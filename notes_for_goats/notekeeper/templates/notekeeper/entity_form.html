@@ -1,0 +1,31 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}{% if form.instance.pk %}Edit Entity{% else %}New Entity{% endif %}{% endblock %}
+
+{% block content %}
+<h1>{% if form.instance.pk %}Edit Entity{% else %}New Entity{% endif %}</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div>
+        <label for="{{ form.name.id_for_label }}">Name:</label>
+        {{ form.name }}
+        {{ form.name.errors }}
+    </div>
+    
+    <div>
+        <label for="{{ form.type.id_for_label }}">Type:</label>
+        {{ form.type }}
+        {{ form.type.errors }}
+    </div>
+    
+    <div>
+        <label for="{{ form.notes.id_for_label }}">Notes:</label>
+        {{ form.notes }}
+        {{ form.notes.errors }}
+    </div>
+    
+    <button type="submit" class="btn">Save</button>
+    <a href="{% url 'notekeeper:entity_list' %}" class="btn">Cancel</a>
+</form>
+{% endblock %} 

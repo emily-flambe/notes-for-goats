@@ -1,0 +1,23 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Journal Entries{% endblock %}
+
+{% block content %}
+<h1>Journal Entries</h1>
+
+<a href="{% url 'notekeeper:journal_create' %}" class="btn">New Journal Entry</a>
+
+{% if entries %}
+    <ul>
+    {% for entry in entries %}
+        <li>
+            <a href="{% url 'notekeeper:journal_detail' pk=entry.pk %}">
+                <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
+            </a>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No journal entries yet.</p>
+{% endif %}
+{% endblock %} 

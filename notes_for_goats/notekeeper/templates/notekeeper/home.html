@@ -1,0 +1,39 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Welcome to Notes for Goats{% endblock %}
+
+{% block content %}
+<h1>Welcome to Notes for Goats</h1>
+<p>Your personal note-taking application for tracking people, projects, and daily events.</p>
+
+<div class="dashboard">
+    <div class="recent-entries">
+        <h2>Recent Journal Entries</h2>
+        {% if recent_entries %}
+            <ul>
+            {% for entry in recent_entries %}
+                <li>
+                    <a href="{% url 'notekeeper:journal_detail' pk=entry.pk %}">
+                        <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
+                    </a>
+                </li>
+            {% endfor %}
+            </ul>
+            <a href="{% url 'notekeeper:journal_list' %}" class="btn">View All Entries</a>
+        {% else %}
+            <p>No journal entries yet.</p>
+            <a href="{% url 'notekeeper:journal_create' %}" class="btn">Create Your First Entry</a>
+        {% endif %}
+    </div>
+    
+    <div class="quick-links">
+        <h2>Quick Links</h2>
+        <ul>
+            <li><a href="{% url 'notekeeper:journal_create' %}">New Journal Entry</a></li>
+            <li><a href="{% url 'notekeeper:entity_create' %}">Create New Entity</a></li>
+            <li><a href="{% url 'notekeeper:entity_list' %}">View All Entities</a></li>
+            <li><a href="{% url 'admin:index' %}">Admin Interface</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %} 

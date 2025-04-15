@@ -1,0 +1,32 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}{% if form.instance.pk %}Edit Journal Entry{% else %}New Journal Entry{% endif %}{% endblock %}
+
+{% block content %}
+<h1>{% if form.instance.pk %}Edit Journal Entry{% else %}New Journal Entry{% endif %}</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div>
+        <label for="{{ form.title.id_for_label }}">Title:</label>
+        {{ form.title }}
+        {{ form.title.errors }}
+    </div>
+    
+    <div>
+        <label for="{{ form.timestamp.id_for_label }}">Date/Time:</label>
+        {{ form.timestamp }}
+        {{ form.timestamp.errors }}
+    </div>
+    
+    <div>
+        <label for="{{ form.content.id_for_label }}">Content:</label>
+        {{ form.content }}
+        {{ form.content.errors }}
+        <p class="help-text">Use #TagName to reference entities</p>
+    </div>
+    
+    <button type="submit" class="btn">Save</button>
+    <a href="{% url 'notekeeper:journal_list' %}" class="btn">Cancel</a>
+</form>
+{% endblock %} 

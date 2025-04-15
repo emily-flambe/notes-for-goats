@@ -1,0 +1,38 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}{{ entity.name }}{% endblock %}
+
+{% block content %}
+<h1>{{ entity.name }} <small>({{ entity.get_type_display }})</small></h1>
+
+<div class="entity-notes">
+    <h2>Notes</h2>
+    {% if entity.notes %}
+        {{ entity.notes|linebreaks }}
+    {% else %}
+        <p>No notes for this entity.</p>
+    {% endif %}
+</div>
+
+<div class="related-entries">
+    <h2>Related Journal Entries</h2>
+    {% if related_entries %}
+        <ul>
+        {% for entry in related_entries %}
+            <li>
+                <a href="{% url 'notekeeper:journal_detail' pk=entry.pk %}">
+                    <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
+                </a>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No related journal entries.</p>
+    {% endif %}
+</div>
+
+<div class="actions">
+    <a href="{% url 'notekeeper:entity_edit' pk=entity.pk %}" class="btn">Edit</a>
+    <a href="{% url 'notekeeper:entity_list' %}" class="btn">Back to List</a>
+</div>
+{% endblock %} 

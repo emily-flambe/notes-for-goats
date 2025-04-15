@@ -1,0 +1,23 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Entities{% endblock %}
+
+{% block content %}
+<h1>Entities</h1>
+
+<a href="{% url 'notekeeper:entity_create' %}" class="btn">New Entity</a>
+
+{% if entities %}
+    <ul>
+    {% for entity in entities %}
+        <li>
+            <a href="{% url 'notekeeper:entity_detail' pk=entity.pk %}">
+                <strong>{{ entity.name }}</strong> ({{ entity.get_type_display }})
+            </a>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No entities created yet.</p>
+{% endif %}
+{% endblock %} 
