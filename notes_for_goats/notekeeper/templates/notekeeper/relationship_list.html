@@ -1,0 +1,98 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Relationships - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Relationships</h1>
+    
+    <div class="actions">
+        <a href="{% url 'notekeeper:relationship_create' workspace_id=workspace.id %}" class="btn btn-primary">
+            Create New Relationship
+        </a>
+        {% if entity %}
+            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="btn">
+                Back to {{ entity.name }}
+            </a>
+        {% else %}
+            <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">
+                Back to Workspace
+            </a>
+        {% endif %}
+    </div>
+    
+    {% if relationships %}
+        <div class="card relationships-list">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Relationship</th>
+                        <th>Target</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rel in relationships %}
+                    <tr>
+                        <td>
+                            {% if rel.source_content_type.model == 'entity' %}
+                                <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.source_object_id %}">
+                                    {{ rel.source }}
+                                </a>
+                            {% else %}
+                                {{ rel.source }}
+                            {% endif %}
+                        </td>
+                        <td>{{ rel.relationship_type.display_name }}</td>
+                        <td>
+                            {% if rel.target_content_type.model == 'entity' %}
+                                <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.target_object_id %}">
+                                    {{ rel.target }}
+                                </a>
+                            {% else %}
+                                {{ rel.target }}
+                            {% endif %}
+                        </td>
+                        <td>{{ rel.notes|truncatechars:50|default:"-" }}</td>
+                        <td class="actions">
+                            <a href="{% url 'notekeeper:relationship_edit' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm">Edit</a>
+                            <a href="{% url 'notekeeper:relationship_delete' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm btn-danger">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            {% if entity %}
+                <p>No relationships defined for {{ entity.name }}.</p>
+            {% else %}
+                <p>No relationships defined in this workspace.</p>
+            {% endif %}
+            <p>Relationships connect entities together in meaningful ways.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .actions {
+        margin: 20px 0;
+    }
+    .relationships-list {
+        margin-top: 20px;
+    }
+    .empty-state {
+        background: #f9f9f9;
+        border-radius: 8px;
+        padding: 30px;
+        text-align: center;
+        margin-top: 30px;
+    }
+    td.actions {
+        white-space: nowrap;
+    }
+</style>
+{% endblock %} 

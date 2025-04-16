@@ -2,6 +2,8 @@ from django.db import models
 from django.utils import timezone
 import re
 import uuid
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 class Workspace(models.Model):
     """
@@ -98,3 +100,58 @@ class CalendarEvent(models.Model):
     
     class Meta:
         ordering = ['start_time']
+
+class RelationshipType(models.Model):
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='relationship_types')
+    name = models.CharField(max_length=50)  # Internal name (e.g., "REPORTS_TO")
+    display_name = models.CharField(max_length=100)  # User-friendly name (e.g., "Reports To")
+    description = models.TextField(blank=True)
+    
+    # Optional fields for relationship properties
+    is_directional = models.BooleanField(default=True)  # Is this relationship directional?
+    inverse_name = models.CharField(max_length=100, blank=True)  # Optional inverse name (e.g., "Has Report")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = [('workspace', 'name')]
+        ordering = ['display_name']
+        
+    def __str__(self):
+        return self.display_name
+
+class Relationship(models.Model):
+    # The workspace this relationship belongs to
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='relationships')
+    
+    # Source entity (can be any model)
+    source_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, related_name='source_relationships')
+    source_object_id = models.PositiveIntegerField()
+    source = GenericForeignKey('source_content_type', 'source_object_id')
+    
+    # Target entity (can be any model)
+    target_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, related_name='target_relationships')
+    target_object_id = models.PositiveIntegerField()
+    target = GenericForeignKey('target_content_type', 'target_object_id')
+    
+    # Relationship type - now a foreign key instead of choices
+    relationship_type = models.ForeignKey(RelationshipType, on_delete=models.CASCADE, related_name='relationships')
+    
+    # Optional description/notes about this relationship
+    notes = models.TextField(blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = [
+            ('source_content_type', 'source_object_id', 
+             'target_content_type', 'target_object_id',
+             'relationship_type')
+        ]
+        
+    def __str__(self):
+        return f"{self.source} {self.relationship_type.display_name} {self.target}"

@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Workspace, Entity, JournalEntry, CalendarEvent
-from .forms import WorkspaceForm, JournalEntryForm, EntityForm
+from .models import Workspace, Entity, JournalEntry, CalendarEvent, Relationship
+from .forms import WorkspaceForm, JournalEntryForm, EntityForm, RelationshipTypeForm
 import os
 import tempfile
 from django.http import HttpResponse, FileResponse
@@ -10,6 +10,7 @@ from io import StringIO, BytesIO
 import json
 import zipfile
 from django.contrib import messages
+from django.contrib.contenttypes.models import ContentType
 
 def home(request):
     """
@@ -282,5 +283,77 @@ def workspace_delete_confirm(request, pk):
     
     # Display confirmation page
     return render(request, 'notekeeper/workspace_delete_confirm.html', {
+        'workspace': workspace
+    })
+
+def create_relationship(request, workspace_id):
+    """View to create a relationship between entities"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    if request.method == "POST":
+        # Process the form data
+        source_type = request.POST.get('source_type')
+        source_id = request.POST.get('source_id')
+        target_type = request.POST.get('target_type')
+        target_id = request.POST.get('target_id')
+        relationship_type = request.POST.get('relationship_type')
+        notes = request.POST.get('notes', '')
+        
+        # Get the source and target models
+        if source_type == 'entity':
+            source = get_object_or_404(Entity, pk=source_id, workspace=workspace)
+        # Add other entity types as needed
+        
+        if target_type == 'entity':
+            target = get_object_or_404(Entity, pk=target_id, workspace=workspace)
+        # Add other entity types as needed
+        
+        # Create the relationship
+        relationship = Relationship.objects.create(
+            workspace=workspace,
+            source_content_type=ContentType.objects.get_for_model(source),
+            source_object_id=source.id,
+            target_content_type=ContentType.objects.get_for_model(target),
+            target_object_id=target.id,
+            relationship_type=relationship_type,
+            notes=notes
+        )
+        
+        return redirect('notekeeper:entity_detail', workspace_id=workspace_id, pk=source_id)
+    
+    # If GET request, show the form
+    entities = workspace.entities.all()
+    # Get other entity types as needed
+    
+    return render(request, 'notekeeper/relationship_form.html', {
+        'workspace': workspace,
+        'entities': entities,
+        'relationship_types': Relationship.RELATIONSHIP_TYPES
+    })
+
+def relationship_type_list(request, workspace_id):
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    relationship_types = workspace.relationship_types.all()
+    
+    return render(request, 'notekeeper/relationship_type_list.html', {
+        'workspace': workspace,
+        'relationship_types': relationship_types
+    })
+
+def relationship_type_create(request, workspace_id):
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    if request.method == "POST":
+        form = RelationshipTypeForm(request.POST)
+        if form.is_valid():
+            relationship_type = form.save(commit=False)
+            relationship_type.workspace = workspace
+            relationship_type.save()
+            return redirect('notekeeper:relationship_type_list', workspace_id=workspace.id)
+    else:
+        form = RelationshipTypeForm()
+        
+    return render(request, 'notekeeper/relationship_type_form.html', {
+        'form': form,
         'workspace': workspace
     })

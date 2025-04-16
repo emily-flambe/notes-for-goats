@@ -1,0 +1,144 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}
+    {% if form.instance.id %}Edit{% else %}Create{% endif %} Relationship Type - {{ workspace.name }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{% if form.instance.id %}Edit{% else %}Create{% endif %} Relationship Type</h1>
+    <p class="subtitle">Define how entities can be related in {{ workspace.name }}</p>
+    
+    <form method="post" class="card relationship-type-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="id_display_name">Display Name:</label>
+            {{ form.display_name }}
+            <small class="form-text text-muted">The name shown to users (e.g., "Reports To")</small>
+            {% if form.display_name.errors %}
+                <div class="error">{{ form.display_name.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="id_name">Internal Name:</label>
+            {{ form.name }}
+            <small class="form-text text-muted">Internal reference name (e.g., "REPORTS_TO"). Use uppercase and underscores.</small>
+            {% if form.name.errors %}
+                <div class="error">{{ form.name.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="id_description">Description:</label>
+            {{ form.description }}
+            <small class="form-text text-muted">Optional description of what this relationship means</small>
+            {% if form.description.errors %}
+                <div class="error">{{ form.description.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group checkbox-group">
+            <label>
+                {{ form.is_directional }}
+                Is Directional
+            </label>
+            <small class="form-text text-muted">If checked, this relationship has a clear direction (e.g., "Reports To"). If unchecked, it's mutual (e.g., "Collaborates With").</small>
+            {% if form.is_directional.errors %}
+                <div class="error">{{ form.is_directional.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group" id="inverse-name-group">
+            <label for="id_inverse_name">Inverse Name:</label>
+            {{ form.inverse_name }}
+            <small class="form-text text-muted">Optional inverse display name for directional relationships (e.g., "Has Report" for "Reports To")</small>
+            {% if form.inverse_name.errors %}
+                <div class="error">{{ form.inverse_name.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'notekeeper:relationship_type_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .subtitle {
+        color: #666;
+        margin-bottom: 20px;
+    }
+    .relationship-type-form {
+        padding: 20px;
+        margin-top: 20px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    .form-group input[type="text"],
+    .form-group textarea {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .form-group textarea {
+        min-height: 80px;
+    }
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+    }
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0;
+    }
+    .checkbox-group input[type="checkbox"] {
+        margin-right: 8px;
+    }
+    .form-text {
+        margin-top: 5px;
+        font-size: 0.875rem;
+    }
+    .error {
+        color: #e53e3e;
+        margin-top: 5px;
+        font-size: 0.875rem;
+    }
+    .form-actions {
+        margin-top: 30px;
+        display: flex;
+        gap: 10px;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isDirectionalCheckbox = document.getElementById('id_is_directional');
+    const inverseNameGroup = document.getElementById('inverse-name-group');
+    
+    function toggleInverseNameVisibility() {
+        if (isDirectionalCheckbox.checked) {
+            inverseNameGroup.style.display = 'block';
+        } else {
+            inverseNameGroup.style.display = 'none';
+        }
+    }
+    
+    // Initial setup
+    toggleInverseNameVisibility();
+    
+    // Listen for changes
+    isDirectionalCheckbox.addEventListener('change', toggleInverseNameVisibility);
+});
+</script>
+{% endblock %} 
