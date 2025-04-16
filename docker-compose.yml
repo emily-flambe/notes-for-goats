@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=devkey_change_in_production
+    command: >
+      sh -c "cd notes_for_goats && 
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000" 
