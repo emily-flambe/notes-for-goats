@@ -22,43 +22,90 @@ Built by engineers for engineers, it emphasizes quick note-taking while automati
 
 ## Getting Started
 
-### Prerequisites
+### Installation Options
+
+#### Option 1: Using Docker (Recommended)
+
+The easiest way to get started is with Docker, which handles all dependencies and environment setup automatically.
+
+##### Prerequisites
+- [Docker](https://www.docker.com/get-started)
+- [Docker Compose](https://docs.docker.com/compose/install/) (usually included with Docker Desktop)
+
+##### Installation and Launch
+
+1. Clone the repository
+``` bash
+git clone https://github.com/yourusername/notes-for-goats.git
+cd notes-for-goats
+```
+
+2. Build and start the application using Docker Compose
+``` bash
+docker-compose up -d
+```
+
+3. Create an admin user (first time only)
+``` bash
+docker-compose exec web python notes_for_goats/manage.py createsuperuser
+```
+
+4. Access the application
+   - Main app: http://localhost:8000/
+   - Admin interface: http://localhost:8000/admin/
+
+5. To stop the application
+``` bash
+docker-compose down
+```
+
+##### Updating After Code Changes
+``` bash
+docker-compose down
+docker-compose up -d --build
+```
+
+#### Option 2: Standard Installation
+
+If you prefer to run directly on your machine:
+
+##### Prerequisites
 
 - Python 3.8+ 
 - Django 4.2+
 - (Optional) Google Calendar API credentials
 
-### Installation
+##### Installation
 
 1. Clone the repository
-```bash
+``` bash
 git clone https://github.com/yourusername/notes-for-goats.git
 cd notes-for-goats
 ```
 
 2. Create and activate a virtual environment
-```bash
+``` bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. Install dependencies
-```bash
+``` bash
 pip install -r requirements.txt
 ```
 
 4. Set up the database
-```bash
+``` bash
 python manage.py migrate
 ```
 
 5. Create an admin user
-```bash
+``` bash
 python manage.py createsuperuser
 ```
 
 6. Run the development server
-```bash
+``` bash
 python manage.py runserver
 ```
 
@@ -99,16 +146,24 @@ The system is designed to integrate with Google Calendar to:
 
 Your data is stored in a SQLite database (`db.sqlite3`). To back up your data:
 
+### Standard Installation Backup
 1. Stop the application if it's running
 2. Copy the `db.sqlite3` file to a secure location
 3. For a more portable backup, use the export command:
-```bash
+``` bash
 python manage.py export_data
+```
+
+### Docker Installation Backup
+1. Export workspaces via the UI (recommended)
+2. Or access the database file directly:
+``` bash
+docker-compose exec web bash -c "cd notes_for_goats && python manage.py export_data"
 ```
 
 ## Project Structure
 
-```
+``` 
 notes_for_goats/
 ├── notes_for_goats/ # Workspace settings
 │ ├── settings.py # Configuration
@@ -125,7 +180,9 @@ notes_for_goats/
 │ ├── management/ # Custom commands
 │ │ └── commands/ # Management commands
 ├── manage.py # Django management script
-└── db.sqlite3 # SQLite database
+├── db.sqlite3 # SQLite database
+├── Dockerfile # Docker build instructions
+└── docker-compose.yml # Docker Compose configuration
 ```
 
 ## Design Decisions
@@ -162,6 +219,14 @@ We chose Django templates for the UI because:
 2. **Cohesiveness**: Unified backend and frontend development
 3. **Focus on Functionality**: Emphasizes core note-taking capabilities over UI sophistication
 4. **Future Extensibility**: API endpoints can be added later if a more dynamic UI is desired
+
+### Why Docker?
+
+We offer Docker support because:
+1. **Consistency**: Ensures the application runs the same way on every machine
+2. **Isolation**: Keeps dependencies contained without affecting your system
+3. **Simplicity**: Reduces setup time and configuration issues
+4. **Portability**: Easy to move between systems or share with others
 
 ## Contributing
 
