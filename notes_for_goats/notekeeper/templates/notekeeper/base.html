@@ -193,10 +193,9 @@
                     <!-- Only show these links if we have a workspace in context -->
                     <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}">Journal</a>
                     <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}">Entities</a>
-                    <a href="{% url 'notekeeper:workspace_detail' pk=current_workspace.id %}">Current Workspace</a>
                 {% endif %}
                 
-                <a href="{% url 'notekeeper:workspace_list' %}">All Workspaces</a>
+                <a href="{% url 'notekeeper:workspace_list' %}">Manage Workspaces</a>
                 <a href="{% url 'admin:index' %}">Admin</a>
                 
                 <!-- Workspace Dropdown -->
