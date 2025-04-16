@@ -1,23 +1,110 @@
 {% extends "notekeeper/base.html" %}
 
-{% block title %}Journal Entries{% endblock %}
+{% block title %}Journal Entries - {{ workspace.name }}{% endblock %}
 
 {% block content %}
-<h1>Journal Entries</h1>
+<h1>Journal Entries - {{ workspace.name }}</h1>
 
-<a href="{% url 'notekeeper:journal_create' %}" class="btn">New Journal Entry</a>
+<div class="actions">
+    <a href="{% url 'notekeeper:journal_create' workspace_id=workspace.id %}" class="btn">New Journal Entry</a>
+    <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">Back to Workspace</a>
+</div>
 
 {% if entries %}
-    <ul>
-    {% for entry in entries %}
-        <li>
-            <a href="{% url 'notekeeper:journal_detail' pk=entry.pk %}">
-                <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
-            </a>
-        </li>
-    {% endfor %}
-    </ul>
+    <div class="journal-entries">
+        {% for entry in entries %}
+            <div class="journal-entry">
+                <h2>
+                    <a href="{% url 'notekeeper:journal_detail' workspace_id=workspace.id pk=entry.pk %}">
+                        {{ entry.title }}
+                    </a>
+                </h2>
+                <div class="entry-meta">
+                    <span class="timestamp">{{ entry.timestamp|date:"Y-m-d H:i" }}</span>
+                    
+                    {% if entry.referenced_entities.exists %}
+                    <span class="entities">
+                        Referenced entities:
+                        {% for entity in entry.referenced_entities.all %}
+                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}" class="entity-tag">
+                                {{ entity.name }}
+                            </a>
+                        {% endfor %}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="entry-preview">
+                    {{ entry.content|truncatewords:30 }}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
 {% else %}
-    <p>No journal entries yet.</p>
+    <div class="no-entries">
+        <p>No journal entries yet.</p>
+        <p>Create your first journal entry to get started tracking your work.</p>
+    </div>
 {% endif %}
+
+<style>
+    .actions {
+        margin: 20px 0;
+        display: flex;
+        gap: 10px;
+    }
+    .journal-entries {
+        margin-top: 20px;
+    }
+    .journal-entry {
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .journal-entry h2 {
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    .journal-entry h2 a {
+        color: #2d3748;
+        text-decoration: none;
+    }
+    .journal-entry h2 a:hover {
+        color: #4a5568;
+        text-decoration: underline;
+    }
+    .entry-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 10px;
+        font-size: 0.875rem;
+        color: #718096;
+    }
+    .entity-tag {
+        display: inline-block;
+        background-color: #e2e8f0;
+        color: #4a5568;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-decoration: none;
+        margin-right: 4px;
+        font-size: 0.8125rem;
+    }
+    .entity-tag:hover {
+        background-color: #cbd5e0;
+    }
+    .entry-preview {
+        color: #4a5568;
+        line-height: 1.5;
+    }
+    .no-entries {
+        padding: 30px;
+        text-align: center;
+        background-color: #f7fafc;
+        border-radius: 8px;
+        color: #4a5568;
+    }
+</style>
 {% endblock %} 

@@ -1,6 +1,24 @@
 from django.db import models
 from django.utils import timezone
 import re
+import uuid
+
+class Workspace(models.Model):
+    """
+    Top-level container for a set of related journal entries and entities.
+    Enables export/import functionality and better organization.
+    """
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        ordering = ['name']
 
 class Entity(models.Model):
     """
@@ -12,6 +30,7 @@ class Entity(models.Model):
         ('TEAM', 'Team'),
     )
     
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='entities')
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=10, choices=ENTITY_TYPES)
     notes = models.TextField(blank=True)
@@ -29,6 +48,7 @@ class JournalEntry(models.Model):
     """
     Represents a timestamped note entry that may reference entities.
     """
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='journal_entries')
     title = models.CharField(max_length=200)
     content = models.TextField()
     timestamp = models.DateTimeField(default=timezone.now)

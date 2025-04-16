@@ -27,6 +27,7 @@
         }
         nav {
             display: flex;
+            align-items: center;
             gap: 20px;
             margin-top: 10px;
         }
@@ -36,6 +37,55 @@
         }
         nav a:hover {
             text-decoration: underline;
+        }
+        .project-dropdown {
+            position: relative;
+            display: inline-block;
+            margin-left: auto;
+        }
+        .dropdown-toggle {
+            background-color: #2d3748;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .dropdown-toggle:after {
+            content: '▼';
+            font-size: 10px;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #f9f9f9;
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .dropdown-content a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            border-bottom: 1px solid #ddd;
+        }
+        .dropdown-content a:last-child {
+            border-bottom: none;
+        }
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+        .project-dropdown:hover .dropdown-content {
+            display: block;
         }
         main {
             padding: 2rem 0;
@@ -59,6 +109,17 @@
         }
         .btn:hover {
             background-color: #2d3748;
+        }
+        .btn-new-project {
+            background-color: #48bb78;
+        }
+        .btn-new-project:hover {
+            background-color: #38a169;
+        }
+        .current-project-indicator {
+            font-weight: bold;
+            background-color: #edf2f7;
+            color: #1a202c;
         }
         .entity-tag {
             background-color: #e2e8f0;
@@ -98,9 +159,36 @@
             <h1>Notes for Goats</h1>
             <nav>
                 <a href="{% url 'notekeeper:home' %}">Home</a>
-                <a href="{% url 'notekeeper:journal_list' %}">Journal</a>
-                <a href="{% url 'notekeeper:entity_list' %}">Entities</a>
+                
+                {% if current_workspace %}
+                    <!-- Only show these links if we have a workspace in context -->
+                    <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}">Journal</a>
+                    <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}">Entities</a>
+                    <a href="{% url 'notekeeper:workspace_detail' pk=current_workspace.id %}">Current Workspace</a>
+                {% endif %}
+                
+                <a href="{% url 'notekeeper:workspace_list' %}">All Workspaces</a>
                 <a href="{% url 'admin:index' %}">Admin</a>
+                
+                <!-- Workspace Dropdown -->
+                <div class="workspace-dropdown">
+                    <button class="dropdown-toggle">
+                        {% if current_workspace %}
+                            {{ current_workspace.name }}
+                        {% else %}
+                            Select Workspace
+                        {% endif %}
+                    </button>
+                    <div class="dropdown-content">
+                        {% for w in all_workspaces %}
+                            <a href="{% url 'notekeeper:workspace_detail' pk=w.id %}" 
+                               {% if current_workspace and current_workspace.id == w.id %}class="current-workspace-indicator"{% endif %}>
+                                {{ w.name }}
+                            </a>
+                        {% endfor %}
+                        <a href="{% url 'notekeeper:workspace_create' %}" class="btn-new-workspace">+ New Workspace</a>
+                    </div>
+                </div>
             </nav>
         </div>
     </header>
@@ -114,5 +202,27 @@
             <p>Notes for Goats - Your Personal Note-Taking App</p>
         </div>
     </footer>
+
+    <script>
+        // Optional JavaScript to make dropdown work better on mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdown = document.querySelector('.dropdown-toggle');
+            const dropdownContent = document.querySelector('.dropdown-content');
+            
+            if (dropdown) {
+                dropdown.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropdownContent.style.display = dropdownContent.style.display === 'block' ? 'none' : 'block';
+                });
+                
+                document.addEventListener('click', function(e) {
+                    if (!dropdown.contains(e.target)) {
+                        dropdownContent.style.display = 'none';
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html> 

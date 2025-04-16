@@ -1,5 +1,14 @@
 from django import forms
-from .models import JournalEntry, Entity
+from .models import Workspace, JournalEntry, Entity
+
+class WorkspaceForm(forms.ModelForm):
+    class Meta:
+        model = Workspace
+        fields = ['name', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        }
 
 class JournalEntryForm(forms.ModelForm):
     class Meta:

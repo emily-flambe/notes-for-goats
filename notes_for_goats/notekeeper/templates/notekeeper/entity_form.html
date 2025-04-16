@@ -1,9 +1,29 @@
 {% extends "notekeeper/base.html" %}
 
-{% block title %}{% if form.instance.pk %}Edit Entity{% else %}New Entity{% endif %}{% endblock %}
+{% block title %}
+    {% if form.instance.pk %}
+        Edit {{ form.instance.get_type_display }}
+    {% else %}
+        {% if entity_type == 'PERSON' %}New Person
+        {% elif entity_type == 'PROJECT' %}New Project
+        {% elif entity_type == 'TEAM' %}New Team
+        {% else %}New Entity
+        {% endif %}
+    {% endif %}
+{% endblock %}
 
 {% block content %}
-<h1>{% if form.instance.pk %}Edit Entity{% else %}New Entity{% endif %}</h1>
+<h1>
+    {% if form.instance.pk %}
+        Edit {{ form.instance.get_type_display }}: {{ form.instance.name }}
+    {% else %}
+        {% if entity_type == 'PERSON' %}New Person
+        {% elif entity_type == 'PROJECT' %}New Project
+        {% elif entity_type == 'TEAM' %}New Team
+        {% else %}New Entity
+        {% endif %}
+    {% endif %}
+</h1>
 
 <form method="post">
     {% csrf_token %}
@@ -25,7 +45,15 @@
         {{ form.notes.errors }}
     </div>
     
-    <button type="submit" class="btn">Save</button>
-    <a href="{% url 'notekeeper:entity_list' %}" class="btn">Cancel</a>
+    <div class="form-actions">
+        <button type="submit" class="btn">Save</button>
+        <a href="{% url 'notekeeper:entity_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
+    </div>
 </form>
+
+<style>
+    .form-actions {
+        margin-top: 20px;
+    }
+</style>
 {% endblock %} 

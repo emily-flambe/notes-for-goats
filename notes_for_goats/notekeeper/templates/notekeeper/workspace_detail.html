@@ -1,0 +1,113 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}{{ current_workspace.name }}{% endblock %}
+
+{% block content %}
+<h1>{{ current_workspace.name }}</h1>
+<p class="workspace-description">{{ current_workspace.description }}</p>
+
+<div class="workspace-actions">
+    <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn">New Journal Entry</a>
+    <a href="{% url 'notekeeper:entity_create' workspace_id=current_workspace.id %}" class="btn">New Entity</a>
+    <a href="{% url 'notekeeper:export_workspace' pk=current_workspace.id %}" class="btn">Export Workspace</a>
+    <a href="{% url 'notekeeper:workspace_edit' pk=current_workspace.id %}" class="btn">Edit Workspace</a>
+</div>
+
+<div class="workspace-dashboard">
+    <div class="recent-entries">
+        <h2>Recent Journal Entries</h2>
+        {% if recent_entries %}
+            <ul>
+            {% for entry in recent_entries %}
+                <li>
+                    <a href="{% url 'notekeeper:journal_detail' workspace_id=current_workspace.id pk=entry.pk %}">
+                        <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
+                    </a>
+                </li>
+            {% endfor %}
+            </ul>
+            <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}" class="btn">View All Entries</a>
+        {% else %}
+            <p>No journal entries yet.</p>
+            <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn">Create First Entry</a>
+        {% endif %}
+    </div>
+    
+    <div class="entities-overview">
+        <h2>Entities</h2>
+        
+        <h3>People</h3>
+        {% if people_entities %}
+            <ul>
+            {% for entity in people_entities %}
+                <li>
+                    <a href="{% url 'notekeeper:entity_detail' workspace_id=current_workspace.id pk=entity.pk %}">
+                        {{ entity.name }}
+                    </a>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No people yet.</p>
+        {% endif %}
+        
+        <h3>Workspaces</h3>
+        {% if workspace_entities %}
+            <ul>
+            {% for entity in workspace_entities %}
+                <li>
+                    <a href="{% url 'notekeeper:entity_detail' workspace_id=current_workspace.id pk=entity.pk %}">
+                        {{ entity.name }}
+                    </a>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No workspaces yet.</p>
+        {% endif %}
+        
+        <h3>Teams</h3>
+        {% if team_entities %}
+            <ul>
+            {% for entity in team_entities %}
+                <li>
+                    <a href="{% url 'notekeeper:entity_detail' workspace_id=current_workspace.id pk=entity.pk %}">
+                        {{ entity.name }}
+                    </a>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No teams yet.</p>
+        {% endif %}
+        
+        <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}" class="btn">View All Entities</a>
+    </div>
+</div>
+
+<style>
+    .workspace-dashboard {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-top: 30px;
+    }
+    .workspace-actions {
+        margin: 20px 0;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .workspace-description {
+        color: #555;
+        font-size: 1.1em;
+        margin-bottom: 25px;
+    }
+    
+    @media (max-width: 768px) {
+        .workspace-dashboard {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %} 

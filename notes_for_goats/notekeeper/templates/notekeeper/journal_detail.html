@@ -9,7 +9,11 @@
 {% if entry.referenced_entities.exists %}
 <p><strong>Referenced Entities:</strong>
     {% for entity in entry.referenced_entities.all %}
-    <span class="entity-tag">{{ entity.name }} ({{ entity.get_type_display }})</span>
+    <span class="entity-tag">
+        <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
+            {{ entity.name }} ({{ entity.get_type_display }})
+        </a>
+    </span>
     {% endfor %}
 </p>
 {% endif %}
@@ -19,7 +23,8 @@
 </div>
 
 <div class="actions">
-    <a href="{% url 'notekeeper:journal_edit' pk=entry.pk %}" class="btn">Edit</a>
-    <a href="{% url 'notekeeper:journal_list' %}" class="btn">Back to List</a>
+    <a href="{% url 'notekeeper:journal_edit' workspace_id=workspace.id pk=entry.pk %}" class="btn">Edit</a>
+    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Back to List</a>
+    <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">Back to Workspace</a>
 </div>
 {% endblock %} 

@@ -6,34 +6,79 @@
 <h1>Welcome to Notes for Goats</h1>
 <p>Your personal note-taking application for tracking people, projects, and daily events.</p>
 
-<div class="dashboard">
-    <div class="recent-entries">
-        <h2>Recent Journal Entries</h2>
-        {% if recent_entries %}
-            <ul>
-            {% for entry in recent_entries %}
-                <li>
-                    <a href="{% url 'notekeeper:journal_detail' pk=entry.pk %}">
-                        <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
-                    </a>
-                </li>
+{% if all_workspaces %}
+    <div class="workspace-cards">
+        <h2>Your Workspaces</h2>
+        <div class="card-grid">
+            {% for workspace in all_workspaces %}
+                <div class="workspace-card">
+                    <h3>{{ workspace.name }}</h3>
+                    <p>{{ workspace.description|truncatechars:100 }}</p>
+                    <div class="stats">
+                        <span>{{ workspace.entities.count }} entities</span>
+                        <span>{{ workspace.journal_entries.count }} entries</span>
+                    </div>
+                    <div class="card-actions">
+                        <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">Open</a>
+                        <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Journal</a>
+                        <a href="{% url 'notekeeper:entity_list' workspace_id=workspace.id %}" class="btn">Entities</a>
+                    </div>
+                </div>
             {% endfor %}
-            </ul>
-            <a href="{% url 'notekeeper:journal_list' %}" class="btn">View All Entries</a>
-        {% else %}
-            <p>No journal entries yet.</p>
-            <a href="{% url 'notekeeper:journal_create' %}" class="btn">Create Your First Entry</a>
-        {% endif %}
+            
+            <div class="workspace-card new-workspace-card">
+                <h3>Create New Workspace</h3>
+                <p>Start a new collection of notes and entities</p>
+                <div class="card-actions">
+                    <a href="{% url 'notekeeper:workspace_create' %}" class="btn btn-new-workspace">+ New Workspace</a>
+                </div>
+            </div>
+        </div>
     </div>
-    
-    <div class="quick-links">
-        <h2>Quick Links</h2>
-        <ul>
-            <li><a href="{% url 'notekeeper:journal_create' %}">New Journal Entry</a></li>
-            <li><a href="{% url 'notekeeper:entity_create' %}">Create New Entity</a></li>
-            <li><a href="{% url 'notekeeper:entity_list' %}">View All Entities</a></li>
-            <li><a href="{% url 'admin:index' %}">Admin Interface</a></li>
-        </ul>
+{% else %}
+    <div class="no-workspaces">
+        <h2>No Workspaces Yet</h2>
+        <p>Create your first workspace to get started.</p>
+        <a href="{% url 'notekeeper:workspace_create' %}" class="btn btn-new-workspace">Create First Workspace</a>
     </div>
-</div>
+{% endif %}
+
+<style>
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    .workspace-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .workspace-card h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    .stats {
+        display: flex;
+        gap: 15px;
+        margin: 15px 0;
+        font-size: 0.9em;
+        color: #666;
+    }
+    .card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 15px;
+    }
+    .new-workspace-card {
+        border: 2px dashed #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+</style>
 {% endblock %} 

@@ -1,0 +1,24 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Import Workspace{% endblock %}
+
+{% block content %}
+<h1>Import Workspace</h1>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div>
+        <label for="zip_file">Workspace ZIP File:</label>
+        <input type="file" name="zip_file" id="zip_file" accept=".zip" required>
+    </div>
+    
+    <div>
+        <label for="new_name">New Workspace Name (optional):</label>
+        <input type="text" name="new_name" id="new_name">
+        <p class="help-text">Leave blank to use the original workspace name</p>
+    </div>
+    
+    <button type="submit" class="btn">Import</button>
+    <a href="{% url 'notekeeper:workspace_list' %}" class="btn">Cancel</a>
+</form>
+{% endblock %} 

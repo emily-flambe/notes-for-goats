@@ -27,6 +27,6 @@
     </div>
     
     <button type="submit" class="btn">Save</button>
-    <a href="{% url 'notekeeper:journal_list' %}" class="btn">Cancel</a>
+    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
 </form>
 {% endblock %} 

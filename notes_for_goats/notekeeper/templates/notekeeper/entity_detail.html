@@ -20,7 +20,7 @@
         <ul>
         {% for entry in related_entries %}
             <li>
-                <a href="{% url 'notekeeper:journal_detail' pk=entry.pk %}">
+                <a href="{% url 'notekeeper:journal_detail' workspace_id=workspace.id pk=entry.pk %}">
                     <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
                 </a>
             </li>
@@ -32,7 +32,7 @@
 </div>
 
 <div class="actions">
-    <a href="{% url 'notekeeper:entity_edit' pk=entity.pk %}" class="btn">Edit</a>
-    <a href="{% url 'notekeeper:entity_list' %}" class="btn">Back to List</a>
+    <a href="{% url 'notekeeper:entity_edit' workspace_id=workspace.id pk=entity.pk %}" class="btn">Edit</a>
+    <a href="{% url 'notekeeper:entity_list' workspace_id=workspace.id %}" class="btn">Back to Entities</a>
 </div>
 {% endblock %} 

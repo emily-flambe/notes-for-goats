@@ -1,0 +1,30 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Workspaces{% endblock %}
+
+{% block content %}
+<h1>Workspaces</h1>
+
+<a href="{% url 'notekeeper:workspace_create' %}" class="btn">New Workspace</a>
+
+{% if workspaces %}
+    <div class="workspace-grid">
+    {% for workspace in workspaces %}
+        <div class="workspace-card">
+            <h2><a href="{% url 'notekeeper:workspace_detail' pk=workspace.pk %}">{{ workspace.name }}</a></h2>
+            <p>{{ workspace.description|truncatechars:100 }}</p>
+            <div class="workspace-stats">
+                <span>{{ workspace.entities.count }} entities</span>
+                <span>{{ workspace.journal_entries.count }} journal entries</span>
+            </div>
+            <div class="workspace-actions">
+                <a href="{% url 'notekeeper:workspace_detail' pk=workspace.pk %}" class="btn">View</a>
+                <a href="{% url 'notekeeper:workspace_edit' pk=workspace.pk %}" class="btn">Edit</a>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+{% else %}
+    <p>No workspaces yet. Create your first workspace to get started!</p>
+{% endif %}
+{% endblock %} 
