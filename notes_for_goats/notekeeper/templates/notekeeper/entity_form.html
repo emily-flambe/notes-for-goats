@@ -47,7 +47,11 @@
     
     <div class="form-actions">
         <button type="submit" class="btn">Save</button>
-        <a href="{% url 'notekeeper:entity_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
+        {% if entity %}
+            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="btn">Cancel</a>
+        {% else %}
+            <a href="{% url 'notekeeper:entity_list' workspace_id=workspace.id %}" class="btn">Back to Entities</a>
+        {% endif %}
     </div>
 </form>
 

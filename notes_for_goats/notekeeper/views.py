@@ -133,15 +133,21 @@ def entity_create(request, workspace_id):
 
 def entity_edit(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    entity = get_object_or_404(Entity, pk=pk)
+    entity = get_object_or_404(Entity, pk=pk, workspace=workspace)  # Ensure entity belongs to this workspace
+    
     if request.method == "POST":
         form = EntityForm(request.POST, instance=entity)
         if form.is_valid():
             entity = form.save()
-            return redirect('notekeeper:entity_detail', workspace_id=workspace.pk, pk=entity.pk)
+            return redirect('notekeeper:entity_detail', workspace_id=workspace.id, pk=entity.pk)
     else:
         form = EntityForm(instance=entity)
-    return render(request, 'notekeeper/entity_form.html', {'form': form})
+    
+    return render(request, 'notekeeper/entity_form.html', {
+        'form': form,
+        'workspace': workspace,  # Pass the workspace to the template
+        'entity': entity  # Pass the entity to the template
+    })
 
 def workspace_list(request):
     workspaces = Workspace.objects.all()

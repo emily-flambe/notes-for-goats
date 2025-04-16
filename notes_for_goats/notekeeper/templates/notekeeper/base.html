@@ -28,12 +28,13 @@
         nav {
             display: flex;
             align-items: center;
-            gap: 20px;
-            margin-top: 10px;
+            justify-content: flex-start;
+            flex-wrap: wrap;
         }
         nav a {
             color: white;
             text-decoration: none;
+            margin-right: 15px;
         }
         nav a:hover {
             text-decoration: underline;
@@ -70,6 +71,7 @@
             border-radius: 4px;
             max-height: 400px;
             overflow-y: auto;
+            margin-right: 0;
         }
         .dropdown-content a {
             color: #333;
@@ -77,6 +79,7 @@
             text-decoration: none;
             display: block;
             border-bottom: 1px solid #ddd;
+            margin-right: 0;
         }
         .dropdown-content a:last-child {
             border-bottom: none;
@@ -179,6 +182,11 @@
         .info {
             background-color: #bee3f8;
             color: #2c5282;
+        }
+        .workspace-dropdown {
+            position: relative;
+            margin-left: auto;
+            margin-right: 0;
         }
     </style>
 </head>
