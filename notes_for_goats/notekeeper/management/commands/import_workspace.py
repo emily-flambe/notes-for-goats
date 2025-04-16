@@ -4,14 +4,16 @@ import zipfile
 import tempfile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from notekeeper.models import Project, Entity, JournalEntry, CalendarEvent
+from django.utils import timezone
+from notekeeper.models import Workspace, Entity, JournalEntry, CalendarEvent
+from django.utils.dateparse import parse_datetime
 
 class Command(BaseCommand):
-    help = 'Import a project from a ZIP file'
+    help = 'Import a workspace from a ZIP file'
 
     def add_arguments(self, parser):
-        parser.add_argument('zip_file', type=str, help='Path to the project ZIP file')
-        parser.add_argument('--new-name', type=str, help='Optional new name for the imported project')
+        parser.add_argument('zip_file', type=str, help='Path to the workspace ZIP file')
+        parser.add_argument('--new-name', type=str, help='Optional new name for the imported workspace')
 
     def handle(self, *args, **options):
         zip_file = options['zip_file']
@@ -25,101 +27,265 @@ class Command(BaseCommand):
             with zipfile.ZipFile(zip_file, 'r') as zipf:
                 zipf.extractall(temp_dir)
             
-            # Load the project data
+            # Check for metadata.json
             try:
-                with open(os.path.join(temp_dir, 'project.json'), 'r') as f:
-                    project_data = json.load(f)
+                with open(os.path.join(temp_dir, 'metadata.json'), 'r') as f:
+                    metadata = json.load(f)
+                    schema_version = metadata.get('schema_version', '1.0')
+                    self.stdout.write(f"Found schema version: {schema_version}")
             except FileNotFoundError:
-                raise CommandError('Invalid project ZIP file: project.json not found')
+                # Set default version if metadata.json is missing
+                schema_version = '1.0'
+            
+            # Load workspace data
+            try:
+                with open(os.path.join(temp_dir, 'workspace.json'), 'r') as f:
+                    workspace_data = json.load(f)
+            except FileNotFoundError:
+                raise CommandError('Invalid workspace ZIP file: workspace.json not found')
             
             # Start a transaction to ensure atomicity
             with transaction.atomic():
-                # Create the project
-                new_name = options.get('new_name')
-                project = Project(
-                    name=new_name if new_name else project_data['name'],
-                    description=project_data['description']
-                )
-                project.save()
+                # Import based on schema version
+                if schema_version == '1.0':
+                    workspace = self._import_v1(temp_dir, options.get('new_name'), workspace_data)
+                else:
+                    # Handle future versions
+                    self.stdout.write(f"Attempting to import unknown schema version: {schema_version}")
+                    workspace = self._import_v1(temp_dir, options.get('new_name'), workspace_data)
                 
-                self.stdout.write(f'Importing project: {project.name}')
+                self.stdout.write(self.style.SUCCESS(
+                    f'Successfully imported workspace {workspace.name} (ID: {workspace.id})'
+                ))
                 
-                # Import entities
-                entity_id_map = {}  # Map old IDs to new IDs
+                return workspace
+    
+    def _import_v1(self, temp_dir, new_name, workspace_data):
+        """Import using schema version 1.0"""
+        # Create the workspace
+        workspace_name = new_name if new_name else workspace_data.get('name', 'Imported Workspace')
+        workspace_description = workspace_data.get('description', '')
+        
+        # Make sure name and description are strings
+        if not isinstance(workspace_name, str):
+            workspace_name = str(workspace_name)
+        if not isinstance(workspace_description, str):
+            workspace_description = str(workspace_description)
+            
+        workspace = Workspace(
+            name=workspace_name,
+            description=workspace_description
+        )
+        
+        # If we have timestamps, preserve them
+        if 'created_at' in workspace_data:
+            try:
+                created_at = parse_datetime(workspace_data['created_at'])
+                if created_at:
+                    workspace.created_at = created_at
+            except (ValueError, TypeError):
+                # If parsing fails, just use the current time (default)
+                pass
                 
+        if 'updated_at' in workspace_data:
+            try:
+                updated_at = parse_datetime(workspace_data['updated_at'])
+                if updated_at:
+                    workspace.updated_at = updated_at
+            except (ValueError, TypeError):
+                # If parsing fails, just use the current time (default)
+                pass
+                
+        workspace.save()
+        
+        self.stdout.write(f'Importing workspace: {workspace.name}')
+        
+        # Import entities
+        entity_id_map = self._import_entities(temp_dir, workspace)
+        
+        # Import journal entries
+        entry_id_map = self._import_journal_entries(temp_dir, workspace, entity_id_map)
+        
+        # Import calendar events
+        self._import_calendar_events(temp_dir, entry_id_map)
+        
+        return workspace
+    
+    def _import_entities(self, temp_dir, workspace):
+        """Import entities"""
+        entity_id_map = {}  # Map old IDs to new IDs
+        
+        try:
+            with open(os.path.join(temp_dir, 'entities.json'), 'r') as f:
+                entities_data = json.load(f)
+        except FileNotFoundError:
+            self.stdout.write(self.style.WARNING('No entities.json found, skipping entities'))
+            return entity_id_map
+        
+        for entity_data in entities_data:
+            # Ensure we have strings for text fields
+            name = str(entity_data.get('name', ''))
+            entity_type = str(entity_data.get('type', 'PERSON'))
+            notes = str(entity_data.get('notes', ''))
+            
+            entity = Entity(
+                workspace=workspace,
+                name=name,
+                type=entity_type,
+                notes=notes
+            )
+            
+            # If we have timestamps, preserve them
+            if 'created_at' in entity_data:
                 try:
-                    with open(os.path.join(temp_dir, 'entities.json'), 'r') as f:
-                        entities_data = json.load(f)
-                except FileNotFoundError:
-                    self.stdout.write(self.style.WARNING('No entities.json found, skipping entities'))
-                    entities_data = []
-                
-                for entity_data in entities_data:
-                    entity = Entity(
-                        project=project,
-                        name=entity_data['name'],
-                        type=entity_data['type'],
-                        notes=entity_data['notes']
-                    )
-                    entity.save()
-                    entity_id_map[entity_data['id']] = entity.id
-                
-                self.stdout.write(f'Imported {len(entities_data)} entities')
-                
-                # Import journal entries
-                entry_id_map = {}  # Map old IDs to new IDs
-                
-                try:
-                    with open(os.path.join(temp_dir, 'journal_entries.json'), 'r') as f:
-                        entries_data = json.load(f)
-                except FileNotFoundError:
-                    self.stdout.write(self.style.WARNING('No journal_entries.json found, skipping entries'))
-                    entries_data = []
-                
-                for entry_data in entries_data:
-                    entry = JournalEntry(
-                        project=project,
-                        title=entry_data['title'],
-                        content=entry_data['content'],
-                        timestamp=entry_data['timestamp']
-                    )
-                    # Don't call the overridden save() yet to avoid processing hashtags
-                    super(JournalEntry, entry).save()
-                    entry_id_map[entry_data['id']] = entry.id
+                    created_at = parse_datetime(entity_data['created_at'])
+                    if created_at:
+                        entity.created_at = created_at
+                except (ValueError, TypeError):
+                    pass
                     
-                    # Add referenced entities
-                    for old_entity_id in entry_data.get('referenced_entity_ids', []):
-                        if old_entity_id in entity_id_map:
+            if 'updated_at' in entity_data:
+                try:
+                    updated_at = parse_datetime(entity_data['updated_at'])
+                    if updated_at:
+                        entity.updated_at = updated_at
+                except (ValueError, TypeError):
+                    pass
+                
+            entity.save()
+            entity_id_map[entity_data.get('id')] = entity.id
+        
+        self.stdout.write(f'Imported {len(entities_data)} entities')
+        return entity_id_map
+    
+    def _import_journal_entries(self, temp_dir, workspace, entity_id_map):
+        """Import journal entries"""
+        entry_id_map = {}  # Map old IDs to new IDs
+        
+        try:
+            with open(os.path.join(temp_dir, 'journal_entries.json'), 'r') as f:
+                entries_data = json.load(f)
+        except FileNotFoundError:
+            self.stdout.write(self.style.WARNING('No journal_entries.json found, skipping entries'))
+            return entry_id_map
+        
+        for entry_data in entries_data:
+            # Ensure we have strings for text fields
+            title = str(entry_data.get('title', ''))
+            content = str(entry_data.get('content', ''))
+            
+            # Parse timestamp or use current time
+            try:
+                timestamp = parse_datetime(entry_data.get('timestamp'))
+                if not timestamp:
+                    timestamp = timezone.now()
+            except (ValueError, TypeError):
+                timestamp = timezone.now()
+            
+            entry = JournalEntry(
+                workspace=workspace,
+                title=title,
+                content=content,
+                timestamp=timestamp
+            )
+            
+            # If we have timestamps, preserve them
+            if 'created_at' in entry_data:
+                try:
+                    created_at = parse_datetime(entry_data['created_at'])
+                    if created_at:
+                        entry.created_at = created_at
+                except (ValueError, TypeError):
+                    pass
+                    
+            if 'updated_at' in entry_data:
+                try:
+                    updated_at = parse_datetime(entry_data['updated_at'])
+                    if updated_at:
+                        entry.updated_at = updated_at
+                except (ValueError, TypeError):
+                    pass
+            
+            # Don't call the overridden save() yet to avoid processing hashtags
+            super(JournalEntry, entry).save()
+            entry_id_map[entry_data.get('id')] = entry.id
+            
+            # Add referenced entities
+            referenced_entity_ids = entry_data.get('referenced_entity_ids', [])
+            if isinstance(referenced_entity_ids, list):
+                for old_entity_id in referenced_entity_ids:
+                    if old_entity_id in entity_id_map:
+                        try:
                             entity = Entity.objects.get(pk=entity_id_map[old_entity_id])
                             entry.referenced_entities.add(entity)
-                
-                self.stdout.write(f'Imported {len(entries_data)} journal entries')
-                
-                # Import calendar events
-                try:
-                    with open(os.path.join(temp_dir, 'calendar_events.json'), 'r') as f:
-                        events_data = json.load(f)
-                except FileNotFoundError:
-                    self.stdout.write(self.style.WARNING('No calendar_events.json found, skipping events'))
-                    events_data = []
-                
-                for event_data in events_data:
-                    journal_entry_id = None
-                    if event_data.get('journal_entry_id') and event_data['journal_entry_id'] in entry_id_map:
-                        journal_entry_id = entry_id_map[event_data['journal_entry_id']]
-                    
-                    event = CalendarEvent(
-                        google_event_id=event_data['google_event_id'],
-                        title=event_data['title'],
-                        description=event_data['description'],
-                        start_time=event_data['start_time'],
-                        end_time=event_data['end_time'],
-                        journal_entry_id=journal_entry_id
-                    )
-                    event.save()
-                
-                self.stdout.write(f'Imported {len(events_data)} calendar events')
+                        except Entity.DoesNotExist:
+                            pass
+        
+        self.stdout.write(f'Imported {len(entries_data)} journal entries')
+        return entry_id_map
+    
+    def _import_calendar_events(self, temp_dir, entry_id_map):
+        """Import calendar events"""
+        try:
+            with open(os.path.join(temp_dir, 'calendar_events.json'), 'r') as f:
+                events_data = json.load(f)
+        except FileNotFoundError:
+            self.stdout.write(self.style.WARNING('No calendar_events.json found, skipping events'))
+            return
+        
+        for event_data in events_data:
+            # Get journal entry ID if available
+            journal_entry_id = None
+            event_journal_entry_id = event_data.get('journal_entry_id')
+            if event_journal_entry_id and event_journal_entry_id in entry_id_map:
+                journal_entry_id = entry_id_map[event_journal_entry_id]
             
-            self.stdout.write(self.style.SUCCESS(
-                f'Successfully imported project {project.name} (ID: {project.id})'
-            )) 
+            # Ensure we have strings for text fields
+            google_event_id = str(event_data.get('google_event_id', ''))
+            title = str(event_data.get('title', ''))
+            description = str(event_data.get('description', ''))
+            
+            # Parse timestamps or use current time
+            try:
+                start_time = parse_datetime(event_data.get('start_time'))
+                if not start_time:
+                    start_time = timezone.now()
+            except (ValueError, TypeError):
+                start_time = timezone.now()
+                
+            try:
+                end_time = parse_datetime(event_data.get('end_time'))
+                if not end_time:
+                    end_time = timezone.now()
+            except (ValueError, TypeError):
+                end_time = timezone.now()
+            
+            event = CalendarEvent(
+                google_event_id=google_event_id,
+                title=title,
+                description=description,
+                start_time=start_time,
+                end_time=end_time,
+                journal_entry_id=journal_entry_id
+            )
+            
+            # If we have timestamps, preserve them
+            if 'created_at' in event_data:
+                try:
+                    created_at = parse_datetime(event_data['created_at'])
+                    if created_at:
+                        event.created_at = created_at
+                except (ValueError, TypeError):
+                    pass
+                    
+            if 'updated_at' in event_data:
+                try:
+                    updated_at = parse_datetime(event_data['updated_at'])
+                    if updated_at:
+                        event.updated_at = updated_at
+                except (ValueError, TypeError):
+                    pass
+                
+            event.save()
+        
+        self.stdout.write(f'Imported {len(events_data)} calendar events') 

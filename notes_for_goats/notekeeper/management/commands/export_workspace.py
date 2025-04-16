@@ -4,52 +4,62 @@ import zipfile
 import tempfile
 from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db.models import Prefetch
-from notekeeper.models import Project, Entity, JournalEntry, CalendarEvent
+from django.utils import timezone
+from notekeeper.models import Workspace, Entity, JournalEntry, CalendarEvent
 
 class Command(BaseCommand):
-    help = 'Export a project to a ZIP file'
+    help = 'Export a workspace to a ZIP file'
 
     def add_arguments(self, parser):
-        parser.add_argument('project_id', type=int, help='ID of the project to export')
-        parser.add_argument('--output', type=str, help='Output file path (default: project_name.zip)')
+        parser.add_argument('workspace_id', type=int, help='ID of the workspace to export')
+        parser.add_argument('--output', type=str, help='Output file path (default: workspace_name.zip)')
 
     def handle(self, *args, **options):
         try:
-            project_id = options['project_id']
-            project = Workspace.objects.get(pk=project_id)
-        except Project.DoesNotExist:
-            raise CommandError(f'Project with ID {project_id} does not exist')
+            workspace_id = options['workspace_id']
+            workspace = Workspace.objects.get(pk=workspace_id)
+        except Workspace.DoesNotExist:
+            raise CommandError(f'Workspace with ID {workspace_id} does not exist')
 
-        output_file = options.get('output') or f"{project.name.replace(' ', '_')}.zip"
+        output_file = options.get('output') or f"{workspace.name.replace(' ', '_')}.zip"
         
         # Create a temporary directory to store the JSON files
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Export project metadata
-            project_data = {
-                'id': project.id,
-                'name': project.name,
-                'description': project.description,
-                'created_at': project.created_at,
-                'updated_at': project.updated_at,
-                'uuid': str(project.uuid)
+            # Export metadata with schema version
+            metadata = {
+                'schema_version': '1.0',  # Increment this when schema changes
+                'app_version': '1.0.0',  # Your application version
+                'export_date': timezone.now().isoformat(),
+                'workspace_id': workspace.id,
+                'workspace_uuid': str(workspace.uuid) if hasattr(workspace, 'uuid') else None
             }
             
-            with open(os.path.join(temp_dir, 'project.json'), 'w') as f:
-                json.dump(project_data, f, cls=DjangoJSONEncoder, indent=2)
+            with open(os.path.join(temp_dir, 'metadata.json'), 'w') as f:
+                json.dump(metadata, f, cls=DjangoJSONEncoder, indent=2)
+            
+            # Export workspace data
+            workspace_data = {
+                'id': workspace.id,
+                'name': workspace.name,
+                'description': workspace.description,
+                'created_at': workspace.created_at.isoformat(),
+                'updated_at': workspace.updated_at.isoformat(),
+            }
+            
+            with open(os.path.join(temp_dir, 'workspace.json'), 'w') as f:
+                json.dump(workspace_data, f, cls=DjangoJSONEncoder, indent=2)
             
             # Export entities
-            entities = project.entities.all()
             entities_data = []
             
-            for entity in entities:
+            for entity in workspace.entities.all():
                 entity_data = {
                     'id': entity.id,
                     'name': entity.name,
                     'type': entity.type,
                     'notes': entity.notes,
-                    'created_at': entity.created_at,
-                    'updated_at': entity.updated_at
+                    'created_at': entity.created_at.isoformat(),
+                    'updated_at': entity.updated_at.isoformat()
                 }
                 entities_data.append(entity_data)
             
@@ -57,7 +67,7 @@ class Command(BaseCommand):
                 json.dump(entities_data, f, cls=DjangoJSONEncoder, indent=2)
             
             # Export journal entries
-            entries = project.journal_entries.all().prefetch_related('referenced_entities')
+            entries = workspace.journal_entries.all().prefetch_related('referenced_entities')
             entries_data = []
             
             for entry in entries:
@@ -65,10 +75,10 @@ class Command(BaseCommand):
                     'id': entry.id,
                     'title': entry.title,
                     'content': entry.content,
-                    'timestamp': entry.timestamp,
-                    'created_at': entry.created_at,
-                    'updated_at': entry.updated_at,
-                    'referenced_entity_ids': [e.id for e in entry.referenced_entities.all()]
+                    'timestamp': entry.timestamp.isoformat(),
+                    'created_at': entry.created_at.isoformat(),
+                    'updated_at': entry.updated_at.isoformat(),
+                    'referenced_entity_ids': list(entry.referenced_entities.values_list('id', flat=True))
                 }
                 entries_data.append(entry_data)
             
@@ -76,7 +86,7 @@ class Command(BaseCommand):
                 json.dump(entries_data, f, cls=DjangoJSONEncoder, indent=2)
             
             # Export calendar events
-            calendar_events = CalendarEvent.objects.filter(journal_entry__project=project)
+            calendar_events = CalendarEvent.objects.filter(journal_entry__workspace=workspace)
             events_data = []
             
             for event in calendar_events:
@@ -85,9 +95,9 @@ class Command(BaseCommand):
                     'google_event_id': event.google_event_id,
                     'title': event.title,
                     'description': event.description,
-                    'start_time': event.start_time,
-                    'end_time': event.end_time,
-                    'journal_entry_id': event.journal_entry_id if event.journal_entry else None
+                    'start_time': event.start_time.isoformat(),
+                    'end_time': event.end_time.isoformat(),
+                    'journal_entry_id': event.journal_entry_id
                 }
                 events_data.append(event_data)
             
@@ -103,4 +113,5 @@ class Command(BaseCommand):
                             os.path.relpath(os.path.join(root, file), temp_dir)
                         )
         
-        self.stdout.write(self.style.SUCCESS(f'Successfully exported project "{project.name}" to {output_file}')) 
+        self.stdout.write(self.style.SUCCESS(f'Successfully exported workspace "{workspace.name}" to {output_file}'))
+        return output_file 

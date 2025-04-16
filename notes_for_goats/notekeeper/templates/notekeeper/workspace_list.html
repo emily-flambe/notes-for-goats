@@ -5,7 +5,10 @@
 {% block content %}
 <h1>Workspaces</h1>
 
-<a href="{% url 'notekeeper:workspace_create' %}" class="btn">New Workspace</a>
+<div class="action-buttons">
+    <a href="{% url 'notekeeper:workspace_create' %}" class="btn">New Workspace</a>
+    <a href="{% url 'notekeeper:import_workspace' %}" class="btn btn-import">Import Workspace</a>
+</div>
 
 {% if workspaces %}
     <div class="workspace-grid">
@@ -20,11 +23,83 @@
             <div class="workspace-actions">
                 <a href="{% url 'notekeeper:workspace_detail' pk=workspace.pk %}" class="btn">View</a>
                 <a href="{% url 'notekeeper:workspace_edit' pk=workspace.pk %}" class="btn">Edit</a>
+                <a href="{% url 'notekeeper:export_workspace' pk=workspace.pk %}" class="btn btn-export">Export</a>
             </div>
         </div>
     {% endfor %}
     </div>
 {% else %}
-    <p>No workspaces yet. Create your first workspace to get started!</p>
+    <div class="no-workspaces">
+        <p>No workspaces yet. Create your first workspace to get started!</p>
+    </div>
 {% endif %}
+
+<style>
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .workspace-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    .workspace-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .workspace-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .workspace-card h2 {
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    .workspace-card h2 a {
+        color: #2d3748;
+        text-decoration: none;
+    }
+    .workspace-card h2 a:hover {
+        color: #4a5568;
+        text-decoration: underline;
+    }
+    .workspace-stats {
+        display: flex;
+        gap: 15px;
+        margin: 15px 0;
+        font-size: 0.9em;
+        color: #718096;
+    }
+    .workspace-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 15px;
+        flex-wrap: wrap;
+    }
+    .no-workspaces {
+        background-color: #f7fafc;
+        border-radius: 8px;
+        padding: 30px;
+        text-align: center;
+        margin-top: 20px;
+    }
+    .btn-import {
+        background-color: #4299e1;
+    }
+    .btn-import:hover {
+        background-color: #3182ce;
+    }
+    .btn-export {
+        background-color: #48bb78;
+    }
+    .btn-export:hover {
+        background-color: #38a169;
+    }
+</style>
 {% endblock %} 

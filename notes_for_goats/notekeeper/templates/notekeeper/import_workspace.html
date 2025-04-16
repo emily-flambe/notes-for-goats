@@ -5,20 +5,84 @@
 {% block content %}
 <h1>Import Workspace</h1>
 
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div>
-        <label for="zip_file">Workspace ZIP File:</label>
-        <input type="file" name="zip_file" id="zip_file" accept=".zip" required>
+<div class="import-container">
+    {% if error %}
+    <div class="error-message">
+        {{ error }}
     </div>
-    
-    <div>
-        <label for="new_name">New Workspace Name (optional):</label>
-        <input type="text" name="new_name" id="new_name">
-        <p class="help-text">Leave blank to use the original workspace name</p>
-    </div>
-    
-    <button type="submit" class="btn">Import</button>
-    <a href="{% url 'notekeeper:workspace_list' %}" class="btn">Cancel</a>
-</form>
+    {% endif %}
+
+    <p class="info-text">
+        Import a workspace from a previously exported .zip file. 
+        This will create a new workspace with all the entities and journal entries from the export.
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="zip_file">Workspace ZIP File:</label>
+            <input type="file" name="zip_file" id="zip_file" accept=".zip" required>
+            <div class="help-text">Select a workspace .zip file that was previously exported from Notes for Goats.</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="new_name">New Workspace Name (optional):</label>
+            <input type="text" name="new_name" id="new_name" class="text-input">
+            <div class="help-text">Leave blank to use the original workspace name from the export.</div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-import">Import Workspace</button>
+            <a href="{% url 'notekeeper:workspace_list' %}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .import-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    .info-text {
+        margin-bottom: 20px;
+        color: #4a5568;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+    }
+    .text-input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+    }
+    .help-text {
+        font-size: 0.875rem;
+        color: #718096;
+        margin-top: 4px;
+    }
+    .form-actions {
+        margin-top: 30px;
+        display: flex;
+        gap: 10px;
+    }
+    .btn-import {
+        background-color: #4299e1;
+    }
+    .btn-import:hover {
+        background-color: #3182ce;
+    }
+    .error-message {
+        background-color: #fed7d7;
+        color: #c53030;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+</style>
 {% endblock %} 

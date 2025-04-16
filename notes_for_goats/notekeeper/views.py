@@ -7,6 +7,8 @@ from django.http import HttpResponse, FileResponse
 from django.urls import reverse
 from django.core.management import call_command
 from io import StringIO, BytesIO
+import json
+import zipfile
 
 def home(request):
     workspaces = Workspace.objects.all()
@@ -164,59 +166,71 @@ def workspace_edit(request, pk):
     return render(request, 'notekeeper/workspace_form.html', {'form': form})
 
 def export_workspace(request, pk):
+    """Export a workspace to a ZIP file for download"""
     workspace = get_object_or_404(Workspace, pk=pk)
     
     # Create a temporary file for the ZIP
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    temp_file.close()
-    
-    # Call the management command
-    output = StringIO()
-    call_command('export_workspace', workspace.id, output=temp_file.name, stdout=output)
-    
-    # Serve the file for download
-    with open(temp_file.name, 'rb') as f:
-        response = HttpResponse(f.read(), content_type='application/zip')
-        response['Content-Disposition'] = f'attachment; filename="{workspace.name.replace(" ", "_")}.zip"'
-    
-    # Clean up the temporary file
-    os.unlink(temp_file.name)
-    
-    return response
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        temp_file.close()
+        
+        # Call the management command
+        output = StringIO()
+        call_command('export_workspace', workspace.id, output=temp_file.name, stdout=output)
+        
+        # Serve the file for download
+        with open(temp_file.name, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/zip')
+            response['Content-Disposition'] = f'attachment; filename="{workspace.name.replace(" ", "_")}.zip"'
+        
+        # Clean up the temporary file
+        os.unlink(temp_file.name)
+        
+        return response
 
 def import_workspace_form(request):
-    if request.method == 'POST':
-        if 'zip_file' in request.FILES:
-            # Save the uploaded file to a temporary location
-            uploaded_file = request.FILES['zip_file']
-            new_name = request.POST.get('new_name', '')
-            
-            temp_file = tempfile.NamedTemporaryFile(delete=False)
-            for chunk in uploaded_file.chunks():
+    """Display and handle the workspace import form"""
+    if request.method == 'POST' and 'zip_file' in request.FILES:
+        zip_file = request.FILES['zip_file']
+        new_name = request.POST.get('new_name', '')
+        
+        # Create a temporary file to save the uploaded zip
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            for chunk in zip_file.chunks():
                 temp_file.write(chunk)
-            temp_file.close()
-            
-            # Call the management command (update command name if renamed)
+        
+        try:
+            # Capture command output to get the workspace ID
             output = StringIO()
             call_command(
                 'import_workspace', 
-                temp_file.name, 
-                new_name=new_name if new_name else None, 
+                temp_file.name,
+                new_name=new_name if new_name else None,
                 stdout=output
             )
             
             # Clean up the temporary file
             os.unlink(temp_file.name)
             
-            # Extract the workspace ID from the output
+            # Parse the output to get the workspace ID
             output_text = output.getvalue()
-            # Assume the last line contains "Successfully imported workspace X (ID: Y)"
             import re
             match = re.search(r'ID: (\d+)', output_text)
+            
             if match:
                 workspace_id = match.group(1)
                 return redirect('notekeeper:workspace_detail', pk=workspace_id)
+            else:
+                # If we can't find the ID, redirect to the workspace list
+                return redirect('notekeeper:workspace_list')
             
-            return redirect('notekeeper:workspace_list')
+        except Exception as e:
+            # If something goes wrong, clean up and show an error
+            if os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+            
+            return render(request, 'notekeeper/import_workspace.html', {
+                'error': f"Import failed: {str(e)}"
+            })
     
+    # Display the import form
     return render(request, 'notekeeper/import_workspace.html')
