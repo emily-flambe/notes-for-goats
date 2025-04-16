@@ -7,7 +7,7 @@
 
 <div class="action-buttons">
     <a href="{% url 'notekeeper:workspace_create' %}" class="btn">New Workspace</a>
-    <a href="{% url 'notekeeper:import_workspace' %}" class="btn btn-import">Import Workspace</a>
+    <a href="{% url 'notekeeper:import_workspace' %}" class="btn" style="background-color: #4299e1;">Import from ZIP</a>
 </div>
 
 {% if workspaces %}
@@ -23,7 +23,8 @@
             <div class="workspace-actions">
                 <a href="{% url 'notekeeper:workspace_detail' pk=workspace.pk %}" class="btn">View</a>
                 <a href="{% url 'notekeeper:workspace_edit' pk=workspace.pk %}" class="btn">Edit</a>
-                <a href="{% url 'notekeeper:export_workspace' pk=workspace.pk %}" class="btn btn-export">Export</a>
+                <a href="{% url 'notekeeper:export_workspace' pk=workspace.pk %}" class="btn" style="background-color: #48bb78;">Export</a>
+                <a href="{% url 'notekeeper:workspace_delete_confirm' pk=workspace.pk %}" class="btn" style="background-color: #e53e3e;">Delete</a>
             </div>
         </div>
     {% endfor %}

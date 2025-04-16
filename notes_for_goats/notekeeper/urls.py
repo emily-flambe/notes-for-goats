@@ -25,4 +25,7 @@ urlpatterns = [
     # Export/Import
     path('workspaces/<int:pk>/export/', views.export_workspace, name='export_workspace'),
     path('workspaces/import/', views.import_workspace_form, name='import_workspace'),
+    
+    # Delete
+    path('workspaces/<int:pk>/delete/', views.workspace_delete_confirm, name='workspace_delete_confirm'),
 ] 

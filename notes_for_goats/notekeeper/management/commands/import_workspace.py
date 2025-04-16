@@ -54,11 +54,11 @@ class Command(BaseCommand):
                     self.stdout.write(f"Attempting to import unknown schema version: {schema_version}")
                     workspace = self._import_v1(temp_dir, options.get('new_name'), workspace_data)
                 
-                self.stdout.write(self.style.SUCCESS(
-                    f'Successfully imported workspace {workspace.name} (ID: {workspace.id})'
-                ))
+                success_message = f'Successfully imported workspace {workspace.name} (ID: {workspace.id})'
+                self.stdout.write(self.style.SUCCESS(success_message))
                 
-                return workspace
+                # Return a string message instead of the workspace object
+                return success_message
     
     def _import_v1(self, temp_dir, new_name, workspace_data):
         """Import using schema version 1.0"""

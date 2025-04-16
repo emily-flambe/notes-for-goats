@@ -1,0 +1,103 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Delete Workspace{% endblock %}
+
+{% block content %}
+<div class="delete-confirm-container">
+    <h1>Delete Workspace: {{ workspace.name }}</h1>
+    
+    <div class="warning-box">
+        <h2>⚠️ Warning</h2>
+        <p>You are about to permanently delete this workspace and all of its contents:</p>
+        <ul>
+            <li><strong>{{ workspace.entities.count }}</strong> entities</li>
+            <li><strong>{{ workspace.journal_entries.count }}</strong> journal entries</li>
+            {% with calendar_events_count=workspace.journal_entries.all|join:','|default:'0'|length %}
+            <li><strong>{{ calendar_events_count }}</strong> calendar events</li>
+            {% endwith %}
+        </ul>
+        <p>This action <strong>cannot be undone</strong>.</p>
+    </div>
+    
+    <div class="action-recommendations">
+        <h3>Before deleting, consider:</h3>
+        <p><a href="{% url 'notekeeper:export_workspace' pk=workspace.id %}" class="btn btn-export">Export this workspace</a> to save a backup copy.</p>
+    </div>
+    
+    <div class="action-buttons">
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-delete">Permanently Delete Workspace</button>
+        </form>
+        <a href="{% url 'notekeeper:workspace_list' %}" class="btn btn-cancel">Cancel</a>
+    </div>
+</div>
+
+<style>
+    .delete-confirm-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .warning-box {
+        background-color: #fff5f5;
+        border: 2px solid #fed7d7;
+        border-radius: 6px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    
+    .warning-box h2 {
+        color: #c53030;
+        margin-top: 0;
+    }
+    
+    .action-recommendations {
+        margin: 20px 0;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+    
+    .btn {
+        padding: 10px 15px;
+        border-radius: 4px;
+        text-decoration: none;
+        display: inline-block;
+        font-weight: bold;
+        cursor: pointer;
+        border: none;
+        font-size: 16px;
+    }
+    
+    .btn-delete {
+        background-color: #e53e3e;
+        color: white;
+    }
+    
+    .btn-delete:hover {
+        background-color: #c53030;
+    }
+    
+    .btn-export {
+        background-color: #48bb78;
+        color: white;
+    }
+    
+    .btn-export:hover {
+        background-color: #38a169;
+    }
+    
+    .btn-cancel {
+        background-color: #a0aec0;
+        color: white;
+    }
+    
+    .btn-cancel:hover {
+        background-color: #718096;
+    }
+</style>
+{% endblock %} 

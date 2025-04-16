@@ -9,6 +9,7 @@ from django.core.management import call_command
 from io import StringIO, BytesIO
 import json
 import zipfile
+from django.contrib import messages
 
 def home(request):
     workspaces = Workspace.objects.all()
@@ -234,3 +235,23 @@ def import_workspace_form(request):
     
     # Display the import form
     return render(request, 'notekeeper/import_workspace.html')
+
+def workspace_delete_confirm(request, pk):
+    """Show confirmation page for workspace deletion"""
+    workspace = get_object_or_404(Workspace, pk=pk)
+    
+    if request.method == 'POST':
+        # Handle form submission - delete the workspace
+        workspace_name = workspace.name  # Save name for confirmation message
+        
+        # Delete the workspace
+        workspace.delete()
+        
+        # Redirect to workspace list with success message
+        messages.success(request, f'Workspace "{workspace_name}" has been deleted.')
+        return redirect('notekeeper:workspace_list')
+    
+    # Display confirmation page
+    return render(request, 'notekeeper/workspace_delete_confirm.html', {
+        'workspace': workspace
+    })
