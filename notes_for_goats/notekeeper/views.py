@@ -1,14 +1,11 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Workspace, Entity, JournalEntry, CalendarEvent, Relationship, RelationshipType
-from .forms import WorkspaceForm, JournalEntryForm, EntityForm, RelationshipTypeForm
+from .forms import WorkspaceForm, JournalEntryForm, EntityForm, RelationshipTypeForm, RelationshipForm
 import os
 import tempfile
-from django.http import HttpResponse, FileResponse
-from django.urls import reverse
+from django.http import HttpResponse, JsonResponse
 from django.core.management import call_command
-from io import StringIO, BytesIO
-import json
-import zipfile
+from io import StringIO
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 
@@ -99,12 +96,34 @@ def entity_list(request, workspace_id):
 def entity_detail(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entity = get_object_or_404(Entity, pk=pk, workspace=workspace)
-    related_entries = entity.journal_entries.all()
     
+    # Get both incoming and outgoing relationships
+    entity_relationships = []
+    
+    # Get outgoing relationships (where this entity is the source)
+    outgoing = Relationship.objects.filter(
+        source_content_type=ContentType.objects.get_for_model(entity),
+        source_object_id=entity.id
+    ).select_related('relationship_type', 'target_content_type')
+    
+    # Get incoming relationships (where this entity is the target)
+    incoming = Relationship.objects.filter(
+        target_content_type=ContentType.objects.get_for_model(entity),
+        target_object_id=entity.id
+    ).select_related('relationship_type', 'source_content_type')
+    
+    # Add outgoing relationships
+    for rel in outgoing:
+        entity_relationships.append((rel, rel.target, True))
+    
+    # Add incoming relationships
+    for rel in incoming:
+        entity_relationships.append((rel, rel.source, False))
+
     return render(request, 'notekeeper/entity_detail.html', {
+        'workspace': workspace,
         'entity': entity,
-        'related_entries': related_entries,
-        'workspace': workspace  # Make sure this is included
+        'entity_relationships': entity_relationships,
     })
 
 def entity_create(request, workspace_id):
@@ -447,22 +466,34 @@ def relationship_list(request, workspace_id):
     })
 
 def relationship_create(request, workspace_id):
-    # This is a placeholder implementation - you'll need to customize it
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     
     if request.method == "POST":
-        # Process form data
-        messages.success(request, 'Relationship created successfully.')
-        return redirect('notekeeper:relationship_list', workspace_id=workspace.id)
-    
-    # Display form
-    relationship_types = RelationshipType.objects.filter(workspace=workspace)
-    entities = workspace.entities.all()
+        form = RelationshipForm(request.POST, workspace=workspace)
+        if form.is_valid():
+            relationship = form.save(commit=False)
+            source = form.cleaned_data['source_entity']
+            target = form.cleaned_data['target_entity']
+            
+            # Set the content type and object IDs
+            relationship.workspace = workspace
+            relationship.source_content_type = ContentType.objects.get_for_model(source)
+            relationship.source_object_id = source.id
+            relationship.target_content_type = ContentType.objects.get_for_model(target)
+            relationship.target_object_id = target.id
+            
+            relationship.save()
+            messages.success(request, 'Relationship created successfully.')
+            return redirect('notekeeper:relationship_list', workspace_id=workspace.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = RelationshipForm(workspace=workspace)
     
     return render(request, 'notekeeper/relationship_form.html', {
         'workspace': workspace,
-        'relationship_types': relationship_types,
-        'entities': entities
+        'form': form,
+        'entities': workspace.entities.all()
     })
 
 def relationship_edit(request, workspace_id, pk):
@@ -489,3 +520,72 @@ def relationship_delete(request, workspace_id, pk):
         'workspace': workspace,
         'relationship': relationship
     })
+def entity_relationships_graph(request, workspace_id, pk):
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    entity = get_object_or_404(Entity, pk=pk, workspace=workspace)
+    
+    # Get relationships data
+    relationships_data = {
+        'nodes': [],
+        'links': []
+    }
+    
+    # Add the central entity
+    relationships_data['nodes'].append({
+        'id': f'e{entity.id}',
+        'name': entity.name,
+        'type': entity.type,
+        'central': True
+    })
+    
+    # Get both outgoing and incoming relationships
+    outgoing = Relationship.objects.filter(
+        source_content_type=ContentType.objects.get_for_model(entity),
+        source_object_id=entity.id
+    ).select_related('relationship_type', 'target_content_type')
+    
+    incoming = Relationship.objects.filter(
+        target_content_type=ContentType.objects.get_for_model(entity),
+        target_object_id=entity.id
+    ).select_related('relationship_type', 'source_content_type')
+    
+    # Add related entities and links
+    for rel in outgoing:
+        if rel.target:
+            node_id = f'e{rel.target_object_id}'
+            relationships_data['nodes'].append({
+                'id': node_id,
+                'name': str(rel.target),
+                'type': getattr(rel.target, 'type', 'unknown'),
+                'central': False
+            })
+            relationships_data['links'].append({
+                'source': f'e{entity.id}',
+                'target': node_id,
+                'type': rel.relationship_type.display_name
+            })
+    
+    for rel in incoming:
+        if rel.source:
+            node_id = f'e{rel.source_object_id}'
+            relationships_data['nodes'].append({
+                'id': node_id,
+                'name': str(rel.source),
+                'type': getattr(rel.source, 'type', 'unknown'),
+                'central': False
+            })
+            relationships_data['links'].append({
+                'source': node_id,
+                'target': f'e{entity.id}',
+                'type': rel.relationship_type.display_name
+            })
+    
+    # Remove duplicate nodes
+    seen = set()
+    relationships_data['nodes'] = [
+        node for node in relationships_data['nodes']
+        if not (node['id'] in seen or seen.add(node['id']))
+    ]
+    
+    return JsonResponse(relationships_data)
+

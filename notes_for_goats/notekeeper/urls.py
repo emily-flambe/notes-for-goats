@@ -40,4 +40,9 @@ urlpatterns = [
     path('workspaces/<int:workspace_id>/relationships/new/', views.relationship_create, name='relationship_create'),
     path('workspaces/<int:workspace_id>/relationships/<int:pk>/edit/', views.relationship_edit, name='relationship_edit'),
     path('workspaces/<int:workspace_id>/relationships/<int:pk>/delete/', views.relationship_delete, name='relationship_delete'),
+
+    # Entity relationships graph
+    path('workspaces/<int:workspace_id>/entities/<int:pk>/graph/', 
+         views.entity_relationships_graph, 
+         name='entity_relationships_graph'),
 ] 
