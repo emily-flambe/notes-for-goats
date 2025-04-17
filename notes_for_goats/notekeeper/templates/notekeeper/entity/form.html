@@ -41,6 +41,21 @@
                 {{ form.type.errors }}
             </div>
             
+            <div class="form-group">
+                <label for="{{ form.tags.id_for_label }}">Tags:</label>
+                {{ form.tags }}
+                {% if form.tags.help_text %}
+                    <small class="form-text text-muted">{{ form.tags.help_text }}</small>
+                {% endif %}
+                {% if form.tags.errors %}
+                    <div class="invalid-feedback" style="display: block;">
+                        {% for error in form.tags.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
             <div>
                 <label for="{{ form.notes.id_for_label }}">Notes:</label>
                 {{ form.notes }}

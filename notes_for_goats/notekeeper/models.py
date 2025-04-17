@@ -38,6 +38,7 @@ class Entity(models.Model):
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    tags = models.CharField(max_length=255, blank=True, default="")
     
     def __str__(self):
         return self.name
@@ -45,6 +46,31 @@ class Entity(models.Model):
     def get_type_display(self):
         """Return the display name for the entity type"""
         return dict(self.ENTITY_TYPES).get(self.type, self.type)
+    
+    def get_tag_list(self):
+        """Return tags as a list, regardless of how they're stored"""
+        if not self.tags:
+            return []
+            
+        # If tags is already a list
+        if isinstance(self.tags, list):
+            return self.tags
+            
+        # If tags is a string
+        if isinstance(self.tags, str):
+            # Check if it looks like JSON
+            if self.tags.startswith('[') and self.tags.endswith(']'):
+                try:
+                    import json
+                    return json.loads(self.tags)
+                except json.JSONDecodeError:
+                    pass
+                    
+            # Otherwise split by comma
+            return [tag.strip() for tag in self.tags.split(',') if tag.strip()]
+            
+        # Default fallback
+        return []
     
     class Meta:
         verbose_name_plural = "Entities"
@@ -68,20 +94,50 @@ class JournalEntry(models.Model):
     def save(self, *args, **kwargs):
         """
         Override save to extract entity references from content.
-        Looks for #TagSyntax in the content.
+        Looks for #HashTags in the content and matches with entity tags or names.
         """
+        # First save the entry normally to ensure it exists in the database
         super().save(*args, **kwargs)
         
-        # Extract hashtags from content
-        tags = re.findall(r'#(\w+)', self.content)
+        # Extract hashtags from content (words prefixed with #)
+        hashtags = re.findall(r'#(\w+)', self.content)
+        # Convert to lowercase for case-insensitive matching
+        lower_hashtags = [tag.lower() for tag in hashtags]
         
-        # Clear existing references
+        if not lower_hashtags:
+            # No hashtags found, clear references and return early
+            self.referenced_entities.clear()
+            return
+        
+        # Clear existing references to rebuild them
         self.referenced_entities.clear()
         
-        # Add references to entities that match tags
-        for tag in tags:
-            entities = Entity.objects.filter(name__iexact=tag)
-            self.referenced_entities.add(*entities)
+        # Get all entities from this workspace
+        from .models import Entity  # Import here to avoid circular imports
+        workspace_entities = Entity.objects.filter(workspace=self.workspace)
+        
+        # Entities to add to referenced_entities
+        entities_to_add = []
+        
+        for entity in workspace_entities:
+            # Check if entity name matches any hashtag (case-insensitive)
+            if entity.name.lower() in lower_hashtags:
+                entities_to_add.append(entity)
+                continue
+            
+            # Check if any entity tag matches any hashtag
+            entity_tags = entity.get_tag_list()
+            
+            # Convert tags to lowercase for case-insensitive matching
+            entity_tags_lower = [tag.lower() for tag in entity_tags]
+            
+            # If any tag matches a hashtag, add the entity
+            if any(tag in lower_hashtags for tag in entity_tags_lower):
+                entities_to_add.append(entity)
+        
+        # Add all matching entities to referenced_entities
+        if entities_to_add:
+            self.referenced_entities.add(*entities_to_add)
     
     class Meta:
         verbose_name_plural = "Journal Entries"

@@ -35,35 +35,112 @@
             <div class="form-group">
                 <label for="{{ form.content.id_for_label }}">Content</label>
                 {{ form.content }}
+                <div class="form-text">
+                    Use hashtags (e.g., #ProjectName, #PersonName) to automatically link to entities.
+                    Tags defined for entities will also work (e.g., #me can link to an entity named "Emily").
+                </div>
                 {% if form.content.errors %}
                     <div class="error">{{ form.content.errors }}</div>
                 {% endif %}
             </div>
             
+            <!-- Start of Related Entities section -->
             <div class="form-group">
-                <label for="{{ form.entities.id_for_label }}">Related Entities</label>
-                {{ form.entities }}
-                <div class="form-text">Select entities related to this journal entry</div>
-                {% if form.entities.errors %}
-                    <div class="error">{{ form.entities.errors }}</div>
+                <label>Related Entities</label>
+                <div class="entity-preview">
+                    {% if entry and entry.referenced_entities.exists %}
+                        <div class="entity-list">
+                            {% for entity in entry.referenced_entities.all %}
+                                <div class="entity-tag">
+                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}">
+                                        {{ entity.name }}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">
+                            No entities referenced yet. Add hashtags in your content to reference entities.
+                            References will be detected when you save the entry.
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <!-- Preview of hashtags in content -->
+                {% if hashtags %}
+                    <div class="detected-hashtags">
+                        <label>Detected Hashtags:</label>
+                        {% for tag in hashtags %}
+                            <span class="tag-badge">#{{ tag }}</span>
+                        {% endfor %}
+                    </div>
                 {% endif %}
             </div>
+            <!-- End of Related Entities section -->
             
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Save</button>
-                
-                {% comment %}Use a more robust way to handle the Cancel button URL{% endcomment %}
-                {% if request.GET.next %}
-                    <a href="{{ request.GET.next }}" class="btn">Cancel</a>
-                {% elif workspace_id %}
-                    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace_id %}" class="btn">Cancel</a>
-                {% elif entry.workspace.id %}
-                    <a href="{% url 'notekeeper:journal_list' workspace_id=entry.workspace.id %}" class="btn">Cancel</a>
+                <button type="submit" class="btn">Save</button>
+                {% if entry %}
+                    <a href="{% url 'notekeeper:journal_detail' workspace_id=workspace.id pk=entry.id %}" class="btn">Cancel</a>
                 {% else %}
-                    <a href="javascript:history.back()" class="btn">Cancel</a>
+                    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Back to Journal</a>
                 {% endif %}
             </div>
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .entity-preview {
+        margin-top: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .entity-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .entity-tag {
+        display: inline-block;
+        padding: 4px 10px;
+        background-color: #e2e8f0;
+        border-radius: 16px;
+        font-size: 0.9em;
+        color: #4a5568;
+    }
+    
+    .detected-hashtags {
+        margin-top: 15px;
+    }
+    
+    .tag-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: #edf2f7;
+        border-radius: 12px;
+        font-size: 0.85em;
+        color: #4a5568;
+        margin-right: 5px;
+    }
+    
+    .text-muted {
+        color: #718096;
+        font-style: italic;
+    }
+    
+    .entity-tag a {
+        text-decoration: none;
+        color: #4a5568;
+        font-weight: 500;
+    }
+    
+    .entity-tag a:hover {
+        text-decoration: underline;
+        color: #2d3748;
+    }
+</style>
 {% endblock %} 

@@ -13,16 +13,27 @@
             {{ entry.content|linebreaks }}
         </div>
         
-        {% if entry.entities.all %}
+        {% if entry.referenced_entities.all %}
             <div class="journal-entities">
-                <strong>Related Entities:</strong>
+                <strong>Referenced Entities:</strong>
                 <div class="entity-list">
-                    {% for entity in entry.entities.all %}
+                    {% for entity in entry.referenced_entities.all %}
                         <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="entity-tag">
                             {{ entity.name }}
+                            {% if entity.get_tag_list %}
+                            {% endif %}
                         </a>
                     {% endfor %}
                 </div>
+            </div>
+        {% endif %}
+        
+        {% if hashtags %}
+            <div class="hashtags">
+                <strong>Hashtags:</strong>
+                {% for tag in hashtags %}
+                    <span class="tag-badge">#{{ tag }}</span>
+                {% endfor %}
             </div>
         {% endif %}
     </div>

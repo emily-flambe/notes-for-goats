@@ -1,5 +1,6 @@
 {% extends "notekeeper/base.html" %}
 {% load static %}
+{% load notekeeper_filters %}
 
 {% block title %}{{ entity.name }} - {{ workspace.name }}{% endblock %}
 
@@ -93,6 +94,17 @@
         </div>
     </div>
 
+    {% if entity.tags %}
+        <div class="entity-tags-section card">
+            <h3>Tags</h3>
+            <div class="entity-tags">
+                {% for tag in entity.get_tag_list %}
+                    <span class="tag-badge">#{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
     <div class="actions">
         <a href="{% url 'notekeeper:entity_edit' workspace_id=workspace.id pk=entity.pk %}" class="btn">Edit</a>
         <a href="{% url 'notekeeper:entity_list' workspace_id=workspace.id %}" class="btn">Back to Entities</a>
@@ -140,6 +152,26 @@
     
     td.actions {
         white-space: nowrap;
+    }
+    
+    .entity-tags-section {
+        margin-top: 20px;
+    }
+    
+    .entity-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    
+    .tag-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        background-color: #e2e8f0;
+        border-radius: 16px;
+        font-size: 0.9em;
+        color: #4a5568;
     }
 </style>
 {% endblock %} 
