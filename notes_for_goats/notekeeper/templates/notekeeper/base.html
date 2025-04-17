@@ -335,5 +335,9 @@
             }
         });
     </script>
+
+    <!-- Move scripts to the end of body for better loading -->
+    <script src="{% static 'notekeeper/js/table-sorter.js' %}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html> 

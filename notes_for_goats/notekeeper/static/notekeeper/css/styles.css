@@ -370,4 +370,52 @@ textarea {
     .header-actions, .actions {
         flex-direction: column;
     }
+}
+
+/* Entity-specific styles */
+.entity-type-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background-color: #edf2f7;
+    color: #4a5568;
+    margin-left: 8px;
+}
+
+/* Filter controls */
+.filter-section {
+    margin-bottom: 20px;
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 200px;
+}
+
+/* Sortable tables */
+th.sortable {
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+.sort-icon {
+    font-size: 0.8em;
+    margin-left: 5px;
+    color: #aaa;
+}
+
+th.sorted-asc .sort-icon,
+th.sorted-desc .sort-icon {
+    color: #333;
 } 
