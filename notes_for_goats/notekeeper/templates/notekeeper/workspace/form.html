@@ -22,4 +22,10 @@
     <button type="submit" class="btn">Save</button>
     <a href="{% url 'notekeeper:workspace_list' %}" class="btn">Cancel</a>
 </form>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* This template is already simple and uses the global styles */
+</style>
 {% endblock %} 

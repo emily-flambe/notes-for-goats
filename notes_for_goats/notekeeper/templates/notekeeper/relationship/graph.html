@@ -151,6 +151,65 @@
         pointer-events: none;
         fill: #666;
     }
+    
+    /* D3.js specific styles */
+    .node {
+        cursor: pointer;
+    }
+    
+    .node text {
+        font-size: 12px;
+        text-anchor: middle;
+        pointer-events: none;
+    }
+    
+    .link {
+        stroke-opacity: 0.6;
+        stroke-width: 2px;
+    }
+    
+    /* Specific tooltip styling */
+    .tooltip {
+        position: absolute;
+        padding: 10px;
+        background-color: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        pointer-events: none;
+        z-index: 100;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    
+    .zoom-controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 4px;
+        padding: 5px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    
+    .zoom-btn {
+        background-color: white;
+        border: 1px solid #ccc;
+        width: 30px;
+        height: 30px;
+        margin: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-weight: bold;
+        border-radius: 3px;
+    }
+    
+    .zoom-btn:hover {
+        background-color: #f0f0f0;
+    }
 </style>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
