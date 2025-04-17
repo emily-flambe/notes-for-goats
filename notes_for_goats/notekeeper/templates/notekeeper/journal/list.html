@@ -1,0 +1,114 @@
+{% extends "notekeeper/base.html" %}
+{% load static %}
+
+{% block title %}Journal - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Journal Entries</h1>
+        <div class="header-actions">
+            <a href="{% url 'notekeeper:journal_create' workspace_id=workspace.id %}" class="btn btn-primary">New Entry</a>
+            <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">Back to Workspace</a>
+        </div>
+    </div>
+    
+    <div class="subtitle">
+        Record and track important events, meetings, and notes about your projects.
+    </div>
+    
+    {% if entries %}
+        <div class="card">
+            <div class="filter-section">
+                <form method="get" class="filter-controls">
+                    <div class="filter-group">
+                        <label for="entity_filter">Filter by Entity:</label>
+                        <select id="entity_filter" name="entity">
+                            <option value="">All Entries</option>
+                            {% for entity in entities %}
+                                <option value="{{ entity.id }}" {% if entity.id|stringformat:"s" == request.GET.entity %}selected{% endif %}>
+                                    {{ entity.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="search">Search:</label>
+                        <input type="text" id="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search entries...">
+                    </div>
+                    <div class="filter-buttons">
+                        <button type="submit" class="btn">Apply Filters</button>
+                        <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Clear</a>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="journal-entries">
+                {% for entry in entries %}
+                    <div class="journal-entry">
+                        <div class="journal-header">
+                            <div>
+                                <h3 class="journal-title">
+                                    <a href="{% url 'notekeeper:journal_detail' workspace_id=workspace.id pk=entry.id %}">
+                                        {{ entry.title }}
+                                    </a>
+                                </h3>
+                                <div class="journal-date">{{ entry.timestamp|date:"F j, Y - g:i A" }}</div>
+                            </div>
+                            <div class="actions">
+                                <a href="{% url 'notekeeper:journal_edit' workspace_id=workspace.id pk=entry.id %}" class="btn btn-sm">Edit</a>
+                            </div>
+                        </div>
+                        
+                        <div class="journal-content">
+                            {{ entry.content|linebreaks|truncatewords:50 }}
+                        </div>
+                        
+                        {% if entry.entities.all %}
+                            <div class="journal-entities">
+                                <strong>Related Entities:</strong>
+                                <div class="entity-list">
+                                    {% for entity in entry.entities.all %}
+                                        <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="entity-tag">
+                                            {{ entity.name }}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>No journal entries yet.</p>
+            <p>Journal entries help you record important events, meetings, and updates.</p>
+            <a href="{% url 'notekeeper:journal_create' workspace_id=workspace.id %}" class="btn btn-primary">Create Your First Entry</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Only add styles for the filter buttons */
+    .filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 15px;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+        padding-left: 15px;
+    }
+</style>
+{% endblock %} 

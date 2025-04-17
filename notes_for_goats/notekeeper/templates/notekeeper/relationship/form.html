@@ -203,4 +203,41 @@ document.addEventListener('DOMContentLoaded', function() {
     targetIdSelect.addEventListener('change', updateSourceOptions);
 });
 </script>
+
+{% block extra_css %}
+<style>
+    /* Specific form styling for relationship form */
+    .entity-selection-inputs {
+        display: flex;
+        gap: 20px;
+    }
+    
+    .entity-selection-section {
+        flex: 1;
+    }
+    
+    .relationship-direction-section {
+        text-align: center;
+        padding: 20px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .direction-arrow {
+        font-size: 1.5rem;
+        margin: 0 5px;
+    }
+    
+    .checkbox-group {
+        margin-bottom: 0.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .entity-selection-inputs {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
 {% endblock %} 

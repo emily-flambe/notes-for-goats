@@ -1,0 +1,77 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}{{ entry.title }} - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ entry.title }}</h1>
+    
+    <div class="card">
+        <div class="journal-date">{{ entry.timestamp|date:"F j, Y - g:i A" }}</div>
+        
+        <div class="journal-content">
+            {{ entry.content|linebreaks }}
+        </div>
+        
+        {% if entry.entities.all %}
+            <div class="journal-entities">
+                <strong>Related Entities:</strong>
+                <div class="entity-list">
+                    {% for entity in entry.entities.all %}
+                        <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="entity-tag">
+                            {{ entity.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="actions">
+        <a href="{% url 'notekeeper:journal_edit' workspace_id=workspace.id pk=entry.id %}" class="btn">Edit</a>
+        <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Back to Journal</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .journal-date {
+        color: #718096;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+    }
+    
+    .journal-content {
+        margin-bottom: 1.5rem;
+    }
+    
+    .journal-entities {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .entity-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 0.5rem;
+    }
+    
+    .entity-tag {
+        background-color: #edf2f7;
+        color: #4a5568;
+        padding: 4px 10px;
+        border-radius: 16px;
+        font-size: 0.875rem;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .entity-tag:hover {
+        background-color: #e2e8f0;
+        color: #2d3748;
+    }
+</style>
+{% endblock %} 

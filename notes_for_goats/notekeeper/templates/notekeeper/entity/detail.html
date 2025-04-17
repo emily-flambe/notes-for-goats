@@ -1,0 +1,145 @@
+{% extends "notekeeper/base.html" %}
+{% load static %}
+
+{% block title %}{{ entity.name }} - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ entity.name }} <small class="subtitle">({{ entity.get_type_display }})</small></h1>
+
+    <div class="card">
+        <h2>Notes</h2>
+        {% if entity.notes %}
+            {{ entity.notes|linebreaks }}
+        {% else %}
+            <p>No notes for this entity.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Related Journal Entries</h2>
+        {% if related_entries %}
+            <ul class="entry-list">
+            {% for entry in related_entries %}
+                <li>
+                    <a href="{% url 'notekeeper:journal_detail' workspace_id=workspace.id pk=entry.pk %}">
+                        <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
+                    </a>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No related journal entries.</p>
+        {% endif %}
+    </div>
+
+    <div class="card relationships-section">
+        <h3>Relationships</h3>
+        
+        {% if entity_relationships %}
+            <div class="relationships-list">
+                <table class="table" id="relationships-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-column="type">Type <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-column="entity">Related Entity <span class="sort-icon">↕</span></th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rel, related_entity, is_source in entity_relationships %}
+                            <tr>
+                                <td data-sort-value="{{ rel.relationship_type.display_name|lower }}">
+                                    {% if is_source %}
+                                        {{ rel.relationship_type.display_name }}
+                                    {% else %}
+                                        {% if rel.relationship_type.inverse_name %}
+                                            {{ rel.relationship_type.inverse_name }}
+                                        {% else %}
+                                            {{ rel.relationship_type.display_name }}
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td data-sort-value="{{ related_entity.name|lower }}">
+                                    {% if related_entity.id %}
+                                        <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=related_entity.id %}">
+                                            {{ related_entity.name }}
+                                        </a>
+                                        <span class="entity-type-badge">{{ related_entity.get_type_display }}</span>
+                                    {% else %}
+                                        {{ related_entity }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ rel.notes|truncatechars:50|default:"-" }}</td>
+                                <td class="actions">
+                                    <a href="{% url 'notekeeper:relationship_edit' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm">Edit</a>
+                                    <a href="{% url 'notekeeper:relationship_delete' workspace_id=workspace.id pk=rel.id %}?from_entity={{ entity.id }}" class="btn btn-sm btn-danger">Delete</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="no-relationships">No relationships defined for this entity.</p>
+        {% endif %}
+        
+        <div class="relationship-actions">
+            <a href="{% url 'notekeeper:relationship_create' workspace_id=workspace.id %}?source_type=entity&source_id={{ entity.id }}" class="btn btn-sm">Add Relationship</a>
+            {% if entity_relationships %}
+                <a href="{% url 'notekeeper:entity_relationships_graph' workspace_id=workspace.id pk=entity.id %}" class="btn btn-sm">View Relationship Graph</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="actions">
+        <a href="{% url 'notekeeper:entity_edit' workspace_id=workspace.id pk=entity.pk %}" class="btn">Edit</a>
+        <a href="{% url 'notekeeper:entity_list' workspace_id=workspace.id %}" class="btn">Back to Entities</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'notekeeper/js/table-sorter.js' %}"></script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .relationships-section {
+        margin-top: 20px;
+    }
+    
+    .relationships-list {
+        margin-top: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .no-relationships {
+        color: #718096;
+        font-style: italic;
+    }
+    
+    .relationship-actions {
+        margin-top: 15px;
+    }
+    
+    .entry-list {
+        list-style: none;
+        padding-left: 0;
+    }
+    
+    .entry-list li {
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .entry-list li:last-child {
+        border-bottom: none;
+    }
+    
+    td.actions {
+        white-space: nowrap;
+    }
+</style>
+{% endblock %} 

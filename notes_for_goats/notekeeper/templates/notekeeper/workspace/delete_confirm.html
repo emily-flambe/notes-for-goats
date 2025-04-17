@@ -100,4 +100,25 @@
         background-color: #718096;
     }
 </style>
+
+{% block extra_css %}
+<style>
+    /* Only template-specific styles */
+    .workspace-summary {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #f8fafc;
+        border-radius: 8px;
+    }
+    
+    .workspace-summary p {
+        margin: 5px 0;
+    }
+    
+    .delete-warning {
+        color: #e53e3e;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
 {% endblock %} 

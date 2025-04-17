@@ -38,7 +38,7 @@ def journal_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entries = workspace.journal_entries.all().order_by('-timestamp')
     
-    return render(request, 'notekeeper/journal_list.html', {
+    return render(request, 'notekeeper/journal/list.html', {
         'entries': entries,
         'workspace': workspace
     })
@@ -47,7 +47,7 @@ def journal_detail(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entry = get_object_or_404(JournalEntry, pk=pk, workspace=workspace)
     
-    return render(request, 'notekeeper/journal_detail.html', {
+    return render(request, 'notekeeper/journal/detail.html', {
         'entry': entry,
         'workspace': workspace  # Make sure this is included
     })
@@ -63,7 +63,7 @@ def journal_create(request, workspace_id):
             return redirect('notekeeper:journal_detail', workspace_id=workspace.pk, pk=entry.pk)
     else:
         form = JournalEntryForm()
-    return render(request, 'notekeeper/journal_form.html', {'form': form, 'workspace': workspace})
+    return render(request, 'notekeeper/journal/form.html', {'form': form, 'workspace': workspace})
 
 def journal_edit(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
@@ -75,7 +75,7 @@ def journal_edit(request, workspace_id, pk):
             return redirect('notekeeper:journal_detail', workspace_id=workspace.pk, pk=entry.pk)
     else:
         form = JournalEntryForm(instance=entry)
-    return render(request, 'notekeeper/journal_form.html', {'form': form})
+    return render(request, 'notekeeper/journal/form.html', {'form': form})
 
 def entity_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
@@ -93,7 +93,7 @@ def entity_list(request, workspace_id):
         'entities': workspace.entities.all(),  # Keep for backward compatibility
     }
     
-    return render(request, 'notekeeper/entity_list.html', context)
+    return render(request, 'notekeeper/entity/list.html', context)
 
 def entity_detail(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
@@ -122,7 +122,7 @@ def entity_detail(request, workspace_id, pk):
     for rel in incoming:
         entity_relationships.append((rel, rel.source, False))
 
-    return render(request, 'notekeeper/entity_detail.html', {
+    return render(request, 'notekeeper/entity/detail.html', {
         'workspace': workspace,
         'entity': entity,
         'entity_relationships': entity_relationships,
@@ -147,7 +147,7 @@ def entity_create(request, workspace_id):
     else:
         form = EntityForm(initial=initial_data)
     
-    return render(request, 'notekeeper/entity_form.html', {
+    return render(request, 'notekeeper/entity/form.html', {
         'form': form,
         'workspace': workspace,
         'entity_type': entity_type  # Pass this to template for custom headings
@@ -165,7 +165,7 @@ def entity_edit(request, workspace_id, pk):
     else:
         form = EntityForm(instance=entity)
     
-    return render(request, 'notekeeper/entity_form.html', {
+    return render(request, 'notekeeper/entity/form.html', {
         'form': form,
         'workspace': workspace,  # Pass the workspace to the template
         'entity': entity  # Pass the entity to the template
@@ -173,7 +173,7 @@ def entity_edit(request, workspace_id, pk):
 
 def workspace_list(request):
     workspaces = Workspace.objects.all()
-    return render(request, 'notekeeper/workspace_list.html', {'workspaces': workspaces})
+    return render(request, 'notekeeper/workspace/list.html', {'workspaces': workspaces})
 
 def workspace_detail(request, pk):
     workspace = get_object_or_404(Workspace, pk=pk)
@@ -192,7 +192,7 @@ def workspace_detail(request, pk):
         'recent_relationships': workspace.relationships.select_related('relationship_type').order_by('-created_at')[:5],
         'relationship_types': workspace.relationship_types.all(),
     }
-    return render(request, 'notekeeper/workspace_detail.html', context)
+    return render(request, 'notekeeper/workspace/detail.html', context)
 
 def workspace_create(request):
     if request.method == "POST":
@@ -202,7 +202,7 @@ def workspace_create(request):
             return redirect('notekeeper:workspace_detail', pk=workspace.pk)
     else:
         form = WorkspaceForm()
-    return render(request, 'notekeeper/workspace_form.html', {'form': form})
+    return render(request, 'notekeeper/workspace/form.html', {'form': form})
 
 def workspace_edit(request, pk):
     workspace = get_object_or_404(Workspace, pk=pk)
@@ -213,7 +213,7 @@ def workspace_edit(request, pk):
             return redirect('notekeeper:workspace_detail', pk=workspace.pk)
     else:
         form = WorkspaceForm(instance=workspace)
-    return render(request, 'notekeeper/workspace_form.html', {'form': form})
+    return render(request, 'notekeeper/workspace/form.html', {'form': form})
 
 def export_workspace(request, pk):
     """Export a workspace to a ZIP file for download"""
@@ -278,12 +278,12 @@ def import_workspace_form(request):
             if os.path.exists(temp_file.name):
                 os.unlink(temp_file.name)
             
-            return render(request, 'notekeeper/import_workspace.html', {
+            return render(request, 'notekeeper/workspace/import.html', {
                 'error': f"Import failed: {str(e)}"
             })
     
     # Display the import form
-    return render(request, 'notekeeper/import_workspace.html')
+    return render(request, 'notekeeper/workspace/import.html')
 
 def workspace_delete_confirm(request, pk):
     """Show confirmation page for workspace deletion"""
@@ -301,7 +301,7 @@ def workspace_delete_confirm(request, pk):
         return redirect('notekeeper:workspace_list')
     
     # Display confirmation page
-    return render(request, 'notekeeper/workspace_delete_confirm.html', {
+    return render(request, 'notekeeper/workspace/delete_confirm.html', {
         'workspace': workspace
     })
 
@@ -344,7 +344,7 @@ def create_relationship(request, workspace_id):
     entities = workspace.entities.all()
     # Get other entity types as needed
     
-    return render(request, 'notekeeper/relationship_form.html', {
+    return render(request, 'notekeeper/relationship/form.html', {
         'workspace': workspace,
         'entities': entities,
         'relationship_types': Relationship.RELATIONSHIP_TYPES
@@ -354,7 +354,7 @@ def relationship_type_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     relationship_types = workspace.relationship_types.all().order_by('display_name')
     
-    return render(request, 'notekeeper/relationship_type_list.html', {
+    return render(request, 'notekeeper/relationship_type/list.html', {
         'workspace': workspace,
         'relationship_types': relationship_types,
     })
@@ -373,7 +373,7 @@ def relationship_type_create(request, workspace_id):
     else:
         form = RelationshipTypeForm()
         
-    return render(request, 'notekeeper/relationship_type_form.html', {
+    return render(request, 'notekeeper/relationship_type/form.html', {
         'form': form,
         'workspace': workspace
     })
@@ -391,7 +391,7 @@ def relationship_type_edit(request, workspace_id, pk):
     else:
         form = RelationshipTypeForm(instance=relationship_type)
         
-    return render(request, 'notekeeper/relationship_type_form.html', {
+    return render(request, 'notekeeper/relationship_type/form.html', {
         'form': form,
         'workspace': workspace,
         'relationship_type': relationship_type
@@ -410,7 +410,7 @@ def relationship_type_delete(request, workspace_id, pk):
     # Count relationships using this type for the confirmation page
     relationships_count = Relationship.objects.filter(relationship_type=relationship_type).count()
     
-    return render(request, 'notekeeper/relationship_type_delete.html', {
+    return render(request, 'notekeeper/relationship_type/delete.html', {
         'workspace': workspace,
         'relationship_type': relationship_type,
         'relationships_count': relationships_count
@@ -477,7 +477,7 @@ def relationship_list(request, workspace_id):
     # Order by creation date (newest first)
     relationships = relationships.order_by('-created_at')
     
-    return render(request, 'notekeeper/relationship_list.html', {
+    return render(request, 'notekeeper/relationship/list.html', {
         'workspace': workspace,
         'relationships': relationships,
         'all_entities': all_entities,
@@ -517,7 +517,7 @@ def relationship_create(request, workspace_id):
     else:
         form = RelationshipForm(workspace=workspace)
     
-    return render(request, 'notekeeper/relationship_form.html', {
+    return render(request, 'notekeeper/relationship/form.html', {
         'workspace': workspace,
         'form': form,
         'entities': workspace.entities.all()
@@ -567,7 +567,7 @@ def relationship_edit(request, workspace_id, pk):
         }
         form = RelationshipForm(instance=relationship, initial=initial_data, workspace=workspace)
     
-    return render(request, 'notekeeper/relationship_form.html', {
+    return render(request, 'notekeeper/relationship/form.html', {
         'workspace': workspace,
         'form': form,
         'relationship': relationship
@@ -607,7 +607,7 @@ def relationship_delete(request, workspace_id, pk):
         else:
             return redirect('notekeeper:relationship_list', workspace_id=workspace_id)
     
-    return render(request, 'notekeeper/relationship_delete.html', {
+    return render(request, 'notekeeper/relationship/delete.html', {
         'workspace': workspace,
         'relationship': relationship,
         'from_entity': from_entity
@@ -686,7 +686,7 @@ def inference_rule_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     rules = workspace.inference_rules.all()
     
-    return render(request, 'notekeeper/inference_rule_list.html', {
+    return render(request, 'notekeeper/inference_rule/list.html', {
         'workspace': workspace,
         'rules': rules
     })
@@ -712,7 +712,7 @@ def inference_rule_create(request, workspace_id):
     else:
         form = RelationshipInferenceRuleForm(workspace=workspace)
     
-    return render(request, 'notekeeper/inference_rule_form.html', {
+    return render(request, 'notekeeper/inference_rule/form.html', {
         'workspace': workspace,
         'form': form
     })
@@ -737,7 +737,7 @@ def inference_rule_edit(request, workspace_id, pk):
     else:
         form = RelationshipInferenceRuleForm(instance=rule, workspace=workspace)
     
-    return render(request, 'notekeeper/inference_rule_form.html', {
+    return render(request, 'notekeeper/inference_rule/form.html', {
         'workspace': workspace,
         'form': form,
         'rule': rule
@@ -768,7 +768,7 @@ def inference_rule_delete(request, workspace_id, pk):
         messages.success(request, "Inference rule deleted successfully.")
         return redirect('notekeeper:inference_rule_list', workspace_id=workspace_id)
     
-    return render(request, 'notekeeper/inference_rule_delete.html', {
+    return render(request, 'notekeeper/inference_rule/delete.html', {
         'workspace': workspace,
         'rule': rule,
         'auto_inferred_count': auto_inferred_count
