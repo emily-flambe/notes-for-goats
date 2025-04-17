@@ -1,0 +1,386 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Relationship Graph - {{ entity.name }} - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Relationship Graph for {{ entity.name }}</h1>
+    
+    <div class="graph-actions">
+        <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="btn">
+            Back to {{ entity.name }}
+        </a>
+        <div class="graph-controls">
+            <label for="depth-slider">Depth: <span id="depth-value">1</span></label>
+            <input type="range" id="depth-slider" min="1" max="3" value="1">
+            
+            <button id="btn-zoom-in" class="btn btn-sm">Zoom In</button>
+            <button id="btn-zoom-out" class="btn btn-sm">Zoom Out</button>
+            <button id="btn-reset" class="btn btn-sm">Reset</button>
+        </div>
+    </div>
+    
+    <div class="card graph-container">
+        <div id="loading-indicator">Loading graph...</div>
+        <div id="relationship-graph"></div>
+        <div id="graph-legend">
+            <h4>Legend</h4>
+            <div class="legend-item">
+                <span class="node-dot person"></span> Person
+            </div>
+            <div class="legend-item">
+                <span class="node-dot project"></span> Project
+            </div>
+            <div class="legend-item">
+                <span class="node-dot team"></span> Team
+            </div>
+            <div class="legend-item">
+                <span class="node-dot current"></span> Current Entity
+            </div>
+        </div>
+    </div>
+    
+    <div id="node-details" class="card" style="display: none;">
+        <h4 id="detail-title">Entity Details</h4>
+        <div id="detail-content"></div>
+        <div class="detail-actions">
+            <a href="#" id="detail-link" class="btn btn-sm">View Details</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .graph-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 20px 0;
+    }
+    .graph-controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
+    .graph-container {
+        position: relative;
+        height: 600px;
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    #relationship-graph {
+        width: 100%;
+        height: 100%;
+    }
+    #loading-indicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 10px 20px;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+        z-index: 100;
+    }
+    #graph-legend {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+    }
+    #graph-legend h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 1rem;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+    .node-dot {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    .node-dot.person {
+        background-color: #4299e1;
+    }
+    .node-dot.project {
+        background-color: #ed8936;
+    }
+    .node-dot.team {
+        background-color: #48bb78;
+    }
+    .node-dot.current {
+        background-color: #805ad5;
+        border: 2px solid #000;
+    }
+    #node-details {
+        padding: 15px;
+        margin-top: 20px;
+    }
+    #detail-title {
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    .detail-actions {
+        margin-top: 15px;
+    }
+    
+    /* D3.js Styling */
+    .links line {
+        stroke: #999;
+        stroke-opacity: 0.6;
+    }
+    .nodes circle {
+        stroke: #fff;
+        stroke-width: 1.5px;
+    }
+    .node-label {
+        font-size: 12px;
+        pointer-events: none;
+    }
+    .relationship-label {
+        font-size: 10px;
+        pointer-events: none;
+        fill: #666;
+    }
+</style>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const entityId = JSON.parse(document.getElementById('entity-id').textContent);
+        const workspaceId = JSON.parse(document.getElementById('workspace-id').textContent);
+        let depthLimit = 1;
+        
+        // Graph visualization state
+        let svg, simulation, linkGroup, nodeGroup, zoom;
+        let nodes = [], links = [];
+        
+        // Initialize the visualization
+        initGraph();
+        loadGraphData();
+        
+        // Event listeners for controls
+        document.getElementById('depth-slider').addEventListener('input', function() {
+            depthLimit = parseInt(this.value);
+            document.getElementById('depth-value').textContent = depthLimit;
+            loadGraphData();
+        });
+        
+        document.getElementById('btn-zoom-in').addEventListener('click', function() {
+            svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+        });
+        
+        document.getElementById('btn-zoom-out').addEventListener('click', function() {
+            svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+        });
+        
+        document.getElementById('btn-reset').addEventListener('click', function() {
+            svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+        });
+        
+        function initGraph() {
+            const width = document.getElementById('relationship-graph').clientWidth;
+            const height = document.getElementById('relationship-graph').clientHeight;
+            
+            // Clear previous graph
+            d3.select('#relationship-graph').selectAll('*').remove();
+            
+            // Create SVG
+            svg = d3.select('#relationship-graph')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .attr('viewBox', [0, 0, width, height]);
+            
+            // Add zoom behavior
+            zoom = d3.zoom()
+                .scaleExtent([0.1, 5])
+                .on('zoom', (event) => {
+                    container.attr('transform', event.transform);
+                });
+            
+            svg.call(zoom);
+            
+            // Create container for zooming
+            const container = svg.append('g')
+                .attr('class', 'container');
+            
+            // Create groups for links and nodes
+            linkGroup = container.append('g').attr('class', 'links');
+            nodeGroup = container.append('g').attr('class', 'nodes');
+            
+            // Define the simulation
+            simulation = d3.forceSimulation()
+                .force('link', d3.forceLink().id(d => d.id).distance(150))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(60));
+        }
+        
+        function loadGraphData() {
+            // Show loading indicator
+            document.getElementById('loading-indicator').style.display = 'block';
+            
+            // Fetch graph data from the server
+            fetch(`/api/relationships/graph/${workspaceId}/${entityId}/?depth=${depthLimit}`)
+                .then(response => response.json())
+                .then(data => {
+                    nodes = data.nodes;
+                    links = data.links;
+                    updateGraph();
+                    document.getElementById('loading-indicator').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error loading graph data:', error);
+                    document.getElementById('loading-indicator').textContent = 'Error loading graph data';
+                });
+        }
+        
+        function updateGraph() {
+            // Create links
+            const link = linkGroup.selectAll('line')
+                .data(links, d => `${d.source}-${d.target}-${d.type}`);
+            
+            link.exit().remove();
+            
+            const linkEnter = link.enter().append('line')
+                .attr('stroke-width', 2)
+                .attr('stroke', '#999');
+            
+            // Create link labels
+            const linkLabels = linkGroup.selectAll('text')
+                .data(links, d => `${d.source}-${d.target}-${d.type}`);
+            
+            linkLabels.exit().remove();
+            
+            const linkLabelsEnter = linkLabels.enter().append('text')
+                .attr('class', 'relationship-label')
+                .text(d => d.label)
+                .attr('text-anchor', 'middle')
+                .attr('dy', -5);
+            
+            // Create nodes
+            const node = nodeGroup.selectAll('g.node')
+                .data(nodes, d => d.id);
+            
+            node.exit().remove();
+            
+            const nodeEnter = node.enter().append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended))
+                .on('click', showNodeDetails);
+            
+            nodeEnter.append('circle')
+                .attr('r', d => d.id === entityId.toString() ? 12 : 8)
+                .attr('fill', d => {
+                    if (d.id === entityId.toString()) return '#805ad5';
+                    switch(d.entity_type) {
+                        case 'PERSON': return '#4299e1';
+                        case 'PROJECT': return '#ed8936';
+                        case 'TEAM': return '#48bb78';
+                        default: return '#a0aec0';
+                    }
+                })
+                .attr('stroke', d => d.id === entityId.toString() ? '#000' : '#fff')
+                .attr('stroke-width', d => d.id === entityId.toString() ? 2 : 1.5);
+            
+            nodeEnter.append('text')
+                .attr('class', 'node-label')
+                .attr('dx', 15)
+                .attr('dy', 4)
+                .text(d => d.name);
+            
+            // Update simulation
+            simulation
+                .nodes(nodes)
+                .on('tick', ticked);
+            
+            simulation.force('link')
+                .links(links);
+            
+            // Restart simulation
+            simulation.alpha(1).restart();
+            
+            function ticked() {
+                linkEnter
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                linkLabelsEnter
+                    .attr('x', d => (d.source.x + d.target.x) / 2)
+                    .attr('y', d => (d.source.y + d.target.y) / 2);
+                
+                nodeEnter
+                    .attr('transform', d => `translate(${d.x},${d.y})`);
+            }
+        }
+        
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+        
+        function showNodeDetails(event, d) {
+            const detailsCard = document.getElementById('node-details');
+            const detailTitle = document.getElementById('detail-title');
+            const detailContent = document.getElementById('detail-content');
+            const detailLink = document.getElementById('detail-link');
+            
+            detailTitle.textContent = d.name;
+            
+            let content = `
+                <p><strong>Type:</strong> ${d.entity_type_display}</p>
+            `;
+            
+            if (d.description) {
+                content += `<p><strong>Description:</strong> ${d.description}</p>`;
+            }
+            
+            content += `
+                <p><strong>Relationships:</strong> ${d.relationship_count}</p>
+            `;
+            
+            detailContent.innerHTML = content;
+            
+            if (d.entity_type === 'ENTITY') {
+                detailLink.href = `/workspaces/${workspaceId}/entities/${d.id}/`;
+                detailLink.textContent = 'View Entity';
+                detailLink.style.display = 'inline-block';
+            } else {
+                detailLink.style.display = 'none';
+            }
+            
+            detailsCard.style.display = 'block';
+        }
+    });
+</script>
+
+{{ entity.id|json_script:"entity-id" }}
+{{ workspace.id|json_script:"workspace-id" }}
+{% endblock %} 

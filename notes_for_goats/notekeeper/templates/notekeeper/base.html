@@ -198,13 +198,16 @@
                 <a href="{% url 'notekeeper:home' %}">Home</a>
                 
                 {% if current_workspace %}
-                    <!-- Only show these links if we have a workspace in context -->
-                    <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}">Journal</a>
-                    <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}">Entities</a>
+                    <!-- Only show these links if we have a workspace in context AND it has a valid ID -->
+                    {% if current_workspace.id %}
+                        <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}">Journal</a>
+                        <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}">Entities</a>
+                        <a href="{% url 'notekeeper:relationship_list' workspace_id=current_workspace.id %}">Relationships</a>
+                    {% endif %}
                 {% endif %}
                 
                 <a href="{% url 'notekeeper:workspace_list' %}">Manage Workspaces</a>
-                <a href="{% url 'admin:index' %}">Admin</a>
+                <a href="{% url 'admin:index' %}">Django Admin</a>
                 
                 <!-- Workspace Dropdown -->
                 <div class="workspace-dropdown">

@@ -1,0 +1,82 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Delete Relationship Type - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Delete Relationship Type</h1>
+    
+    <div class="card confirmation-card">
+        <div class="warning-message">
+            <h3>Are you sure you want to delete the relationship type "{{ relationship_type.display_name }}"?</h3>
+            
+            {% if relationships_count > 0 %}
+                <div class="alert alert-danger">
+                    <p>
+                        <strong>Warning:</strong> This relationship type is currently used in 
+                        {{ relationships_count }} relationship{{ relationships_count|pluralize }}.
+                    </p>
+                    <p>
+                        Deleting this relationship type will also delete all relationships using it.
+                    </p>
+                </div>
+            {% endif %}
+            
+            <p>This action cannot be undone.</p>
+        </div>
+        
+        <div class="relationship-type-details">
+            <p><strong>Display Name:</strong> {{ relationship_type.display_name }}</p>
+            <p><strong>Internal Name:</strong> <code>{{ relationship_type.name }}</code></p>
+            <p><strong>Description:</strong> {{ relationship_type.description|default:"No description" }}</p>
+            <p><strong>Directional:</strong> {% if relationship_type.is_directional %}Yes{% else %}No{% endif %}</p>
+            {% if relationship_type.is_directional and relationship_type.inverse_name %}
+                <p><strong>Inverse Name:</strong> {{ relationship_type.inverse_name }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="confirmation-actions">
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Permanently Delete</button>
+                <a href="{% url 'notekeeper:relationship_type_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .confirmation-card {
+        padding: 25px;
+        margin-top: 20px;
+        border: 1px solid #f0f0f0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .warning-message {
+        margin-bottom: 25px;
+    }
+    .alert-danger {
+        background-color: #fff5f5;
+        border-left: 4px solid #e53e3e;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 4px;
+    }
+    .relationship-type-details {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 25px;
+    }
+    .confirmation-actions {
+        margin-top: 30px;
+        display: flex;
+        gap: 10px;
+    }
+    .btn-danger {
+        background-color: #e53e3e;
+        color: white;
+    }
+</style>
+{% endblock %} 

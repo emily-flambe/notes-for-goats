@@ -1,0 +1,173 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}
+    {% if relationship %}Edit{% else %}Create{% endif %} Relationship - {{ workspace.name }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{% if relationship %}Edit{% else %}Create{% endif %} Relationship</h1>
+    <p class="subtitle">Define how entities are connected in {{ workspace.name }}</p>
+    
+    <form method="post" class="card relationship-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.source_entity.id_for_label }}">Source Entity:</label>
+            {{ form.source_entity }}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.relationship_type.id_for_label }}">Relationship Type:</label>
+            {{ form.relationship_type }}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.target_entity.id_for_label }}">Target Entity:</label>
+            {{ form.target_entity }}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.notes.id_for_label }}">Notes:</label>
+            {{ form.notes }}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Relationship</button>
+            <a href="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .subtitle {
+        color: #666;
+        margin-bottom: 20px;
+    }
+    .relationship-form {
+        padding: 20px;
+        margin-top: 20px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    textarea.form-control {
+        min-height: 80px;
+    }
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+    }
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0;
+    }
+    .checkbox-group input[type="checkbox"] {
+        margin-right: 8px;
+    }
+    .form-text {
+        margin-top: 5px;
+        font-size: 0.875rem;
+        color: #666;
+    }
+    .form-actions {
+        margin-top: 30px;
+        display: flex;
+        gap: 10px;
+    }
+    .nested-form {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 0 0 20px 0;
+        border: 1px solid #e0e0e0;
+    }
+    .nested-form h4 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 1.1rem;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle relationship type selection
+    const relationshipTypeSelect = document.getElementById('relationship_type');
+    const newRelationshipTypeForm = document.getElementById('new_relationship_type_form');
+    
+    relationshipTypeSelect.addEventListener('change', function() {
+        if (this.value === 'new') {
+            newRelationshipTypeForm.style.display = 'block';
+        } else {
+            newRelationshipTypeForm.style.display = 'none';
+        }
+    });
+    
+    // Handle directional checkbox for new relationship type
+    const newTypeIsDirectionalCheckbox = document.getElementById('new_type_is_directional');
+    const newTypeInverseNameGroup = document.getElementById('new_type_inverse_name_group');
+    
+    function toggleNewTypeInverseNameVisibility() {
+        if (newTypeIsDirectionalCheckbox.checked) {
+            newTypeInverseNameGroup.style.display = 'block';
+        } else {
+            newTypeInverseNameGroup.style.display = 'none';
+        }
+    }
+    
+    // Initial setup
+    toggleNewTypeInverseNameVisibility();
+    
+    // Listen for changes
+    newTypeIsDirectionalCheckbox.addEventListener('change', toggleNewTypeInverseNameVisibility);
+    
+    // Prevent selecting the same entity for source and target
+    const sourceIdSelect = document.getElementById('source_id');
+    const targetIdSelect = document.getElementById('target_id');
+    
+    function updateTargetOptions() {
+        const sourceValue = sourceIdSelect.value;
+        
+        Array.from(targetIdSelect.options).forEach(option => {
+            if (option.value === sourceValue && option.value !== '') {
+                option.disabled = true;
+            } else {
+                option.disabled = false;
+            }
+        });
+    }
+    
+    function updateSourceOptions() {
+        const targetValue = targetIdSelect.value;
+        
+        Array.from(sourceIdSelect.options).forEach(option => {
+            if (option.value === targetValue && option.value !== '') {
+                option.disabled = true;
+            } else {
+                option.disabled = false;
+            }
+        });
+    }
+    
+    // Initial setup
+    updateTargetOptions();
+    updateSourceOptions();
+    
+    // Listen for changes
+    sourceIdSelect.addEventListener('change', updateTargetOptions);
+    targetIdSelect.addEventListener('change', updateSourceOptions);
+});
+</script>
+{% endblock %} 

@@ -10,7 +10,9 @@ def workspace_context(request):
     current_workspace_id = request.session.get('current_workspace_id')
     if current_workspace_id:
         try:
-            context['current_workspace'] = Workspace.objects.get(pk=current_workspace_id)
+            workspace = Workspace.objects.get(pk=current_workspace_id)
+            if workspace and workspace.id:  # Make sure it's valid
+                context['current_workspace'] = workspace
         except Workspace.DoesNotExist:
             # Clear invalid workspace ID from session
             if 'current_workspace_id' in request.session:

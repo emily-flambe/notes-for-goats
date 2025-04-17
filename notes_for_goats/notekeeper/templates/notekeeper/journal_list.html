@@ -3,7 +3,7 @@
 {% block title %}Journal Entries - {{ workspace.name }}{% endblock %}
 
 {% block content %}
-<h1>Journal Entries - {{ workspace.name }}</h1>
+<h1>Journal</h1>
 
 <div class="actions">
     <a href="{% url 'notekeeper:journal_create' workspace_id=workspace.id %}" class="btn">New Journal Entry</a>

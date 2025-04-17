@@ -28,4 +28,21 @@ urlpatterns = [
     
     # Delete
     path('workspaces/<int:pk>/delete/', views.workspace_delete_confirm, name='workspace_delete_confirm'),
+
+    # Relationship Types
+    path('workspaces/<int:workspace_id>/relationship-types/', views.relationship_type_list, name='relationship_type_list'),
+    path('workspaces/<int:workspace_id>/relationship-types/new/', views.relationship_type_create, name='relationship_type_create'),
+    path('workspaces/<int:workspace_id>/relationship-types/<int:pk>/edit/', views.relationship_type_edit, name='relationship_type_edit'),
+    path('workspaces/<int:workspace_id>/relationship-types/<int:pk>/delete/', views.relationship_type_delete, name='relationship_type_delete'),
+
+    # Relationships
+    path('workspaces/<int:workspace_id>/relationships/', views.relationship_list, name='relationship_list'),
+    path('workspaces/<int:workspace_id>/relationships/new/', views.relationship_create, name='relationship_create'),
+    path('workspaces/<int:workspace_id>/relationships/<int:pk>/edit/', views.relationship_edit, name='relationship_edit'),
+    path('workspaces/<int:workspace_id>/relationships/<int:pk>/delete/', views.relationship_delete, name='relationship_delete'),
+
+    # Entity relationships graph
+    path('workspaces/<int:workspace_id>/entities/<int:pk>/graph/', 
+         views.entity_relationships_graph, 
+         name='entity_relationships_graph'),
 ] 

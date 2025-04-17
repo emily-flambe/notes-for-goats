@@ -1,0 +1,79 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Relationship Types - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Relationship Types</h1>
+    <p class="subtitle">Manage the types of relationships between entities in {{ workspace.name }}</p>
+
+    <div class="actions">
+        <a href="{% url 'notekeeper:relationship_type_create' workspace_id=workspace.id %}" class="btn btn-primary">
+            Create New Relationship Type
+        </a>
+        <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">
+            Back to Workspace
+        </a>
+    </div>
+
+    {% if relationship_types %}
+        <div class="card relationship-types-list">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Display Name</th>
+                        <th>Internal Name</th>
+                        <th>Description</th>
+                        <th>Directional</th>
+                        <th>Inverse Name</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rt in relationship_types %}
+                    <tr>
+                        <td>{{ rt.display_name }}</td>
+                        <td><code>{{ rt.name }}</code></td>
+                        <td>{{ rt.description|truncatechars:50 }}</td>
+                        <td>{% if rt.is_directional %}Yes{% else %}No{% endif %}</td>
+                        <td>{{ rt.inverse_name|default:"-" }}</td>
+                        <td class="actions">
+                            <a href="{% url 'notekeeper:relationship_type_edit' workspace_id=workspace.id pk=rt.id %}" class="btn btn-sm">Edit</a>
+                            <a href="{% url 'notekeeper:relationship_type_delete' workspace_id=workspace.id pk=rt.id %}" class="btn btn-sm btn-danger">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>No relationship types defined yet.</p>
+            <p>Relationship types define the kinds of connections that can exist between entities.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .subtitle {
+        color: #666;
+        margin-bottom: 20px;
+    }
+    .actions {
+        margin: 20px 0;
+    }
+    .relationship-types-list {
+        margin-top: 20px;
+    }
+    .empty-state {
+        background: #f9f9f9;
+        border-radius: 8px;
+        padding: 30px;
+        text-align: center;
+        margin-top: 30px;
+    }
+    td.actions {
+        white-space: nowrap;
+    }
+</style>
+{% endblock %} 

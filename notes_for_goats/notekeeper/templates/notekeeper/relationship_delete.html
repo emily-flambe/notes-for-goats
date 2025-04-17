@@ -1,0 +1,90 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Delete Relationship - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Delete Relationship</h1>
+    
+    <div class="card confirmation-card">
+        <div class="warning-message">
+            <h3>Are you sure you want to delete this relationship?</h3>
+            <p>This action cannot be undone.</p>
+        </div>
+        
+        <div class="relationship-details">
+            <p>
+                <strong>From:</strong> 
+                {% if relationship.source_content_type.model == 'entity' %}
+                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=relationship.source_object_id %}">
+                        {{ relationship.source }}
+                    </a>
+                {% else %}
+                    {{ relationship.source }}
+                {% endif %}
+            </p>
+            
+            <p>
+                <strong>Relationship:</strong> 
+                {{ relationship.relationship_type.display_name }}
+            </p>
+            
+            <p>
+                <strong>To:</strong> 
+                {% if relationship.target_content_type.model == 'entity' %}
+                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=relationship.target_object_id %}">
+                        {{ relationship.target }}
+                    </a>
+                {% else %}
+                    {{ relationship.target }}
+                {% endif %}
+            </p>
+            
+            {% if relationship.notes %}
+                <p><strong>Notes:</strong> {{ relationship.notes }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="confirmation-actions">
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Delete Relationship</button>
+                
+                {% if from_entity %}
+                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=from_entity.id %}" class="btn">Cancel</a>
+                {% else %}
+                    <a href="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .confirmation-card {
+        padding: 25px;
+        margin-top: 20px;
+        border: 1px solid #f0f0f0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .warning-message {
+        margin-bottom: 25px;
+    }
+    .relationship-details {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 25px;
+    }
+    .confirmation-actions {
+        margin-top: 30px;
+        display: flex;
+        gap: 10px;
+    }
+    .btn-danger {
+        background-color: #e53e3e;
+        color: white;
+    }
+</style>
+{% endblock %}
