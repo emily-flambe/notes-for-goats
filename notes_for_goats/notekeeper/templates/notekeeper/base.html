@@ -198,9 +198,13 @@
                 <a href="{% url 'notekeeper:home' %}">Home</a>
                 
                 {% if current_workspace %}
-                    <!-- Only show these links if we have a workspace in context -->
-                    <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}">Journal</a>
-                    <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}">Entities</a>
+                    <!-- Only show these links if we have a workspace in context AND it has a valid ID -->
+                    {% if current_workspace.id %}
+                        <a href="{% url 'notekeeper:workspace_detail' pk=current_workspace.id %}">View Workspace</a>
+                        <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}">Journal</a>
+                        <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}">New Entry</a>
+                        <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}">Entities</a>
+                    {% endif %}
                 {% endif %}
                 
                 <a href="{% url 'notekeeper:workspace_list' %}">Manage Workspaces</a>

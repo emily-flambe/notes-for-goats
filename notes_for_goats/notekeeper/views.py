@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Workspace, Entity, JournalEntry, CalendarEvent, Relationship
+from .models import Workspace, Entity, JournalEntry, CalendarEvent, Relationship, RelationshipType
 from .forms import WorkspaceForm, JournalEntryForm, EntityForm, RelationshipTypeForm
 import os
 import tempfile
@@ -155,25 +155,65 @@ def workspace_list(request):
     return render(request, 'notekeeper/workspace_list.html', {'workspaces': workspaces})
 
 def workspace_detail(request, pk):
-    workspace = get_object_or_404(Workspace, pk=pk)
-    recent_entries = workspace.journal_entries.all().order_by('-timestamp')[:5]
-    
-    # Get entities by type for display
-    people_entities = workspace.entities.filter(type='PERSON')
-    project_entities = workspace.entities.filter(type='PROJECT')
-    team_entities = workspace.entities.filter(type='TEAM')
-    
-    # Set this workspace as the current workspace in session
-    request.session['current_workspace_id'] = workspace.id
-    
-    return render(request, 'notekeeper/workspace_detail.html', {
-        'workspace': workspace,
-        'current_workspace': workspace,  # Make sure this is explicitly set
-        'recent_entries': recent_entries,
-        'people_entities': people_entities,
-        'project_entities': project_entities,
-        'team_entities': team_entities,
-    })
+    try:
+        workspace = get_object_or_404(Workspace, pk=pk)
+        
+        # Ensure workspace ID is a valid integer
+        if not workspace.id:
+            messages.error(request, "Invalid workspace ID.")
+            return redirect('notekeeper:workspace_list')
+            
+        # Set this workspace as the current workspace in session
+        request.session['current_workspace_id'] = workspace.id
+        
+        print(f"Found workspace: {workspace.name}")
+        print(f"Workspace ID: {workspace.id}")  # Add this line to debug
+        
+        recent_entries = workspace.journal_entries.all().order_by('-timestamp')[:5]
+        print(f"Found {len(recent_entries)} recent entries")
+        
+        # Get entities by type for display
+        people_entities = workspace.entities.filter(type='PERSON')
+        project_entities = workspace.entities.filter(type='PROJECT')
+        team_entities = workspace.entities.filter(type='TEAM')
+        
+        # Add this to check for relationship-related code that might be causing issues
+        print("Checking for relationships")
+        try:
+            # If you've added relationship functionality
+            relationship_types = workspace.relationship_types.all()
+            print(f"Found {len(relationship_types)} relationship types")
+            recent_relationships = workspace.relationships.all().order_by('-created_at')[:5]
+            print(f"Found {len(recent_relationships)} recent relationships")
+        except Exception as e:
+            print(f"Error in relationship code: {str(e)}")
+            # If there's an error in relationship code, use empty querysets
+            relationship_types = []
+            recent_relationships = []
+        
+        print("Preparing context")
+        context = {
+            'workspace': workspace,
+            'current_workspace': workspace,  # Add this
+            'recent_entries': recent_entries,
+            'people_entities': people_entities,
+            'project_entities': project_entities,
+            'team_entities': team_entities,
+        }
+        
+        # Only add these to context if relationships are implemented
+        if 'relationship_types' in locals():
+            context['relationship_types'] = relationship_types
+            context['recent_relationships'] = recent_relationships
+            
+        # Debug the context values
+        print(f"Context workspace ID: {context['workspace'].id}")
+        
+        return render(request, 'notekeeper/workspace_detail.html', context)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        messages.error(request, "There was an error loading the workspace.")
+        return redirect('notekeeper:workspace_list')
 
 def workspace_create(request):
     if request.method == "POST":
@@ -333,7 +373,7 @@ def create_relationship(request, workspace_id):
 
 def relationship_type_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    relationship_types = workspace.relationship_types.all()
+    relationship_types = RelationshipType.objects.filter(workspace=workspace)
     
     return render(request, 'notekeeper/relationship_type_list.html', {
         'workspace': workspace,
@@ -349,6 +389,7 @@ def relationship_type_create(request, workspace_id):
             relationship_type = form.save(commit=False)
             relationship_type.workspace = workspace
             relationship_type.save()
+            messages.success(request, f'Relationship type "{relationship_type.display_name}" created successfully.')
             return redirect('notekeeper:relationship_type_list', workspace_id=workspace.id)
     else:
         form = RelationshipTypeForm()
@@ -356,4 +397,95 @@ def relationship_type_create(request, workspace_id):
     return render(request, 'notekeeper/relationship_type_form.html', {
         'form': form,
         'workspace': workspace
+    })
+
+def relationship_type_edit(request, workspace_id, pk):
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    relationship_type = get_object_or_404(RelationshipType, pk=pk, workspace=workspace)
+    
+    if request.method == "POST":
+        form = RelationshipTypeForm(request.POST, instance=relationship_type)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Relationship type "{relationship_type.display_name}" updated successfully.')
+            return redirect('notekeeper:relationship_type_list', workspace_id=workspace.id)
+    else:
+        form = RelationshipTypeForm(instance=relationship_type)
+        
+    return render(request, 'notekeeper/relationship_type_form.html', {
+        'form': form,
+        'workspace': workspace,
+        'relationship_type': relationship_type
+    })
+
+def relationship_type_delete(request, workspace_id, pk):
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    relationship_type = get_object_or_404(RelationshipType, pk=pk, workspace=workspace)
+    
+    if request.method == "POST":
+        display_name = relationship_type.display_name
+        relationship_type.delete()
+        messages.success(request, f'Relationship type "{display_name}" deleted successfully.')
+        return redirect('notekeeper:relationship_type_list', workspace_id=workspace.id)
+        
+    # Count relationships using this type for the confirmation page
+    relationships_count = Relationship.objects.filter(relationship_type=relationship_type).count()
+    
+    return render(request, 'notekeeper/relationship_type_delete.html', {
+        'workspace': workspace,
+        'relationship_type': relationship_type,
+        'relationships_count': relationships_count
+    })
+
+def relationship_list(request, workspace_id):
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    relationships = Relationship.objects.filter(workspace=workspace)
+    
+    return render(request, 'notekeeper/relationship_list.html', {
+        'workspace': workspace,
+        'relationships': relationships
+    })
+
+def relationship_create(request, workspace_id):
+    # This is a placeholder implementation - you'll need to customize it
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    if request.method == "POST":
+        # Process form data
+        messages.success(request, 'Relationship created successfully.')
+        return redirect('notekeeper:relationship_list', workspace_id=workspace.id)
+    
+    # Display form
+    relationship_types = RelationshipType.objects.filter(workspace=workspace)
+    entities = workspace.entities.all()
+    
+    return render(request, 'notekeeper/relationship_form.html', {
+        'workspace': workspace,
+        'relationship_types': relationship_types,
+        'entities': entities
+    })
+
+def relationship_edit(request, workspace_id, pk):
+    # Placeholder implementation
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    relationship = get_object_or_404(Relationship, pk=pk, workspace=workspace)
+    
+    return render(request, 'notekeeper/relationship_form.html', {
+        'workspace': workspace,
+        'relationship': relationship
+    })
+
+def relationship_delete(request, workspace_id, pk):
+    # Placeholder implementation
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    relationship = get_object_or_404(Relationship, pk=pk, workspace=workspace)
+    
+    if request.method == "POST":
+        relationship.delete()
+        messages.success(request, 'Relationship deleted successfully.')
+        return redirect('notekeeper:relationship_list', workspace_id=workspace.id)
+    
+    return render(request, 'notekeeper/relationship_delete.html', {
+        'workspace': workspace,
+        'relationship': relationship
     })

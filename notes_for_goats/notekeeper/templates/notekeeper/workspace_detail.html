@@ -3,11 +3,30 @@
 {% block title %}{{ current_workspace.name }}{% endblock %}
 
 {% block content %}
+{% if not current_workspace.id %}
+<div style="background-color: red; color: white; padding: 10px;">
+    ERROR: workspace.id is empty or None!
+    {% if current_workspace %}
+        workspace exists but has no id
+    {% else %}
+        workspace does not exist in context
+    {% endif %}
+</div>
+{% endif %}
+
+<div style="display:none;">
+Debug info: 
+workspace: {{ current_workspace }}
+workspace.id: {{ current_workspace.id }}
+</div>
+
 <h1>{{ current_workspace.name }}</h1>
 <p class="workspace-description">{{ current_workspace.description }}</p>
 
 <div class="workspace-actions">
-    <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn">New Journal Entry</a>
+    {% if current_workspace and current_workspace.id %}
+        <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn">New Journal Entry</a>
+    {% endif %}
     <a href="{% url 'notekeeper:entity_create' workspace_id=current_workspace.id %}" class="btn">New Entity</a>
     <a href="{% url 'notekeeper:export_workspace' pk=current_workspace.id %}" class="btn">Export Workspace</a>
     <a href="{% url 'notekeeper:workspace_edit' pk=current_workspace.id %}" class="btn">Edit Workspace</a>
