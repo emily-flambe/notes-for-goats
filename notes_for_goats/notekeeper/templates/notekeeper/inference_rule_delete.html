@@ -1,0 +1,85 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Delete Inference Rule - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Delete Inference Rule</h1>
+    
+    <div class="card confirmation-card">
+        <div class="warning-message">
+            <h3>Are you sure you want to delete the inference rule "{{ rule.name }}"?</h3>
+            
+            {% if auto_inferred_count > 0 %}
+                <div class="alert alert-danger">
+                    <p>
+                        <strong>Warning:</strong> This rule has created 
+                        {{ auto_inferred_count }} relationship{{ auto_inferred_count|pluralize }}.
+                    </p>
+                    <p>
+                        You can choose to delete these auto-inferred relationships or keep them.
+                    </p>
+                </div>
+            {% endif %}
+            
+            <p>This action cannot be undone.</p>
+        </div>
+        
+        <div class="rule-details">
+            <p><strong>Name:</strong> {{ rule.name }}</p>
+            <p><strong>Description:</strong> {{ rule.description|default:"No description" }}</p>
+            <p><strong>Source Relationship Type:</strong> {{ rule.source_relationship_type.display_name }}</p>
+            <p><strong>Inferred Relationship Type:</strong> {{ rule.inferred_relationship_type.display_name }}</p>
+            <p><strong>Active:</strong> {% if rule.is_active %}Yes{% else %}No{% endif %}</p>
+            <p><strong>Bidirectional:</strong> {% if rule.is_bidirectional %}Yes{% else %}No{% endif %}</p>
+        </div>
+        
+        <div class="confirmation-actions">
+            <form method="post">
+                {% csrf_token %}
+                {% if auto_inferred_count > 0 %}
+                    <div class="form-group checkbox-group mb-3">
+                        <label>
+                            <input type="checkbox" name="delete_relationships" value="1">
+                            Also delete all auto-inferred relationships created by this rule
+                        </label>
+                    </div>
+                {% endif %}
+                
+                <button type="submit" class="btn btn-danger">Delete Rule</button>
+                <a href="{% url 'notekeeper:inference_rule_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_css %}
+<style>
+    .rule-details {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 25px;
+    }
+    
+    .alert-danger {
+        background-color: #fff5f5;
+        border-left: 4px solid #e53e3e;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 4px;
+    }
+    
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        margin-right: 8px;
+    }
+</style>
+{% endblock %}
+{% endblock %} 

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Workspace, JournalEntry, Entity, RelationshipType, Relationship
+from .models import Workspace, JournalEntry, Entity, RelationshipType, Relationship, RelationshipInferenceRule
 
 class WorkspaceForm(forms.ModelForm):
     class Meta:
@@ -87,3 +87,30 @@ class RelationshipForm(forms.ModelForm):
             self.fields['target_entity'].queryset = Entity.objects.filter(workspace=workspace)
             # Filter relationship types by workspace
             self.fields['relationship_type'].queryset = RelationshipType.objects.filter(workspace=workspace)
+
+class RelationshipInferenceRuleForm(forms.ModelForm):
+    class Meta:
+        model = RelationshipInferenceRule
+        fields = ['name', 'description', 'source_relationship_type', 'inferred_relationship_type', 
+                 'is_active', 'auto_update']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'source_relationship_type': forms.Select(attrs={'class': 'form-control'}),
+            'inferred_relationship_type': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        workspace = kwargs.pop('workspace', None)
+        super().__init__(*args, **kwargs)
+        
+        if workspace:
+            # Filter relationship types by workspace
+            self.fields['source_relationship_type'].queryset = RelationshipType.objects.filter(workspace=workspace)
+            self.fields['inferred_relationship_type'].queryset = RelationshipType.objects.filter(workspace=workspace)
+            
+        # Add a help text for the inferred relationship type field
+        self.fields['inferred_relationship_type'].help_text = (
+            "For best results with relationships like 'Teammate' or 'Housemate', create a "
+            "non-directional relationship type to represent mutual connections."
+        )

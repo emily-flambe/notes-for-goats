@@ -45,4 +45,11 @@ urlpatterns = [
     path('workspaces/<int:workspace_id>/entities/<int:pk>/graph/', 
          views.entity_relationships_graph, 
          name='entity_relationships_graph'),
+
+    # Inference Rules
+    path('workspaces/<int:workspace_id>/inference-rules/', views.inference_rule_list, name='inference_rule_list'),
+    path('workspaces/<int:workspace_id>/inference-rules/new/', views.inference_rule_create, name='inference_rule_create'),
+    path('workspaces/<int:workspace_id>/inference-rules/<int:pk>/edit/', views.inference_rule_edit, name='inference_rule_edit'),
+    path('workspaces/<int:workspace_id>/inference-rules/<int:pk>/delete/', views.inference_rule_delete, name='inference_rule_delete'),
+    path('workspaces/<int:workspace_id>/inference-rules/<int:pk>/apply/', views.apply_rule_now, name='apply_rule_now'),
 ] 

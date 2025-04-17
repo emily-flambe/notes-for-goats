@@ -135,6 +135,34 @@ python manage.py runserver
    - Access powerful data management tools via the admin console
    - Bulk edit, search, and organize your data
 
+### Relationships System
+
+Notes for Goats features a powerful relationship management system that allows you to:
+
+1. **Create Relationship Types**
+   - Define custom relationship types like "Reports To", "Manages", "Collaborates With"
+   - Configure if relationships are directional (one-way) or non-directional (mutual)
+   - Set optional inverse names for directional relationships (e.g., "Reports To" ↔ "Manages")
+
+2. **Connect Entities with Relationships**
+   - Link any two entities with meaningful relationships
+   - View an entity's relationships from their detail page
+   - Add notes to relationships for additional context
+   - Visualize connections through relationship graphs
+
+3. **Automatic Relationship Inference**
+   - Define inference rules to automatically create relationships based on shared connections
+   - Example: When two people are members of the same team, automatically create a "Teammate" relationship
+   - Supports bidirectional inference (relationships created in both directions)
+   - Auto-inferred relationships are marked and can be managed separately from manual relationships
+
+4. **Managing Relationship Rules**
+   - Create, edit, and delete inference rules from the dedicated management page
+   - Apply rules on-demand or automatically when new relationships are created
+   - Control which types of relationships should trigger inference
+
+This relationship system helps you map organizational structures, project involvement, and team connections with minimal manual effort.
+
 ### Google Calendar Integration (Future)
 
 The system is designed to integrate with Google Calendar to:
@@ -175,6 +203,7 @@ notes_for_goats/
 │ ├── forms.py # Form definitions
 │ ├── admin.py # Admin interface
 │ ├── urls.py # URL patterns
+│ ├── inference.py # Relationship inference system
 │ ├── templates/ # HTML templates
 │ │ └── notekeeper/ # App-specific templates
 │ ├── management/ # Custom commands
@@ -211,6 +240,15 @@ The app revolves around the concept of entities (people, projects, teams):
 2. **Intuitive Tagging**: Natural writing with #hashtags maintains flow while creating structure
 3. **Relationship Exploration**: Navigate between related entries and entities
 4. **Flexible Journaling**: Combines the freedom of free-form writing with the structure of a database
+
+### Relationship and Inference System
+
+Our relationship system was designed with these principles:
+1. **Flexibility**: Custom relationship types allow modeling any organizational structure
+2. **Automation**: Inference rules reduce manual data entry by detecting patterns
+3. **Transparency**: Auto-created relationships are clearly marked with their origin
+4. **Integrity**: Manual relationships are never overwritten by automatic ones
+5. **Discoverability**: Visual graph representations help explore complex networks
 
 ### Template-Based UI vs API+SPA
 

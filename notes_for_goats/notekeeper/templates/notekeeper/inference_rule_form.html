@@ -1,0 +1,131 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}
+    {% if rule %}Edit{% else %}Create{% endif %} Inference Rule - {{ workspace.name }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{% if rule %}Edit{% else %}Create{% endif %} Inference Rule</h1>
+    <p class="subtitle">Define how relationships should be automatically inferred in {{ workspace.name }}</p>
+    
+    <form method="post" class="card">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.name.id_for_label }}">Name:</label>
+            {{ form.name }}
+            <small class="form-text text-muted">A descriptive name for this rule (e.g., "Team Membership Creates Teammates")</small>
+            {% if form.name.errors %}
+                <div class="error">{{ form.name.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.description.id_for_label }}">Description:</label>
+            {{ form.description }}
+            <small class="form-text text-muted">Optional explanation of what this rule does</small>
+            {% if form.description.errors %}
+                <div class="error">{{ form.description.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.source_relationship_type.id_for_label }}">Source Relationship Type:</label>
+            {{ form.source_relationship_type }}
+            <small class="form-text text-muted">When two entities share this relationship with a common entity</small>
+            {% if form.source_relationship_type.errors %}
+                <div class="error">{{ form.source_relationship_type.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.inferred_relationship_type.id_for_label }}">Inferred Relationship Type:</label>
+            {{ form.inferred_relationship_type }}
+            <small class="form-text text-muted">Create this relationship between the two entities</small>
+            {% if form.inferred_relationship_type.errors %}
+                <div class="error">{{ form.inferred_relationship_type.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group checkbox-group">
+            <label>
+                {{ form.is_active }}
+                Is Active
+            </label>
+            <small class="form-text text-muted">If checked, this rule will be applied automatically</small>
+            {% if form.is_active.errors %}
+                <div class="error">{{ form.is_active.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group checkbox-group">
+            <label>
+                {{ form.auto_update }}
+                Auto Update
+            </label>
+            <small class="form-text text-muted">If checked, inferred relationships will be updated when source relationships change</small>
+            {% if form.auto_update.errors %}
+                <div class="error">{{ form.auto_update.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Rule</button>
+            <button type="submit" name="apply_now" value="1" class="btn">Save & Apply Now</button>
+            <a href="{% url 'notekeeper:inference_rule_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
+        </div>
+    </form>
+    
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5>How Inference Rules Work</h5>
+            <p>Inference rules automatically create relationships between entities that share a common connection.</p>
+            <div class="example">
+                <strong>Example:</strong>
+                <ol>
+                    <li>Alice is a <em>Member of</em> Team Alpha</li>
+                    <li>Bob is a <em>Member of</em> Team Alpha</li>
+                    <li>An inference rule creates a <em>Teammate</em> relationship between Alice and Bob</li>
+                </ol>
+            </div>
+            <p class="mt-3"><strong>Note:</strong> Auto-inferred relationships will not overwrite manually created relationships.</p>
+        </div>
+    </div>
+
+    <div class="form-info mt-3">
+        <p><strong>How Inferred Relationships Work:</strong></p>
+        <p>When two entities share a relationship with a common third entity, a new relationship is created between them.</p>
+        <p>For example, if both Alice and Bob are "Member of Team Alpha", they'll get a "Teammate" relationship.</p>
+        <p>Each pair of entities will only get one relationship to avoid duplication.</p>
+    </div>
+</div>
+
+{% block extra_css %}
+<style>
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        margin-right: 8px;
+    }
+    
+    .example {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    
+    .example em {
+        color: #3182ce;
+        font-style: normal;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+{% endblock %} 
