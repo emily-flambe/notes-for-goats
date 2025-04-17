@@ -36,6 +36,21 @@
                         </select>
                     </div>
                 </div>
+                
+                <div class="filter-group">
+                    <label for="relationship_type_filter">Filter by Relationship Type:</label>
+                    <div class="filter-dropdown-container">
+                        <select id="relationship_type_filter" name="relationship_type_id" class="searchable-select">
+                            <option value="">All Relationship Types</option>
+                            {% for rel_type in all_relationship_types %}
+                                <option value="{{ rel_type.id }}" {% if selected_relationship_type_id == rel_type.id %}selected{% endif %}>
+                                    {{ rel_type.display_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
                 <div class="filter-actions">
                     <button type="submit" class="btn btn-primary">Apply Filters</button>
                     <a href="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="btn btn-outline">Clear Filters</a>
@@ -46,6 +61,25 @@
     
     {% if relationships %}
         <div class="card relationships-list">
+            {% if selected_entity_id or selected_relationship_type_id %}
+                <div class="active-filters">
+                    <span>Active Filters:</span>
+                    {% if selected_entity_id %}
+                        <span class="filter-badge">
+                            Entity: {{ selected_entity_name }}
+                            <a href="?{% if selected_relationship_type_id %}relationship_type_id={{ selected_relationship_type_id }}{% endif %}" class="filter-remove" title="Remove filter">×</a>
+                        </span>
+                    {% endif %}
+                    
+                    {% if selected_relationship_type_id %}
+                        <span class="filter-badge">
+                            Type: {{ selected_relationship_type_name }}
+                            <a href="?{% if selected_entity_id %}entity_id={{ selected_entity_id }}{% endif %}" class="filter-remove" title="Remove filter">×</a>
+                        </span>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
             <table class="table">
                 <colgroup>
                     <col style="width: 15%;">  <!-- Source - narrower -->
@@ -123,7 +157,7 @@
         </div>
     {% else %}
         <div class="empty-state">
-            {% if selected_entity_id %}
+            {% if selected_entity_id or selected_relationship_type_id %}
                 <p>No relationships found matching your filters.</p>
                 <a href="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="btn">View All Relationships</a>
             {% elif entity %}
@@ -252,6 +286,38 @@
         gap: 10px;
     }
     
+    /* Active filters */
+    .active-filters {
+        padding: 10px 15px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .filter-badge {
+        background-color: #f0f0f0;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 0.9em;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .filter-remove {
+        color: #666;
+        font-weight: bold;
+        text-decoration: none;
+        margin-left: 5px;
+        font-size: 1.2em;
+    }
+    
+    .filter-remove:hover {
+        color: #ff3b30;
+    }
+    
     /* Searchable select styling */
     .select2-container {
         width: 100% !important;
@@ -275,7 +341,7 @@
     $(document).ready(function() {
         // Initialize the searchable dropdown
         $('.searchable-select').select2({
-            placeholder: 'Search entities...',
+            placeholder: 'Search...',
             allowClear: true,
             width: '100%'
         });
