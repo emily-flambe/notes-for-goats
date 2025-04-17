@@ -152,3 +152,45 @@ class Relationship(models.Model):
         source = str(self.source) if self.source else f"Unknown ({self.source_object_id})"
         target = str(self.target) if self.target else f"Unknown ({self.target_object_id})"
         return f"{source} {self.relationship_type.display_name} {target}"
+
+class RelationshipInferenceRule(models.Model):
+    """Rules for automatically inferring relationships between entities."""
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='inference_rules')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    
+    # What relationship type to look for
+    source_relationship_type = models.ForeignKey(
+        RelationshipType, 
+        related_name='source_inference_rules',
+        on_delete=models.CASCADE,
+        help_text="When two entities share this relationship with a common target"
+    )
+    
+    # What relationship type to create between entities that share the common relationship
+    inferred_relationship_type = models.ForeignKey(
+        RelationshipType,
+        related_name='inferred_inference_rules',
+        on_delete=models.CASCADE,
+        help_text="Create this relationship between the entities"
+    )
+    
+    is_active = models.BooleanField(default=True)
+    is_bidirectional = models.BooleanField(
+        default=True, 
+        help_text="If checked, relationships will be inferred in both directions"
+    )
+    auto_update = models.BooleanField(
+        default=True,
+        help_text="Automatically update inferred relationships when source relationships change"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('workspace', 'name')
+        ordering = ['workspace', 'name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.workspace.name})"
