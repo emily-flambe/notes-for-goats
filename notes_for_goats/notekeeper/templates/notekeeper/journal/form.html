@@ -35,6 +35,10 @@
             <div class="form-group">
                 <label for="{{ form.content.id_for_label }}">Content</label>
                 {{ form.content }}
+                <div class="form-text">
+                    Use hashtags (e.g., #ProjectName, #PersonName) to automatically link to entities.
+                    Tags defined for entities will also work (e.g., #me can link to an entity named "Emily").
+                </div>
                 {% if form.content.errors %}
                     <div class="error">{{ form.content.errors }}</div>
                 {% endif %}

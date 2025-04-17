@@ -99,33 +99,38 @@ def entity_detail(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entity = get_object_or_404(Entity, pk=pk, workspace=workspace)
     
-    # Get both incoming and outgoing relationships
+    # Get related entries
+    related_entries = JournalEntry.objects.filter(
+        workspace=workspace, 
+        referenced_entities=entity
+    ).order_by('-timestamp')
+    
+    # Get relationships
     entity_relationships = []
     
-    # Get outgoing relationships (where this entity is the source)
-    outgoing = Relationship.objects.filter(
-        source_content_type=ContentType.objects.get_for_model(entity),
+    # Source relationships (entity → other)
+    source_relationships = Relationship.objects.filter(
+        source_content_type=ContentType.objects.get_for_model(Entity),
         source_object_id=entity.id
     ).select_related('relationship_type', 'target_content_type')
     
-    # Get incoming relationships (where this entity is the target)
-    incoming = Relationship.objects.filter(
-        target_content_type=ContentType.objects.get_for_model(entity),
+    for rel in source_relationships:
+        entity_relationships.append((rel, rel.target, True))
+    
+    # Target relationships (other → entity)
+    target_relationships = Relationship.objects.filter(
+        target_content_type=ContentType.objects.get_for_model(Entity),
         target_object_id=entity.id
     ).select_related('relationship_type', 'source_content_type')
     
-    # Add outgoing relationships
-    for rel in outgoing:
-        entity_relationships.append((rel, rel.target, True))
-    
-    # Add incoming relationships
-    for rel in incoming:
+    for rel in target_relationships:
         entity_relationships.append((rel, rel.source, False))
 
     return render(request, 'notekeeper/entity/detail.html', {
         'workspace': workspace,
         'entity': entity,
         'entity_relationships': entity_relationships,
+        'related_entries': related_entries,
     })
 
 def entity_create(request, workspace_id):

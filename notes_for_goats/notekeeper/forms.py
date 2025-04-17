@@ -23,11 +23,18 @@ class JournalEntryForm(forms.ModelForm):
 class EntityForm(forms.ModelForm):
     class Meta:
         model = Entity
-        fields = ['name', 'type', 'notes']
+        fields = ['name', 'type', 'notes', 'tags']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'type': forms.Select(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
+            'tags': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter tags separated by commas (e.g., me, myself, I)'
+            })
+        }
+        help_texts = {
+            'tags': 'Enter tags separated by commas (e.g., me, myself, I)'
         }
 
 class RelationshipTypeForm(forms.ModelForm):
