@@ -418,4 +418,87 @@ th.sortable {
 th.sorted-asc .sort-icon,
 th.sorted-desc .sort-icon {
     color: #333;
+}
+
+/* Inference Rules */
+.rule-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.rule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.rule-title {
+    margin: 0;
+    color: #2d3748;
+    font-size: 1.25rem;
+}
+
+.rule-description {
+    color: #718096;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.rule-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    color: #718096;
+}
+
+.rule-logic {
+    background-color: #f7fafc;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.relationship-type {
+    display: inline-block;
+    font-weight: 500;
+    color: #4a5568;
+    background-color: #edf2f7;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.badge-active {
+    background-color: #c6f6d5;
+    color: #276749;
+}
+
+.badge-inactive {
+    background-color: #edf2f7;
+    color: #718096;
+}
+
+.rule-details {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 25px;
+}
+
+.checkbox-group {
+    margin-bottom: 1rem;
 } 

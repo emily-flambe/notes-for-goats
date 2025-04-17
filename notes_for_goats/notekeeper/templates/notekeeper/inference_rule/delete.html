@@ -11,7 +11,7 @@
             <h3>Are you sure you want to delete the inference rule "{{ rule.name }}"?</h3>
             
             {% if auto_inferred_count > 0 %}
-                <div class="alert alert-danger">
+                <div class="alert danger">
                     <p>
                         <strong>Warning:</strong> This rule has created 
                         {{ auto_inferred_count }} relationship{{ auto_inferred_count|pluralize }}.
@@ -38,7 +38,7 @@
             <form method="post">
                 {% csrf_token %}
                 {% if auto_inferred_count > 0 %}
-                    <div class="form-group checkbox-group mb-3">
+                    <div class="form-group checkbox-group">
                         <label>
                             <input type="checkbox" name="delete_relationships" value="1">
                             Also delete all auto-inferred relationships created by this rule
@@ -52,6 +52,7 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -74,12 +75,11 @@
         display: flex;
         align-items: center;
         gap: 8px;
+        font-weight: normal;
     }
     
     .checkbox-group input[type="checkbox"] {
         width: auto;
-        margin-right: 8px;
     }
 </style>
-{% endblock %}
 {% endblock %} 

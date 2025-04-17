@@ -1,4 +1,5 @@
 {% extends "notekeeper/base.html" %}
+{% load static %}
 
 {% block title %}Relationships - {{ workspace.name }}{% endblock %}
 
@@ -177,47 +178,19 @@
         </div>
     {% endif %}
 </div>
+{% endblock %}
 
+{% block extra_css %}
 <style>
     /* Table Styling */
     .relationships-list {
         margin-top: 20px;
     }
-    .table {
-        border-collapse: separate;
-        border-spacing: 0;
-        width: 100%;
-    }
-    .table th, .table td {
-        padding: 12px;
-        vertical-align: top;
-        border-bottom: 1px solid #e2e8f0;
-    }
     
-    /* Row structure */
-    .relationship-row {
-        position: relative;
-    }
-    
-    /* Cell types */
-    .entity-cell, .relationship-cell, .notes-cell, .actions-cell {
-        position: relative;
-    }
-    
-    /* Ensure entity names wrap properly */
+    /* Entity names */
     .entity-name {
         word-break: break-word;
         padding-bottom: 4px;
-    }
-    
-    /* Cell content wrappers */
-    .relationship-wrapper, .notes-content, .action-buttons {
-        padding-bottom: 4px; /* Ensure consistent bottom padding */
-    }
-    
-    /* Notes content */
-    .notes-content {
-        word-break: break-word;
     }
     
     /* Relationship directions */
@@ -235,48 +208,12 @@
         padding-top: 5px;
     }
     
-    /* Action buttons */
-    .action-buttons {
-        display: flex;
-        gap: 5px;
-        white-space: nowrap;
-    }
-    
-    /* Empty state */
-    .empty-state {
-        background: #f9f9f9;
-        border-radius: 8px;
-        padding: 30px;
-        text-align: center;
-        margin-top: 30px;
+    /* Notes content */
+    .notes-content {
+        word-break: break-word;
     }
     
     /* Filter section styling */
-    .filter-section {
-        margin-top: 20px;
-        margin-bottom: 20px;
-        padding: 15px;
-    }
-    
-    .filter-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        align-items: flex-end;
-    }
-    
-    .filter-group {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-width: 200px;
-    }
-    
-    .filter-group label {
-        margin-bottom: 5px;
-        font-weight: bold;
-    }
-    
     .filter-dropdown-container {
         position: relative;
         width: 100%;
@@ -287,11 +224,6 @@
         padding: 8px;
         border-radius: 4px;
         border: 1px solid #ccc;
-    }
-    
-    .filter-actions {
-        display: flex;
-        gap: 10px;
     }
     
     /* Scrollable table styling */
@@ -367,55 +299,12 @@
     .filter-remove:hover {
         color: #ff3b30;
     }
-    
-    /* Searchable select styling */
-    .select2-container {
-        width: 100% !important;
-    }
-    
-    .select2-dropdown {
-        border-color: #ddd;
-    }
-    
-    .select2-search__field {
-        padding: 8px !important;
-    }
-    
-    /* Sortable column styles */
-    th.sortable {
-        cursor: pointer;
-        position: relative;
-        user-select: none;
-    }
-    
-    th.sortable:hover {
-        background-color: #f0f4f8;
-    }
-    
-    .sort-icon {
-        font-size: 0.8em;
-        margin-left: 5px;
-        color: #aaa;
-    }
-    
-    th.sorted-asc .sort-icon {
-        color: #333;
-    }
-    
-    th.sorted-desc .sort-icon {
-        color: #333;
-    }
-    
-    th.sorted-asc .sort-icon::after {
-        content: "↑";
-    }
-    
-    th.sorted-desc .sort-icon::after {
-        content: "↓";
-    }
 </style>
+{% endblock %}
 
-<!-- Move JavaScript directly into the content block -->
+{% block extra_js %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize Select2 if jQuery is loaded
@@ -427,21 +316,27 @@
             });
         }
         
-        // Table sorting functionality
+        // Enhanced table sorting with three states
         const table = document.getElementById('relationships-table');
-        if (!table) {
-            console.log("Table not found");
-            return;
-        }
+        if (!table) return;
         
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        
+        // Save original order of rows
+        const originalRows = Array.from(tbody.querySelectorAll('tr')).map(row => row.cloneNode(true));
+        
+        // Add click handlers to sortable headers
         const sortableHeaders = table.querySelectorAll('th.sortable');
-        console.log("Found sortable headers:", sortableHeaders.length);
-        
         sortableHeaders.forEach(header => {
             header.addEventListener('click', function() {
-                console.log("Header clicked:", this.getAttribute('data-column'));
-                const column = this.getAttribute('data-column');
-                const isAscending = !this.classList.contains('sorted-asc');
+                // Determine next sort state (none → asc → desc → none)
+                let nextState = 'asc';
+                if (this.classList.contains('sorted-asc')) {
+                    nextState = 'desc';
+                } else if (this.classList.contains('sorted-desc')) {
+                    nextState = 'none';
+                }
                 
                 // Remove sorting classes from all headers
                 sortableHeaders.forEach(h => {
@@ -450,61 +345,80 @@
                     if (icon) icon.textContent = '↕';
                 });
                 
-                // Add sorting class to clicked header
-                this.classList.add(isAscending ? 'sorted-asc' : 'sorted-desc');
+                // Find column index
+                const headerRow = table.querySelector('thead tr');
+                const headers = Array.from(headerRow.querySelectorAll('th'));
+                const columnIndex = headers.indexOf(this);
                 
-                // Update sort icon
-                const sortIcon = this.querySelector('.sort-icon');
-                if (sortIcon) sortIcon.textContent = isAscending ? '↑' : '↓';
-                
-                // Get all rows and convert to array for sorting
-                const tbody = table.querySelector('tbody');
-                const rows = Array.from(tbody.querySelectorAll('tr'));
-                
-                // Sort rows based on the content of cells in the clicked column
-                rows.sort((a, b) => {
-                    let cellIndex;
+                if (nextState === 'asc') {
+                    // Sort ascending
+                    this.classList.add('sorted-asc');
+                    const sortIcon = this.querySelector('.sort-icon');
+                    if (sortIcon) sortIcon.textContent = '↑';
                     
-                    switch(column) {
-                        case 'source': cellIndex = 0; break;
-                        case 'relationship': cellIndex = 1; break;
-                        case 'target': cellIndex = 2; break;
-                        default: return 0;
-                    }
+                    sortTableByColumn(table, columnIndex, true);
+                } 
+                else if (nextState === 'desc') {
+                    // Sort descending
+                    this.classList.add('sorted-desc');
+                    const sortIcon = this.querySelector('.sort-icon');
+                    if (sortIcon) sortIcon.textContent = '↓';
                     
-                    const aCell = a.cells[cellIndex];
-                    const bCell = b.cells[cellIndex];
-                    
-                    // Use data-sort-value if available, otherwise use text content
-                    const aValue = aCell.getAttribute('data-sort-value') || 
-                                  aCell.textContent.trim().toLowerCase();
-                    const bValue = bCell.getAttribute('data-sort-value') || 
-                                  bCell.textContent.trim().toLowerCase();
-                    
-                    // Compare the values
-                    if (aValue < bValue) return isAscending ? -1 : 1;
-                    if (aValue > bValue) return isAscending ? 1 : -1;
-                    return 0;
-                });
-                
-                // Remove all existing rows
-                while (tbody.firstChild) {
-                    tbody.removeChild(tbody.firstChild);
+                    sortTableByColumn(table, columnIndex, false);
+                } 
+                else {
+                    // Restore original order
+                    restoreOriginalOrder();
                 }
-                
-                // Add sorted rows
-                rows.forEach(row => {
-                    tbody.appendChild(row);
-                });
             });
         });
+        
+        // Sort table by column
+        function sortTableByColumn(table, columnIndex, isAscending) {
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Sort rows
+            rows.sort((a, b) => {
+                const aCell = a.cells[columnIndex];
+                const bCell = b.cells[columnIndex];
+                
+                if (!aCell || !bCell) return 0;
+                
+                // Use data-sort-value if available, otherwise use text content
+                const aValue = aCell.getAttribute('data-sort-value') || 
+                              aCell.textContent.trim().toLowerCase();
+                const bValue = bCell.getAttribute('data-sort-value') || 
+                              bCell.textContent.trim().toLowerCase();
+                
+                // Compare the values
+                if (aValue < bValue) return isAscending ? -1 : 1;
+                if (aValue > bValue) return isAscending ? 1 : -1;
+                return 0;
+            });
+            
+            // Remove all existing rows
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+            
+            // Add sorted rows
+            rows.forEach(row => {
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Restore original table order
+        function restoreOriginalOrder() {
+            // Clear current rows
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+            
+            // Add original rows back
+            originalRows.forEach(originalRow => {
+                tbody.appendChild(originalRow.cloneNode(true));
+            });
+        }
     });
 </script>
-
-{% endblock %}
-
-<!-- Keep the Select2 CSS in the extra_js block, but move the functional code up to the content block -->
-{% block extra_js %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 {% endblock %} 

@@ -1,6 +1,7 @@
 {% extends "notekeeper/base.html" %}
+{% load static %}
 
-{% block title %}{{ entity.name }}{% endblock %}
+{% block title %}{{ entity.name }} - {{ workspace.name }}{% endblock %}
 
 {% block content %}
 <div class="container">
