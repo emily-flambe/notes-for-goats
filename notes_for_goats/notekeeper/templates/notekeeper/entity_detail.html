@@ -55,16 +55,18 @@
                                     {% if rel.relationship_type.inverse_name %}
                                         {{ rel.relationship_type.inverse_name }}
                                     {% else %}
-                                        {{ rel.relationship_type.display_name }} (target)
+                                        {{ rel.relationship_type.display_name }}
                                     {% endif %}
                                 {% endif %}
                             </td>
                             <td>
-                                {% if related_entity.content_type.model == 'entity' %}
+                                {% if related_entity.id %}
                                     <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=related_entity.id %}">
                                         {{ related_entity.name }}
                                     </a>
-                                    <span class="entity-type-badge">{{ related_entity.get_type_display }}</span>
+                                    {% if related_entity.get_type_display %}
+                                        <span class="entity-type-badge">{{ related_entity.get_type_display }}</span>
+                                    {% endif %}
                                 {% else %}
                                     {{ related_entity }}
                                 {% endif %}
