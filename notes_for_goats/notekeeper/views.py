@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Workspace, Entity, JournalEntry, CalendarEvent, Relationship, RelationshipType
-from .forms import WorkspaceForm, JournalEntryForm, EntityForm, RelationshipTypeForm, RelationshipForm
+from .models import Workspace, Entity, JournalEntry, CalendarEvent, Relationship, RelationshipType, RelationshipInferenceRule
+from .forms import WorkspaceForm, JournalEntryForm, EntityForm, RelationshipTypeForm, RelationshipForm, RelationshipInferenceRuleForm
 import os
 import tempfile
 from django.http import HttpResponse, JsonResponse
@@ -8,6 +8,7 @@ from django.core.management import call_command
 from io import StringIO
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from .inference import apply_inference_rules, handle_relationship_deleted
 
 def home(request):
     """
@@ -441,6 +442,10 @@ def relationship_create(request, workspace_id):
             relationship.target_object_id = target.id
             
             relationship.save()
+            
+            # Apply inference rules after creating the relationship
+            apply_inference_rules(workspace, source, relationship.relationship_type)
+            
             messages.success(request, 'Relationship created successfully.')
             return redirect('notekeeper:relationship_list', workspace_id=workspace.id)
         else:
@@ -465,19 +470,45 @@ def relationship_edit(request, workspace_id, pk):
     })
 
 def relationship_delete(request, workspace_id, pk):
-    # Placeholder implementation
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     relationship = get_object_or_404(Relationship, pk=pk, workspace=workspace)
     
+    # Get from_entity parameter if it exists
+    from_entity_id = request.GET.get('from_entity')
+    from_entity = None
+    if from_entity_id:
+        from_entity = get_object_or_404(Entity, pk=from_entity_id, workspace=workspace)
+    
     if request.method == "POST":
+        # Store relationship data before deleting
+        relationship_data = {
+            'workspace': relationship.workspace,
+            'relationship_type': relationship.relationship_type,
+            'source_content_type': relationship.source_content_type,
+            'source_object_id': relationship.source_object_id,
+            'target_content_type': relationship.target_content_type,
+            'target_object_id': relationship.target_object_id
+        }
+        
+        # Delete the relationship
         relationship.delete()
-        messages.success(request, 'Relationship deleted successfully.')
-        return redirect('notekeeper:relationship_list', workspace_id=workspace.id)
+        
+        # Handle updates to inferred relationships
+        handle_relationship_deleted(workspace, type('obj', (object,), relationship_data))
+        
+        messages.success(request, "Relationship deleted successfully.")
+        
+        if from_entity:
+            return redirect('notekeeper:entity_detail', workspace_id=workspace_id, pk=from_entity.id)
+        else:
+            return redirect('notekeeper:relationship_list', workspace_id=workspace_id)
     
     return render(request, 'notekeeper/relationship_delete.html', {
         'workspace': workspace,
-        'relationship': relationship
+        'relationship': relationship,
+        'from_entity': from_entity
     })
+
 def entity_relationships_graph(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entity = get_object_or_404(Entity, pk=pk, workspace=workspace)
@@ -546,4 +577,108 @@ def entity_relationships_graph(request, workspace_id, pk):
     ]
     
     return JsonResponse(relationships_data)
+
+def inference_rule_list(request, workspace_id):
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    rules = workspace.inference_rules.all()
+    
+    return render(request, 'notekeeper/inference_rule_list.html', {
+        'workspace': workspace,
+        'rules': rules
+    })
+
+def inference_rule_create(request, workspace_id):
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    if request.method == "POST":
+        form = RelationshipInferenceRuleForm(request.POST, workspace=workspace)
+        if form.is_valid():
+            rule = form.save(commit=False)
+            rule.workspace = workspace
+            rule.save()
+            
+            messages.success(request, "Inference rule created successfully.")
+            
+            # Option to apply rules immediately
+            if 'apply_now' in request.POST:
+                apply_inference_rules(workspace, relationship_type=rule.source_relationship_type)
+                messages.info(request, "Rule has been applied to existing relationships.")
+                
+            return redirect('notekeeper:inference_rule_list', workspace_id=workspace_id)
+    else:
+        form = RelationshipInferenceRuleForm(workspace=workspace)
+    
+    return render(request, 'notekeeper/inference_rule_form.html', {
+        'workspace': workspace,
+        'form': form
+    })
+
+def inference_rule_edit(request, workspace_id, pk):
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    rule = get_object_or_404(RelationshipInferenceRule, pk=pk, workspace=workspace)
+    
+    if request.method == "POST":
+        form = RelationshipInferenceRuleForm(request.POST, instance=rule, workspace=workspace)
+        if form.is_valid():
+            rule = form.save()
+            
+            messages.success(request, "Inference rule updated successfully.")
+            
+            # Option to apply rules immediately
+            if 'apply_now' in request.POST:
+                apply_inference_rules(workspace, relationship_type=rule.source_relationship_type)
+                messages.info(request, "Rule has been applied to existing relationships.")
+                
+            return redirect('notekeeper:inference_rule_list', workspace_id=workspace_id)
+    else:
+        form = RelationshipInferenceRuleForm(instance=rule, workspace=workspace)
+    
+    return render(request, 'notekeeper/inference_rule_form.html', {
+        'workspace': workspace,
+        'form': form,
+        'rule': rule
+    })
+
+def inference_rule_delete(request, workspace_id, pk):
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    rule = get_object_or_404(RelationshipInferenceRule, pk=pk, workspace=workspace)
+    
+    # Count relationships that may have been created by this rule
+    auto_inferred_count = Relationship.objects.filter(
+        workspace=workspace,
+        relationship_type=rule.inferred_relationship_type,
+        notes__startswith="Auto-inferred:"
+    ).count()
+    
+    if request.method == "POST":
+        # Optionally delete inferred relationships
+        if 'delete_relationships' in request.POST:
+            Relationship.objects.filter(
+                workspace=workspace,
+                relationship_type=rule.inferred_relationship_type,
+                notes__startswith="Auto-inferred:"
+            ).delete()
+            messages.info(request, f"Deleted {auto_inferred_count} auto-inferred relationships.")
+        
+        rule.delete()
+        messages.success(request, "Inference rule deleted successfully.")
+        return redirect('notekeeper:inference_rule_list', workspace_id=workspace_id)
+    
+    return render(request, 'notekeeper/inference_rule_delete.html', {
+        'workspace': workspace,
+        'rule': rule,
+        'auto_inferred_count': auto_inferred_count
+    })
+
+def apply_rule_now(request, workspace_id, pk):
+    """Manually trigger a rule application."""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    rule = get_object_or_404(RelationshipInferenceRule, pk=pk, workspace=workspace)
+    
+    if request.method == "POST":
+        # Apply the rule to all entities
+        apply_inference_rules(workspace, relationship_type=rule.source_relationship_type)
+        messages.success(request, "Rule applied successfully to existing relationships.")
+    
+    return redirect('notekeeper:inference_rule_list', workspace_id=workspace_id)
 

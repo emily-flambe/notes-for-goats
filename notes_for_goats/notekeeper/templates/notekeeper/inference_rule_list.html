@@ -1,0 +1,139 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Relationship Inference Rules - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Relationship Inference Rules</h1>
+        <div class="header-actions">
+            <a href="{% url 'notekeeper:inference_rule_create' workspace_id=workspace.id %}" class="btn btn-primary">
+                Create New Rule
+            </a>
+        </div>
+    </div>
+
+    <p class="subtitle">Manage automatic relationship inference for {{ workspace.name }}</p>
+
+    {% if rules %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5>About Inference Rules</h5>
+                <p>Inference rules automatically create relationships between entities that share a common connection.</p>
+                <p>For example, if Person A and Person B are both members of Team C, a rule can automatically create a "Teammate" relationship between Person A and Person B.</p>
+            </div>
+        </div>
+
+        <div class="rules-list">
+            {% for rule in rules %}
+                <div class="card rule-card mb-3">
+                    <div class="card-body">
+                        <div class="rule-header">
+                            <h4>{{ rule.name }}</h4>
+                            <div class="rule-actions">
+                                <form method="post" action="{% url 'notekeeper:apply_rule_now' workspace_id=workspace.id pk=rule.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm">Apply Now</button>
+                                </form>
+                                <a href="{% url 'notekeeper:inference_rule_edit' workspace_id=workspace.id pk=rule.id %}" class="btn btn-sm">Edit</a>
+                                <a href="{% url 'notekeeper:inference_rule_delete' workspace_id=workspace.id pk=rule.id %}" class="btn btn-sm btn-danger">Delete</a>
+                            </div>
+                        </div>
+                        
+                        <div class="rule-status mb-2">
+                            <span class="badge {% if rule.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                                {% if rule.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                            <span class="badge badge-info">
+                                {% if rule.is_bidirectional %}Bidirectional{% else %}One-way{% endif %}
+                            </span>
+                            <span class="badge badge-info">
+                                {% if rule.auto_update %}Auto-update{% else %}Manual update{% endif %}
+                            </span>
+                        </div>
+                        
+                        <p class="rule-description">{{ rule.description|default:"No description provided" }}</p>
+                        
+                        <div class="rule-logic">
+                            <p>
+                                <strong>When two entities share a</strong> 
+                                <span class="relationship-type">{{ rule.source_relationship_type.display_name }}</span> 
+                                <strong>relationship with a common entity</strong>
+                            </p>
+                            <p>
+                                <strong>Create a</strong> 
+                                <span class="relationship-type">{{ rule.inferred_relationship_type.display_name }}</span> 
+                                <strong>relationship between them</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>No inference rules defined yet.</p>
+            <p>Inference rules automatically create relationships between entities based on their shared connections.</p>
+            <a href="{% url 'notekeeper:inference_rule_create' workspace_id=workspace.id %}" class="btn btn-primary">
+                Create Your First Inference Rule
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+{% block extra_css %}
+<style>
+    .rule-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+    
+    .rule-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .rule-description {
+        color: #4a5568;
+        margin-bottom: 1rem;
+    }
+    
+    .rule-logic {
+        background-color: #f7fafc;
+        padding: 1rem;
+        border-radius: 4px;
+    }
+    
+    .relationship-type {
+        color: #3182ce;
+        font-weight: bold;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+    
+    .badge-success {
+        background-color: #c6f6d5;
+        color: #276749;
+    }
+    
+    .badge-secondary {
+        background-color: #e2e8f0;
+        color: #4a5568;
+    }
+    
+    .badge-info {
+        background-color: #bee3f8;
+        color: #2c5282;
+    }
+</style>
+{% endblock %}
+{% endblock %} 
