@@ -19,6 +19,31 @@
         </div>
     </div>
     
+    <!-- Filter section -->
+    <div class="filter-section card">
+        <form id="relationship-filter-form" method="get" action="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}">
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label for="entity_filter">Filter by Entity:</label>
+                    <div class="filter-dropdown-container">
+                        <select id="entity_filter" name="entity_id" class="searchable-select">
+                            <option value="">All Entities</option>
+                            {% for entity in all_entities %}
+                                <option value="{{ entity.id }}" {% if selected_entity_id == entity.id %}selected{% endif %}>
+                                    {{ entity.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="btn btn-outline">Clear Filters</a>
+                </div>
+            </div>
+        </form>
+    </div>
+    
     {% if relationships %}
         <div class="card relationships-list">
             <table class="table">
@@ -98,7 +123,10 @@
         </div>
     {% else %}
         <div class="empty-state">
-            {% if entity %}
+            {% if selected_entity_id %}
+                <p>No relationships found matching your filters.</p>
+                <a href="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="btn">View All Relationships</a>
+            {% elif entity %}
                 <p>No relationships defined for {{ entity.name }}.</p>
             {% else %}
                 <p>No relationships defined in this workspace.</p>
@@ -180,5 +208,78 @@
         text-align: center;
         margin-top: 30px;
     }
+    
+    /* Filter section styling */
+    .filter-section {
+        margin-top: 20px;
+        margin-bottom: 20px;
+        padding: 15px;
+    }
+    
+    .filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: flex-end;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .filter-group label {
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    
+    .filter-dropdown-container {
+        position: relative;
+        width: 100%;
+    }
+    
+    .searchable-select {
+        width: 100%;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+    
+    .filter-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    /* Searchable select styling */
+    .select2-container {
+        width: 100% !important;
+    }
+    
+    .select2-dropdown {
+        border-color: #ddd;
+    }
+    
+    .select2-search__field {
+        padding: 8px !important;
+    }
 </style>
+
+{% block extra_js %}
+<!-- Include Select2 for searchable dropdown - make sure you have these in your base template or add CDN links -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        // Initialize the searchable dropdown
+        $('.searchable-select').select2({
+            placeholder: 'Search entities...',
+            allowClear: true,
+            width: '100%'
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %} 
