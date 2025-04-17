@@ -9,6 +9,7 @@ from io import StringIO
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from .inference import apply_inference_rules, handle_relationship_deleted
+from django.db.models import Q
 
 def home(request):
     """
@@ -417,11 +418,74 @@ def relationship_type_delete(request, workspace_id, pk):
 
 def relationship_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    # Get all entities and relationship types for the filter dropdowns
+    all_entities = Entity.objects.filter(workspace=workspace).order_by('name')
+    all_relationship_types = RelationshipType.objects.filter(workspace=workspace).order_by('display_name')
+    
+    # Handle entity filter
+    entity_id = request.GET.get('entity_id')
+    selected_entity_id = None
+    selected_entity_name = None
+    
+    # Handle relationship type filter
+    relationship_type_id = request.GET.get('relationship_type_id')
+    selected_relationship_type_id = None
+    selected_relationship_type_name = None
+    
+    # Base queryset
     relationships = Relationship.objects.filter(workspace=workspace)
+    
+    # Apply entity filter if provided
+    if entity_id:
+        try:
+            entity_id = int(entity_id)
+            selected_entity_id = entity_id
+            
+            # Get entity name for display
+            entity = Entity.objects.filter(id=entity_id, workspace=workspace).first()
+            if entity:
+                selected_entity_name = entity.name
+            
+            # Filter for relationships where the entity appears as either source or target
+            entity_content_type = ContentType.objects.get_for_model(Entity)
+            relationships = relationships.filter(
+                Q(source_content_type=entity_content_type, source_object_id=entity_id) |
+                Q(target_content_type=entity_content_type, target_object_id=entity_id)
+            )
+        except (ValueError, TypeError):
+            # Invalid ID format, ignore filter
+            pass
+    
+    # Apply relationship type filter if provided
+    if relationship_type_id:
+        try:
+            relationship_type_id = int(relationship_type_id)
+            selected_relationship_type_id = relationship_type_id
+            
+            # Get relationship type name for display
+            relationship_type = RelationshipType.objects.filter(id=relationship_type_id, workspace=workspace).first()
+            if relationship_type:
+                selected_relationship_type_name = relationship_type.display_name
+            
+            # Filter for relationships of this type
+            relationships = relationships.filter(relationship_type_id=relationship_type_id)
+        except (ValueError, TypeError):
+            # Invalid ID format, ignore filter
+            pass
+    
+    # Order by creation date (newest first)
+    relationships = relationships.order_by('-created_at')
     
     return render(request, 'notekeeper/relationship_list.html', {
         'workspace': workspace,
-        'relationships': relationships
+        'relationships': relationships,
+        'all_entities': all_entities,
+        'all_relationship_types': all_relationship_types,
+        'selected_entity_id': selected_entity_id,
+        'selected_entity_name': selected_entity_name,
+        'selected_relationship_type_id': selected_relationship_type_id,
+        'selected_relationship_type_name': selected_relationship_type_name,
     })
 
 def relationship_create(request, workspace_id):
