@@ -501,4 +501,74 @@ th.sorted-desc .sort-icon {
 
 .checkbox-group {
     margin-bottom: 1rem;
+}
+
+/* Journal entries */
+.journal-entry {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background-color: white;
+}
+
+.journal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.journal-title {
+    font-size: 1.25rem;
+    margin: 0;
+    color: #2d3748;
+    font-weight: bold;
+}
+
+.journal-date {
+    color: #718096;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.journal-content {
+    margin-top: 1rem;
+    line-height: 1.6;
+}
+
+.journal-entities {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.entity-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 0.5rem;
+}
+
+.entity-tag {
+    background-color: #edf2f7;
+    color: #4a5568;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 0.875rem;
+    text-decoration: none;
+}
+
+.entity-tag:hover {
+    background-color: #e2e8f0;
+    color: #2d3748;
+}
+
+/* Date picker styling */
+.datepicker-wrapper {
+    position: relative;
+}
+
+input[type="datetime-local"] {
+    width: 100%;
 } 

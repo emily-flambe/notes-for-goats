@@ -1,30 +1,35 @@
 {% extends "notekeeper/base.html" %}
 
-{% block title %}{{ entry.title }}{% endblock %}
+{% block title %}{{ entry.title }} - {{ workspace.name }}{% endblock %}
 
 {% block content %}
-<h1>{{ entry.title }}</h1>
-<p><strong>Date:</strong> {{ entry.timestamp|date:"Y-m-d H:i" }}</p>
-
-{% if entry.referenced_entities.exists %}
-<p><strong>Referenced Entities:</strong>
-    {% for entity in entry.referenced_entities.all %}
-    <span class="entity-tag">
-        <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
-            {{ entity.name }} ({{ entity.get_type_display }})
-        </a>
-    </span>
-    {% endfor %}
-</p>
-{% endif %}
-
-<div class="journal-content">
-    {{ entry.content|linebreaks }}
-</div>
-
-<div class="actions">
-    <a href="{% url 'notekeeper:journal_edit' workspace_id=workspace.id pk=entry.pk %}" class="btn">Edit</a>
-    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Back to List</a>
-    <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">Back to Workspace</a>
+<div class="container">
+    <h1>{{ entry.title }}</h1>
+    
+    <div class="card">
+        <div class="journal-date">{{ entry.timestamp|date:"F j, Y - g:i A" }}</div>
+        
+        <div class="journal-content">
+            {{ entry.content|linebreaks }}
+        </div>
+        
+        {% if entry.entities.all %}
+            <div class="journal-entities">
+                <strong>Related Entities:</strong>
+                <div class="entity-list">
+                    {% for entity in entry.entities.all %}
+                        <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="entity-tag">
+                            {{ entity.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="actions">
+        <a href="{% url 'notekeeper:journal_edit' workspace_id=workspace.id pk=entry.id %}" class="btn">Edit</a>
+        <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Back to Journal</a>
+    </div>
 </div>
 {% endblock %} 

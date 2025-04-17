@@ -1,32 +1,59 @@
 {% extends "notekeeper/base.html" %}
 
-{% block title %}{% if form.instance.pk %}Edit Journal Entry{% else %}New Journal Entry{% endif %}{% endblock %}
+{% block title %}
+    {% if entry %}Edit{% else %}New{% endif %} Journal Entry - {{ workspace.name }}
+{% endblock %}
 
 {% block content %}
-<h1>{% if form.instance.pk %}Edit Journal Entry{% else %}New Journal Entry{% endif %}</h1>
-
-<form method="post">
-    {% csrf_token %}
-    <div>
-        <label for="{{ form.title.id_for_label }}">Title:</label>
-        {{ form.title }}
-        {{ form.title.errors }}
+<div class="container">
+    <div class="page-header">
+        <h1>{% if entry %}Edit{% else %}New{% endif %} Journal Entry</h1>
     </div>
     
-    <div>
-        <label for="{{ form.timestamp.id_for_label }}">Date/Time:</label>
-        {{ form.timestamp }}
-        {{ form.timestamp.errors }}
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="{{ form.title.id_for_label }}">Title</label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                    <div class="error">{{ form.title.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.timestamp.id_for_label }}">Date/Time</label>
+                <div class="datepicker-wrapper">
+                    {{ form.timestamp }}
+                </div>
+                {% if form.timestamp.errors %}
+                    <div class="error">{{ form.timestamp.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.content.id_for_label }}">Content</label>
+                {{ form.content }}
+                {% if form.content.errors %}
+                    <div class="error">{{ form.content.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.entities.id_for_label }}">Related Entities</label>
+                {{ form.entities }}
+                <div class="form-text">Select entities related to this journal entry</div>
+                {% if form.entities.errors %}
+                    <div class="error">{{ form.entities.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
+            </div>
+        </form>
     </div>
-    
-    <div>
-        <label for="{{ form.content.id_for_label }}">Content:</label>
-        {{ form.content }}
-        {{ form.content.errors }}
-        <p class="help-text">Use #TagName to reference entities</p>
-    </div>
-    
-    <button type="submit" class="btn">Save</button>
-    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
-</form>
+</div>
 {% endblock %} 
