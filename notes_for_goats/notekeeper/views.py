@@ -460,12 +460,52 @@ def relationship_create(request, workspace_id):
     })
 
 def relationship_edit(request, workspace_id, pk):
-    # Placeholder implementation
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     relationship = get_object_or_404(Relationship, pk=pk, workspace=workspace)
     
+    entity_content_type = ContentType.objects.get_for_model(Entity)
+    source_entity = None
+    target_entity = None
+    
+    # Get the source and target entities if they are Entity objects
+    if relationship.source_content_type == entity_content_type:
+        source_entity = get_object_or_404(Entity, pk=relationship.source_object_id)
+    
+    if relationship.target_content_type == entity_content_type:
+        target_entity = get_object_or_404(Entity, pk=relationship.target_object_id)
+    
+    if request.method == "POST":
+        form = RelationshipForm(request.POST, instance=relationship, workspace=workspace)
+        if form.is_valid():
+            # Update the relationship
+            updated_relationship = form.save(commit=False)
+            
+            # Update the content type and object IDs
+            source = form.cleaned_data['source_entity']
+            target = form.cleaned_data['target_entity']
+            
+            updated_relationship.source_content_type = ContentType.objects.get_for_model(source)
+            updated_relationship.source_object_id = source.id
+            updated_relationship.target_content_type = ContentType.objects.get_for_model(target)
+            updated_relationship.target_object_id = target.id
+            
+            updated_relationship.save()
+            
+            messages.success(request, 'Relationship updated successfully.')
+            return redirect('notekeeper:relationship_list', workspace_id=workspace_id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        # For GET requests, initialize the form with initial values
+        initial_data = {
+            'source_entity': source_entity,
+            'target_entity': target_entity,
+        }
+        form = RelationshipForm(instance=relationship, initial=initial_data, workspace=workspace)
+    
     return render(request, 'notekeeper/relationship_form.html', {
         'workspace': workspace,
+        'form': form,
         'relationship': relationship
     })
 
