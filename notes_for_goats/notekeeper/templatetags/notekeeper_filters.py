@@ -1,5 +1,6 @@
 from django import template
 import json
+import re
 
 register = template.Library()
 
@@ -28,3 +29,10 @@ def split_tags(value):
         
     # Default fallback
     return [str(value)] 
+
+@register.filter
+def findhashtags(text):
+    """Extract hashtags from text"""
+    if not text:
+        return []
+    return re.findall(r'#(\w+)', text) 

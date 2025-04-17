@@ -12,80 +12,105 @@
     </div>
     
     {% if people.exists or projects.exists or teams.exists %}
-        <div class="entity-groups">
-            <div class="entity-group card">
-                <h2>People</h2>
-                {% if people %}
-                    <ul class="entity-list">
-                    {% for entity in people %}
-                        <li>
-                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
-                                {{ entity.name }}
-                            </a>
-                            {% if entity.notes %}
-                                <div class="entity-preview">{{ entity.notes|truncatechars:60 }}</div>
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="no-entities">No people yet.</p>
-                {% endif %}
-                <div class="entity-actions">
-                    <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}?type=PERSON" class="btn btn-sm">Add Person</a>
-                </div>
-            </div>
+        <div class="entity-sections">
+            <!-- People Section -->
+            {% if people.exists %}
+                <section class="entity-section">
+                    <h2 class="section-title">People</h2>
+                    <div class="entity-container">
+                        {% for entity in people|dictsort:"name" %}
+                            <div class="entity-card">
+                                <h3 class="entity-name">
+                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
+                                        {{ entity.name }}
+                                    </a>
+                                </h3>
+                                {% if entity.notes %}
+                                    <p class="entity-notes">{{ entity.notes|truncatechars:100 }}</p>
+                                {% endif %}
+                                {% if entity.tags %}
+                                    <div class="entity-tags">
+                                        {% for tag in entity.get_tag_list %}
+                                            <span class="tag-badge">#{{ tag }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="section-actions">
+                        <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}?type=PERSON" class="btn btn-sm">Add Person</a>
+                    </div>
+                </section>
+            {% endif %}
             
-            <div class="entity-group card">
-                <h2>Projects</h2>
-                {% if projects %}
-                    <ul class="entity-list">
-                    {% for entity in projects %}
-                        <li>
-                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
-                                {{ entity.name }}
-                            </a>
-                            {% if entity.notes %}
-                                <div class="entity-preview">{{ entity.notes|truncatechars:60 }}</div>
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="no-entities">No projects yet.</p>
-                {% endif %}
-                <div class="entity-actions">
-                    <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}?type=PROJECT" class="btn btn-sm">Add Project</a>
-                </div>
-            </div>
+            <!-- Projects Section -->
+            {% if projects.exists %}
+                <section class="entity-section">
+                    <h2 class="section-title">Projects</h2>
+                    <div class="entity-container">
+                        {% for entity in projects|dictsort:"name" %}
+                            <div class="entity-card">
+                                <h3 class="entity-name">
+                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
+                                        {{ entity.name }}
+                                    </a>
+                                </h3>
+                                {% if entity.notes %}
+                                    <p class="entity-notes">{{ entity.notes|truncatechars:100 }}</p>
+                                {% endif %}
+                                {% if entity.tags %}
+                                    <div class="entity-tags">
+                                        {% for tag in entity.get_tag_list %}
+                                            <span class="tag-badge">#{{ tag }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="section-actions">
+                        <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}?type=PROJECT" class="btn btn-sm">Add Project</a>
+                    </div>
+                </section>
+            {% endif %}
             
-            <div class="entity-group card">
-                <h2>Teams</h2>
-                {% if teams %}
-                    <ul class="entity-list">
-                    {% for entity in teams %}
-                        <li>
-                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
-                                {{ entity.name }}
-                            </a>
-                            {% if entity.notes %}
-                                <div class="entity-preview">{{ entity.notes|truncatechars:60 }}</div>
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="no-entities">No teams yet.</p>
-                {% endif %}
-                <div class="entity-actions">
-                    <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}?type=TEAM" class="btn btn-sm">Add Team</a>
-                </div>
-            </div>
+            <!-- Teams Section -->
+            {% if teams.exists %}
+                <section class="entity-section">
+                    <h2 class="section-title">Teams</h2>
+                    <div class="entity-container">
+                        {% for entity in teams|dictsort:"name" %}
+                            <div class="entity-card">
+                                <h3 class="entity-name">
+                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
+                                        {{ entity.name }}
+                                    </a>
+                                </h3>
+                                {% if entity.notes %}
+                                    <p class="entity-notes">{{ entity.notes|truncatechars:100 }}</p>
+                                {% endif %}
+                                {% if entity.tags %}
+                                    <div class="entity-tags">
+                                        {% for tag in entity.get_tag_list %}
+                                            <span class="tag-badge">#{{ tag }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="section-actions">
+                        <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}?type=TEAM" class="btn btn-sm">Add Team</a>
+                    </div>
+                </section>
+            {% endif %}
         </div>
     {% else %}
         <div class="empty-state">
             <p>No entities created yet.</p>
             <p>Entities represent people, projects, and teams that you can reference in your journal entries.</p>
+            <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}" class="btn btn-primary">Create Your First Entity</a>
         </div>
     {% endif %}
 </div>
@@ -93,64 +118,99 @@
 
 {% block extra_css %}
 <style>
-    .entity-groups {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
+    /* Global Entity List Styles */
+    .entity-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
         margin-top: 20px;
     }
     
-    .entity-group h2 {
+    .entity-section {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+    }
+    
+    .section-title {
         margin-top: 0;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
         border-bottom: 1px solid #e2e8f0;
+        color: #2d3748;
+        font-size: 1.5rem;
+    }
+    
+    .entity-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .entity-card {
+        padding: 15px;
+        background-color: #f8fafc;
+        border-radius: 6px;
+        border-left: 4px solid #4299e1;
+    }
+    
+    .entity-name {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 1.1rem;
+    }
+    
+    .entity-name a {
+        color: #2c5282;
+        text-decoration: none;
+    }
+    
+    .entity-name a:hover {
+        color: #2b6cb0;
+        text-decoration: underline;
+    }
+    
+    .entity-notes {
+        margin: 0 0 10px 0;
+        color: #4a5568;
+        line-height: 1.5;
+    }
+    
+    .entity-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+    }
+    
+    .tag-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: #e2e8f0;
+        border-radius: 12px;
+        font-size: 0.8em;
         color: #4a5568;
     }
     
-    .entity-list {
-        list-style-type: none;
-        padding: 0;
-        margin: 0;
-    }
-    
-    .entity-list li {
-        margin-bottom: 12px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #f7fafc;
-    }
-    
-    .entity-list li:last-child {
-        margin-bottom: 0;
-        padding-bottom: 0;
-        border-bottom: none;
-    }
-    
-    .entity-list a {
-        font-weight: 500;
-        color: #2d3748;
-        text-decoration: none;
-        display: block;
-    }
-    
-    .entity-list a:hover {
-        color: #4299e1;
-    }
-    
-    .entity-preview {
-        font-size: 0.875rem;
-        color: #718096;
-        margin-top: 4px;
-    }
-    
-    .no-entities {
-        color: #a0aec0;
-        font-style: italic;
-    }
-    
-    .entity-actions {
-        margin-top: 15px;
+    .section-actions {
+        margin-top: 20px;
         text-align: right;
+        padding-top: 15px;
+        border-top: 1px solid #edf2f7;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        background-color: #f8fafc;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+    
+    .empty-state p {
+        color: #4a5568;
+        margin-bottom: 15px;
     }
 </style>
 {% endblock %} 

@@ -10,6 +10,8 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from .inference import apply_inference_rules, handle_relationship_deleted
 from django.db.models import Q
+import re
+from django.utils import timezone
 
 def home(request):
     """
@@ -47,35 +49,62 @@ def journal_detail(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entry = get_object_or_404(JournalEntry, pk=pk, workspace=workspace)
     
+    # Extract hashtags from content for display
+    hashtags = re.findall(r'#(\w+)', entry.content)
+    
     return render(request, 'notekeeper/journal/detail.html', {
+        'workspace': workspace,
         'entry': entry,
-        'workspace': workspace  # Make sure this is included
+        'hashtags': hashtags
     })
 
 def journal_create(request, workspace_id):
+    """View to create a new journal entry"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
     if request.method == "POST":
         form = JournalEntryForm(request.POST)
         if form.is_valid():
             entry = form.save(commit=False)
             entry.workspace = workspace
-            entry.save()
-            return redirect('notekeeper:journal_detail', workspace_id=workspace.pk, pk=entry.pk)
+            entry.save()  # This will trigger the save method to find hashtags
+            return redirect('notekeeper:journal_detail', workspace_id=workspace_id, pk=entry.pk)
     else:
-        form = JournalEntryForm()
-    return render(request, 'notekeeper/journal/form.html', {'form': form, 'workspace': workspace})
+        form = JournalEntryForm(initial={'timestamp': timezone.now()})
+    
+    # Extract hashtags from content if available (for preview)
+    hashtags = []
+    if request.method == "POST" and 'content' in request.POST:
+        hashtags = re.findall(r'#(\w+)', request.POST['content'])
+    
+    return render(request, 'notekeeper/journal/form.html', {
+        'workspace': workspace,
+        'form': form,
+        'hashtags': hashtags
+    })
 
 def journal_edit(request, workspace_id, pk):
+    """View to edit an existing journal entry"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entry = get_object_or_404(JournalEntry, pk=pk, workspace=workspace)
+    
     if request.method == "POST":
         form = JournalEntryForm(request.POST, instance=entry)
         if form.is_valid():
-            entry = form.save()
-            return redirect('notekeeper:journal_detail', workspace_id=workspace.pk, pk=entry.pk)
+            entry = form.save()  # This will trigger the save method to find hashtags
+            return redirect('notekeeper:journal_detail', workspace_id=workspace_id, pk=entry.pk)
     else:
         form = JournalEntryForm(instance=entry)
-    return render(request, 'notekeeper/journal/form.html', {'form': form})
+    
+    # Extract hashtags from content (for preview)
+    hashtags = re.findall(r'#(\w+)', entry.content)
+    
+    return render(request, 'notekeeper/journal/form.html', {
+        'workspace': workspace,
+        'form': form,
+        'entry': entry,
+        'hashtags': hashtags
+    })
 
 def entity_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)

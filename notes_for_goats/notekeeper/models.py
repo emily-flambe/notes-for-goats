@@ -94,41 +94,48 @@ class JournalEntry(models.Model):
     def save(self, *args, **kwargs):
         """
         Override save to extract entity references from content.
-        Looks for #TagSyntax in the content and matches with entity tags.
+        Looks for #HashTags in the content and matches with entity tags or names.
         """
+        # First save the entry normally to ensure it exists in the database
         super().save(*args, **kwargs)
         
-        # Extract hashtags from content
+        # Extract hashtags from content (words prefixed with #)
         hashtags = re.findall(r'#(\w+)', self.content)
+        # Convert to lowercase for case-insensitive matching
         lower_hashtags = [tag.lower() for tag in hashtags]
         
-        # Clear existing references
+        if not lower_hashtags:
+            # No hashtags found, clear references and return early
+            self.referenced_entities.clear()
+            return
+        
+        # Clear existing references to rebuild them
         self.referenced_entities.clear()
         
         # Get all entities from this workspace
+        from .models import Entity  # Import here to avoid circular imports
         workspace_entities = Entity.objects.filter(workspace=self.workspace)
         
-        # Find entities that match either their name or any of their tags
+        # Entities to add to referenced_entities
         entities_to_add = []
+        
         for entity in workspace_entities:
-            # Check if entity name matches any hashtag
+            # Check if entity name matches any hashtag (case-insensitive)
             if entity.name.lower() in lower_hashtags:
                 entities_to_add.append(entity)
                 continue
-                
+            
             # Check if any entity tag matches any hashtag
-            if hasattr(entity, 'tags') and entity.tags:
-                # Handle the case where tags might be a string representation of a list
-                if isinstance(entity.tags, list):
-                    entity_tags = [tag.lower() for tag in entity.tags if isinstance(tag, str)]
-                else:
-                    # Handle the case where tags is already a list
-                    entity_tags = [tag.lower() for tag in entity.tags if isinstance(tag, str)]
-                    
-                if any(tag in lower_hashtags for tag in entity_tags):
-                    entities_to_add.append(entity)
+            entity_tags = entity.get_tag_list()
+            
+            # Convert tags to lowercase for case-insensitive matching
+            entity_tags_lower = [tag.lower() for tag in entity_tags]
+            
+            # If any tag matches a hashtag, add the entity
+            if any(tag in lower_hashtags for tag in entity_tags_lower):
+                entities_to_add.append(entity)
         
-        # Add all matching entities
+        # Add all matching entities to referenced_entities
         if entities_to_add:
             self.referenced_entities.add(*entities_to_add)
     

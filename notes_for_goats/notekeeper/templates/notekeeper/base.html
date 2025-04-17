@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Notes for Goats{% endblock %}</title>
     {% load static %}
+    {% load notekeeper_filters %}
     <link rel="stylesheet" href="{% static 'notekeeper/css/styles.css' %}">
     {% block extra_css %}{% endblock %}
     <style>
