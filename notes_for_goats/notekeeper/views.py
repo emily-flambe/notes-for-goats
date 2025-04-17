@@ -174,65 +174,23 @@ def workspace_list(request):
     return render(request, 'notekeeper/workspace_list.html', {'workspaces': workspaces})
 
 def workspace_detail(request, pk):
-    try:
-        workspace = get_object_or_404(Workspace, pk=pk)
-        
-        # Ensure workspace ID is a valid integer
-        if not workspace.id:
-            messages.error(request, "Invalid workspace ID.")
-            return redirect('notekeeper:workspace_list')
-            
-        # Set this workspace as the current workspace in session
-        request.session['current_workspace_id'] = workspace.id
-        
-        print(f"Found workspace: {workspace.name}")
-        print(f"Workspace ID: {workspace.id}")  # Add this line to debug
-        
-        recent_entries = workspace.journal_entries.all().order_by('-timestamp')[:5]
-        print(f"Found {len(recent_entries)} recent entries")
-        
-        # Get entities by type for display
-        people_entities = workspace.entities.filter(type='PERSON')
-        project_entities = workspace.entities.filter(type='PROJECT')
-        team_entities = workspace.entities.filter(type='TEAM')
-        
-        # Add this to check for relationship-related code that might be causing issues
-        print("Checking for relationships")
-        try:
-            # If you've added relationship functionality
-            relationship_types = workspace.relationship_types.all()
-            print(f"Found {len(relationship_types)} relationship types")
-            recent_relationships = workspace.relationships.all().order_by('-created_at')[:5]
-            print(f"Found {len(recent_relationships)} recent relationships")
-        except Exception as e:
-            print(f"Error in relationship code: {str(e)}")
-            # If there's an error in relationship code, use empty querysets
-            relationship_types = []
-            recent_relationships = []
-        
-        print("Preparing context")
-        context = {
-            'workspace': workspace,
-            'current_workspace': workspace,  # Add this
-            'recent_entries': recent_entries,
-            'people_entities': people_entities,
-            'project_entities': project_entities,
-            'team_entities': team_entities,
-        }
-        
-        # Only add these to context if relationships are implemented
-        if 'relationship_types' in locals():
-            context['relationship_types'] = relationship_types
-            context['recent_relationships'] = recent_relationships
-            
-        # Debug the context values
-        print(f"Context workspace ID: {context['workspace'].id}")
-        
-        return render(request, 'notekeeper/workspace_detail.html', context)
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        messages.error(request, "There was an error loading the workspace.")
-        return redirect('notekeeper:workspace_list')
+    workspace = get_object_or_404(Workspace, pk=pk)
+    
+    # Get all entities grouped by type
+    entities_by_type = {}
+    for entity in workspace.entities.all():
+        if entity.type not in entities_by_type:
+            entities_by_type[entity.type] = []
+        entities_by_type[entity.type].append(entity)
+    
+    context = {
+        'current_workspace': workspace,
+        'recent_entries': workspace.journal_entries.order_by('-timestamp')[:5],
+        'entities_by_type': entities_by_type,
+        'recent_relationships': workspace.relationships.select_related('relationship_type').order_by('-created_at')[:5],
+        'relationship_types': workspace.relationship_types.all(),
+    }
+    return render(request, 'notekeeper/workspace_detail.html', context)
 
 def workspace_create(request):
     if request.method == "POST":
@@ -392,11 +350,11 @@ def create_relationship(request, workspace_id):
 
 def relationship_type_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    relationship_types = RelationshipType.objects.filter(workspace=workspace)
+    relationship_types = workspace.relationship_types.all().order_by('display_name')
     
     return render(request, 'notekeeper/relationship_type_list.html', {
         'workspace': workspace,
-        'relationship_types': relationship_types
+        'relationship_types': relationship_types,
     })
 
 def relationship_type_create(request, workspace_id):

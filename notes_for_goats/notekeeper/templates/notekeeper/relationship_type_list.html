@@ -4,76 +4,186 @@
 
 {% block content %}
 <div class="container">
-    <h1>Relationship Types</h1>
-    <p class="subtitle">Manage the types of relationships between entities in {{ workspace.name }}</p>
-
-    <div class="actions">
-        <a href="{% url 'notekeeper:relationship_type_create' workspace_id=workspace.id %}" class="btn btn-primary">
-            Create New Relationship Type
-        </a>
-        <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">
-            Back to Workspace
-        </a>
+    <div class="page-header">
+        <h1>Relationship Types</h1>
+        <div class="header-actions">
+            <a href="{% url 'notekeeper:relationship_type_create' workspace_id=workspace.id %}" class="btn btn-primary">
+                Create New Type
+            </a>
+        </div>
     </div>
 
+    <p class="subtitle">Manage the types of relationships between entities in {{ workspace.name }}</p>
+
     {% if relationship_types %}
-        <div class="card relationship-types-list">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Display Name</th>
-                        <th>Internal Name</th>
-                        <th>Description</th>
-                        <th>Directional</th>
-                        <th>Inverse Name</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for rt in relationship_types %}
-                    <tr>
-                        <td>{{ rt.display_name }}</td>
-                        <td><code>{{ rt.name }}</code></td>
-                        <td>{{ rt.description|truncatechars:50 }}</td>
-                        <td>{% if rt.is_directional %}Yes{% else %}No{% endif %}</td>
-                        <td>{{ rt.inverse_name|default:"-" }}</td>
-                        <td class="actions">
-                            <a href="{% url 'notekeeper:relationship_type_edit' workspace_id=workspace.id pk=rt.id %}" class="btn btn-sm">Edit</a>
-                            <a href="{% url 'notekeeper:relationship_type_delete' workspace_id=workspace.id pk=rt.id %}" class="btn btn-sm btn-danger">Delete</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="relationship-types-grid">
+            {% for type in relationship_types %}
+                <div class="type-card">
+                    <div class="type-header">
+                        <h3>{{ type.display_name }}</h3>
+                        <div class="type-actions">
+                            <a href="{% url 'notekeeper:relationship_type_edit' workspace_id=workspace.id pk=type.id %}" 
+                               class="btn btn-sm">Edit</a>
+                            <a href="{% url 'notekeeper:relationship_type_delete' workspace_id=workspace.id pk=type.id %}" 
+                               class="btn btn-sm btn-danger"
+                               onclick="return confirm('Are you sure? This will delete all relationships of this type.')">
+                                Delete
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="type-metadata">
+                        <span class="relationship-count">
+                            {{ type.relationships.count }} relationship{{ type.relationships.count|pluralize }}
+                        </span>
+                        {% if type.is_directional %}
+                            <span class="directional-badge">Directional</span>
+                        {% else %}
+                            <span class="non-directional-badge">Non-directional</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="type-details">
+                        {% if type.description %}
+                            <p>{{ type.description }}</p>
+                        {% else %}
+                            <p class="no-description">No description provided</p>
+                        {% endif %}
+
+                        {% if type.is_directional and type.inverse_name %}
+                            <p class="inverse-name">
+                                <strong>Inverse:</strong> {{ type.inverse_name }}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
         </div>
     {% else %}
         <div class="empty-state">
             <p>No relationship types defined yet.</p>
-            <p>Relationship types define the kinds of connections that can exist between entities.</p>
+            <p>Relationship types help you define how entities are connected to each other.</p>
+            <a href="{% url 'notekeeper:relationship_type_create' workspace_id=workspace.id %}" class="btn btn-primary">
+                Create Your First Relationship Type
+            </a>
         </div>
     {% endif %}
 </div>
 
 <style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
     .subtitle {
         color: #666;
-        margin-bottom: 20px;
+        margin-bottom: 2rem;
     }
-    .actions {
-        margin: 20px 0;
+
+    .relationship-types-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
     }
-    .relationship-types-list {
-        margin-top: 20px;
-    }
-    .empty-state {
-        background: #f9f9f9;
+
+    .type-card {
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-        padding: 30px;
-        text-align: center;
-        margin-top: 30px;
+        padding: 1.5rem;
+        background-color: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    td.actions {
-        white-space: nowrap;
+
+    .type-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+
+    .type-header h3 {
+        margin: 0;
+        color: #2d3748;
+    }
+
+    .type-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .type-metadata {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+    }
+
+    .relationship-count {
+        color: #4a5568;
+    }
+
+    .directional-badge, .non-directional-badge {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+    }
+
+    .directional-badge {
+        background-color: #ebf8ff;
+        color: #2b6cb0;
+    }
+
+    .non-directional-badge {
+        background-color: #f0fff4;
+        color: #2f855a;
+    }
+
+    .type-details {
+        color: #4a5568;
+    }
+
+    .type-details p {
+        margin: 0.5rem 0;
+    }
+
+    .no-description {
+        color: #a0aec0;
+        font-style: italic;
+    }
+
+    .inverse-name {
+        font-size: 0.875rem;
+        color: #718096;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        background-color: #f7fafc;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+
+    .empty-state p {
+        color: #4a5568;
+        margin-bottom: 1rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .btn-danger {
+        background-color: #f56565;
+    }
+
+    .btn-danger:hover {
+        background-color: #e53e3e;
     }
 </style>
 {% endblock %} 

@@ -10,13 +10,12 @@
         <a href="{% url 'notekeeper:relationship_create' workspace_id=workspace.id %}" class="btn btn-primary">
             Create New Relationship
         </a>
+        <a href="{% url 'notekeeper:relationship_type_list' workspace_id=workspace.id %}" class="btn">
+            Manage Relationship Types
+        </a>
         {% if entity %}
             <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="btn">
                 Back to {{ entity.name }}
-            </a>
-        {% else %}
-            <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">
-                Back to Workspace
             </a>
         {% endif %}
     </div>

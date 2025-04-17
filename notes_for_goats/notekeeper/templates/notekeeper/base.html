@@ -188,6 +188,57 @@
             margin-left: auto;
             margin-right: 0;
         }
+        .admin-menu {
+            position: relative;
+            margin-left: 15px;
+        }
+        
+        .hamburger-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .hamburger-button:hover {
+            opacity: 0.8;
+        }
+        
+        .admin-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 4px;
+        }
+        
+        .admin-dropdown a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            border-bottom: 1px solid #ddd;
+            margin-right: 0;
+        }
+        
+        .admin-dropdown a:last-child {
+            border-bottom: none;
+        }
+        
+        .admin-dropdown a:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .admin-menu:hover .admin-dropdown {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -206,9 +257,6 @@
                     {% endif %}
                 {% endif %}
                 
-                <a href="{% url 'notekeeper:workspace_list' %}">Manage Workspaces</a>
-                <a href="{% url 'admin:index' %}">Django Admin</a>
-                
                 <!-- Workspace Dropdown -->
                 <div class="workspace-dropdown">
                     <button class="dropdown-toggle">
@@ -226,6 +274,15 @@
                             </a>
                         {% endfor %}
                         <a href="{% url 'notekeeper:workspace_create' %}" class="btn-new-workspace">+ New Workspace</a>
+                    </div>
+                </div>
+                
+                <!-- New Admin Menu -->
+                <div class="admin-menu">
+                    <button class="hamburger-button">☰</button>
+                    <div class="admin-dropdown">
+                        <a href="{% url 'notekeeper:workspace_list' %}">Manage Workspaces</a>
+                        <a href="{% url 'admin:index' %}">Django Admin</a>
                     </div>
                 </div>
             </nav>

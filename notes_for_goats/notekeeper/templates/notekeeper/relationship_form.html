@@ -17,9 +17,17 @@
             {{ form.source_entity }}
         </div>
         
-        <div class="form-group">
+        <div class="form-group relationship-type-group">
             <label for="{{ form.relationship_type.id_for_label }}">Relationship Type:</label>
-            {{ form.relationship_type }}
+            <div class="relationship-type-row">
+                {{ form.relationship_type }}
+                <a href="{% url 'notekeeper:relationship_type_create' workspace_id=workspace.id %}" 
+                   class="btn btn-sm" 
+                   target="_blank"
+                   onclick="return confirm('This will open in a new tab. After creating the type, please return here and refresh the page.')">
+                    + New Type
+                </a>
+            </div>
         </div>
         
         <div class="form-group">
@@ -98,6 +106,31 @@
         margin-top: 0;
         margin-bottom: 15px;
         font-size: 1.1rem;
+    }
+    .relationship-type-group {
+        margin-bottom: 1rem;
+    }
+    
+    .relationship-type-row {
+        display: flex;
+        gap: 10px;
+        align-items: start;
+    }
+    
+    .relationship-type-row select {
+        flex: 1;
+    }
+    
+    .btn-sm {
+        padding: 8px 12px;
+        font-size: 0.875rem;
+        white-space: nowrap;
+    }
+    
+    /* Override the full-width style for the select in this case */
+    .relationship-type-row .form-control {
+        width: auto;
+        flex-grow: 1;
     }
 </style>
 

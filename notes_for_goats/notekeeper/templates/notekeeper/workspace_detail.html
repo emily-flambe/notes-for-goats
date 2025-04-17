@@ -23,15 +23,6 @@ workspace.id: {{ current_workspace.id }}
 <h1>{{ current_workspace.name }}</h1>
 <p class="workspace-description">{{ current_workspace.description }}</p>
 
-<div class="workspace-actions">
-    {% if current_workspace and current_workspace.id %}
-        <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn">New Journal Entry</a>
-    {% endif %}
-    <a href="{% url 'notekeeper:entity_create' workspace_id=current_workspace.id %}" class="btn">New Entity</a>
-    <a href="{% url 'notekeeper:export_workspace' pk=current_workspace.id %}" class="btn">Export Workspace</a>
-    <a href="{% url 'notekeeper:workspace_edit' pk=current_workspace.id %}" class="btn">Edit Workspace</a>
-</div>
-
 <div class="workspace-dashboard">
     <div class="recent-entries">
         <h2>Recent Journal Entries</h2>
@@ -55,99 +46,38 @@ workspace.id: {{ current_workspace.id }}
     <div class="entities-overview">
         <h2>Entities</h2>
         
-        <h3>People</h3>
-        {% if people_entities %}
-            <ul>
-            {% for entity in people_entities %}
-                <li>
-                    <a href="{% url 'notekeeper:entity_detail' workspace_id=current_workspace.id pk=entity.pk %}">
-                        {{ entity.name }}
-                    </a>
-                </li>
+        {% if entities_by_type %}
+            {% for type, entities in entities_by_type.items %}
+                <h3>{{ type|title }}s</h3>
+                <ul>
+                {% for entity in entities %}
+                    <li>
+                        <a href="{% url 'notekeeper:entity_detail' workspace_id=current_workspace.id pk=entity.pk %}">
+                            {{ entity.name }}
+                        </a>
+                    </li>
+                {% endfor %}
+                </ul>
             {% endfor %}
-            </ul>
         {% else %}
-            <p>No people yet.</p>
+            <p>No entities yet.</p>
         {% endif %}
         
-        <h3>Workspaces</h3>
-        {% if workspace_entities %}
-            <ul>
-            {% for entity in workspace_entities %}
-                <li>
-                    <a href="{% url 'notekeeper:entity_detail' workspace_id=current_workspace.id pk=entity.pk %}">
-                        {{ entity.name }}
-                    </a>
-                </li>
-            {% endfor %}
-            </ul>
-        {% else %}
-            <p>No workspaces yet.</p>
-        {% endif %}
-        
-        <h3>Teams</h3>
-        {% if team_entities %}
-            <ul>
-            {% for entity in team_entities %}
-                <li>
-                    <a href="{% url 'notekeeper:entity_detail' workspace_id=current_workspace.id pk=entity.pk %}">
-                        {{ entity.name }}
-                    </a>
-                </li>
-            {% endfor %}
-            </ul>
-        {% else %}
-            <p>No teams yet.</p>
-        {% endif %}
-        
-        <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}" class="btn">View All Entities</a>
+        <div class="entity-actions">
+            <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}" class="btn">View All Entities</a>
+            <a href="{% url 'notekeeper:entity_create' workspace_id=current_workspace.id %}" class="btn">Create New Entity</a>
+        </div>
     </div>
 </div>
 
 <div class="relationships-summary">
     <div class="section-header">
         <h2>Relationships</h2>
-        <div class="section-actions">
-            <a href="{% url 'notekeeper:relationship_type_list' workspace_id=current_workspace.id %}" class="btn btn-sm">Manage Relationship Types</a>
-            <a href="{% url 'notekeeper:relationship_list' workspace_id=current_workspace.id %}" class="btn btn-sm">View All Relationships</a>
-            <a href="{% url 'notekeeper:relationship_create' workspace_id=current_workspace.id %}" class="btn btn-sm btn-primary">Create Relationship</a>
-        </div>
     </div>
-    
-    {% if relationship_types %}
-        <div class="relationship-types-summary">
-            <h3>Available Relationship Types</h3>
-            <div class="relationship-types-grid">
-                {% for rt in relationship_types %}
-                    <div class="relationship-type-card">
-                        <h4>{{ rt.display_name }}</h4>
-                        <div class="relationship-type-metadata">
-                            <span class="relationship-count">{{ rt.relationships.count }} relationship{{ rt.relationships.count|pluralize }}</span>
-                            {% if rt.is_directional %}
-                                <span class="directional-badge">Directional</span>
-                            {% else %}
-                                <span class="non-directional-badge">Non-directional</span>
-                            {% endif %}
-                        </div>
-                        <p>{{ rt.description|truncatechars:100|default:"No description" }}</p>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    {% else %}
-        <div class="empty-relationship-types">
-            <p>No relationship types defined yet.</p>
-            <p>
-                <a href="{% url 'notekeeper:relationship_type_create' workspace_id=current_workspace.id %}" class="btn">
-                    Create First Relationship Type
-                </a>
-            </p>
-        </div>
-    {% endif %}
     
     {% if recent_relationships %}
         <div class="recent-relationships">
-            <h3>Recent Relationships</h3>
+            <h3>Recently Created</h3>
             <div class="relationships-list">
                 <table class="table">
                     <thead>
@@ -186,11 +116,40 @@ workspace.id: {{ current_workspace.id }}
                     </tbody>
                 </table>
             </div>
-            <div class="view-all-link">
-                <a href="{% url 'notekeeper:relationship_list' workspace_id=current_workspace.id %}">View all relationships</a>
-            </div>
         </div>
     {% endif %}
+
+    {% if relationship_types %}
+        <div class="relationship-types-summary">
+            <h3>Relationship Types</h3>
+            <div class="relationship-types-grid">
+                {% for rt in relationship_types %}
+                    <div class="relationship-type-card">
+                        <h4>{{ rt.display_name }}</h4>
+                        <div class="relationship-type-metadata">
+                            <span class="relationship-count">{{ rt.relationships.count }} relationship{{ rt.relationships.count|pluralize }}</span>
+                            {% if rt.is_directional %}
+                                <span class="directional-badge">Directional</span>
+                            {% else %}
+                                <span class="non-directional-badge">Non-directional</span>
+                            {% endif %}
+                        </div>
+                        <p>{{ rt.description|truncatechars:100|default:"No description" }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-relationship-types">
+            <p>No relationship types defined yet.</p>
+            <p>
+                <a href="{% url 'notekeeper:relationship_type_create' workspace_id=current_workspace.id %}" class="btn">
+                    Create First Relationship Type
+                </a>
+            </p>
+        </div>
+    {% endif %}
+    
 </div>
 
 <style>
@@ -284,6 +243,37 @@ workspace.id: {{ current_workspace.id }}
     .view-all-link {
         text-align: right;
         margin-top: 10px;
+    }
+    .entities-overview h3 {
+        margin-top: 20px;
+        margin-bottom: 10px;
+        color: #4a5568;
+        font-size: 1.1em;
+    }
+    
+    .entities-overview ul {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+    }
+    
+    .entities-overview li {
+        padding: 5px 0;
+    }
+    
+    .entities-overview li a {
+        color: #2d3748;
+        text-decoration: none;
+    }
+    
+    .entities-overview li a:hover {
+        color: #4299e1;
+    }
+    
+    .entity-actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
     }
 </style>
 {% endblock %} 
