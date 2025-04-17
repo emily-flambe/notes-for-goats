@@ -50,6 +50,17 @@
             {% endif %}
         </div>
         
+        <div class="form-group checkbox-group">
+            <label>
+                {{ form.is_bidirectional }}
+                Is Bidirectional
+            </label>
+            <small class="form-text text-muted">If checked, this relationship is treated as a mutual connection between entities (e.g., "Teammate", "Friend"). Only one relationship will be created between any two entities.</small>
+            {% if form.is_bidirectional.errors %}
+                <div class="error">{{ form.is_bidirectional.errors }}</div>
+            {% endif %}
+        </div>
+        
         <div class="form-group" id="inverse-name-group">
             <label for="id_inverse_name">Inverse Name:</label>
             {{ form.inverse_name }}

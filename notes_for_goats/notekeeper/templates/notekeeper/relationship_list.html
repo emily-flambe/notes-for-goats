@@ -22,6 +22,13 @@
     {% if relationships %}
         <div class="card relationships-list">
             <table class="table">
+                <colgroup>
+                    <col style="width: 15%;">  <!-- Source - narrower -->
+                    <col style="width: 15%;">  <!-- Relationship -->
+                    <col style="width: 15%;">  <!-- Target - narrower -->
+                    <col style="width: 40%;">  <!-- Notes - much wider column -->
+                    <col style="width: 15%;">  <!-- Actions -->
+                </colgroup>
                 <thead>
                     <tr>
                         <th>Source</th>
@@ -33,30 +40,56 @@
                 </thead>
                 <tbody>
                     {% for rel in relationships %}
-                    <tr>
-                        <td>
-                            {% if rel.source_content_type.model == 'entity' %}
-                                <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.source_object_id %}">
+                    <tr class="relationship-row">
+                        <td class="entity-cell">
+                            <div class="entity-name">
+                                {% if rel.source_content_type.model == 'entity' %}
+                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.source_object_id %}">
+                                        {{ rel.source }}
+                                    </a>
+                                {% else %}
                                     {{ rel.source }}
-                                </a>
-                            {% else %}
-                                {{ rel.source }}
-                            {% endif %}
+                                {% endif %}
+                            </div>
                         </td>
-                        <td>{{ rel.relationship_type.display_name }}</td>
-                        <td>
-                            {% if rel.target_content_type.model == 'entity' %}
-                                <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.target_object_id %}">
+                        <td class="relationship-cell">
+                            <div class="relationship-wrapper">
+                                <div class="relationship-direction primary">
+                                    {{ rel.relationship_type.display_name }}
+                                </div>
+                                {% if rel.relationship_type.is_directional %}
+                                    <div class="relationship-direction inverse">
+                                        {% if rel.relationship_type.inverse_name %}
+                                            ← {{ rel.relationship_type.inverse_name }}
+                                        {% else %}
+                                            ← {{ rel.relationship_type.display_name }}
+                                            <span class="inverse-indicator">(inv)</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="entity-cell">
+                            <div class="entity-name">
+                                {% if rel.target_content_type.model == 'entity' %}
+                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.target_object_id %}">
+                                        {{ rel.target }}
+                                    </a>
+                                {% else %}
                                     {{ rel.target }}
-                                </a>
-                            {% else %}
-                                {{ rel.target }}
-                            {% endif %}
+                                {% endif %}
+                            </div>
                         </td>
-                        <td>{{ rel.notes|truncatechars:50|default:"-" }}</td>
-                        <td class="actions">
-                            <a href="{% url 'notekeeper:relationship_edit' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm">Edit</a>
-                            <a href="{% url 'notekeeper:relationship_delete' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm btn-danger">Delete</a>
+                        <td class="notes-cell">
+                            <div class="notes-content">
+                                {{ rel.notes|truncatechars:100|default:"-" }}
+                            </div>
+                        </td>
+                        <td class="actions-cell">
+                            <div class="action-buttons">
+                                <a href="{% url 'notekeeper:relationship_edit' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm">Edit</a>
+                                <a href="{% url 'notekeeper:relationship_delete' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm btn-danger">Delete</a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -76,21 +109,76 @@
 </div>
 
 <style>
-    .actions {
-        margin: 20px 0;
-    }
+    /* Table Styling */
     .relationships-list {
         margin-top: 20px;
     }
+    .table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+    }
+    .table th, .table td {
+        padding: 12px;
+        vertical-align: top;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    /* Row structure */
+    .relationship-row {
+        position: relative;
+    }
+    
+    /* Cell types */
+    .entity-cell, .relationship-cell, .notes-cell, .actions-cell {
+        position: relative;
+    }
+    
+    /* Ensure entity names wrap properly */
+    .entity-name {
+        word-break: break-word;
+        padding-bottom: 4px;
+    }
+    
+    /* Cell content wrappers */
+    .relationship-wrapper, .notes-content, .action-buttons {
+        padding-bottom: 4px; /* Ensure consistent bottom padding */
+    }
+    
+    /* Notes content */
+    .notes-content {
+        word-break: break-word;
+    }
+    
+    /* Relationship directions */
+    .relationship-direction {
+        line-height: 1.4;
+    }
+    .relationship-direction.primary {
+        font-weight: bold;
+    }
+    .relationship-direction.inverse {
+        font-size: 0.9em;
+        color: #666;
+        border-top: 1px dashed #ddd;
+        margin-top: 5px;
+        padding-top: 5px;
+    }
+    
+    /* Action buttons */
+    .action-buttons {
+        display: flex;
+        gap: 5px;
+        white-space: nowrap;
+    }
+    
+    /* Empty state */
     .empty-state {
         background: #f9f9f9;
         border-radius: 8px;
         padding: 30px;
         text-align: center;
         margin-top: 30px;
-    }
-    td.actions {
-        white-space: nowrap;
     }
 </style>
 {% endblock %} 

@@ -92,7 +92,7 @@ class RelationshipInferenceRuleForm(forms.ModelForm):
     class Meta:
         model = RelationshipInferenceRule
         fields = ['name', 'description', 'source_relationship_type', 'inferred_relationship_type', 
-                 'is_active', 'is_bidirectional', 'auto_update']
+                 'is_active', 'auto_update']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
@@ -108,3 +108,9 @@ class RelationshipInferenceRuleForm(forms.ModelForm):
             # Filter relationship types by workspace
             self.fields['source_relationship_type'].queryset = RelationshipType.objects.filter(workspace=workspace)
             self.fields['inferred_relationship_type'].queryset = RelationshipType.objects.filter(workspace=workspace)
+            
+        # Add a help text for the inferred relationship type field
+        self.fields['inferred_relationship_type'].help_text = (
+            "For best results with relationships like 'Teammate' or 'Housemate', create a "
+            "non-directional relationship type to represent mutual connections."
+        )

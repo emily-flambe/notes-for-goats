@@ -6,13 +6,7 @@ from .models import Relationship, RelationshipInferenceRule, Entity
 
 
 def apply_inference_rules(workspace, entity=None, relationship_type=None):
-    """Apply all active inference rules for a given entity after a relationship change.
-    
-    Args:
-        workspace: The workspace to apply rules within
-        entity (optional): If provided, only apply rules for this entity
-        relationship_type (optional): If provided, only apply rules for this relationship type
-    """
+    """Apply all active inference rules for a given entity after a relationship change."""
     # Get all active rules that apply to this relationship type
     rules = RelationshipInferenceRule.objects.filter(
         workspace=workspace,
@@ -42,152 +36,112 @@ def _apply_rule(rule, specific_entity=None):
     else:
         entities_to_process = Entity.objects.filter(workspace=workspace)
     
+    # Set to track processed entity pairs to avoid duplication
+    processed_pairs = set()
+    
     with transaction.atomic():
         for entity in entities_to_process:
-            # Find all common entities that this entity is related to via the source relationship type
-            # This includes both directions: entity → common_entity and common_entity → entity
-            outgoing_relationships = Relationship.objects.filter(
+            # Find common entities that this entity is related to
+            # (e.g., teams this person is a member of)
+            common_entity_ids = set()
+            
+            # Case 1: Entity -> Common Entity
+            outgoing_relations = Relationship.objects.filter(
                 workspace=workspace,
                 relationship_type=rule.source_relationship_type,
                 source_content_type=entity_content_type,
                 source_object_id=entity.id,
                 target_content_type=entity_content_type
-            )
+            ).values_list('target_object_id', flat=True)
+            common_entity_ids.update(outgoing_relations)
             
-            incoming_relationships = Relationship.objects.filter(
+            # Case 2: Common Entity -> Entity
+            incoming_relations = Relationship.objects.filter(
                 workspace=workspace,
                 relationship_type=rule.source_relationship_type,
                 source_content_type=entity_content_type,
                 target_content_type=entity_content_type,
                 target_object_id=entity.id
-            )
+            ).values_list('source_object_id', flat=True)
+            common_entity_ids.update(incoming_relations)
             
-            # For each entity that this entity is connected to
-            for rel in outgoing_relationships:
-                common_entity_id = rel.target_object_id
-                
-                # Find all other entities that are connected to the same common entity
-                # Other entities that point to the common entity
-                other_entities_outgoing = Entity.objects.filter(
-                    workspace=workspace,
-                    id__in=Relationship.objects.filter(
-                        workspace=workspace,
-                        relationship_type=rule.source_relationship_type,
-                        source_content_type=entity_content_type,
-                        target_content_type=entity_content_type,
-                        target_object_id=common_entity_id
-                    ).exclude(source_object_id=entity.id).values_list('source_object_id', flat=True)
-                )
-                
-                # Other entities that the common entity points to
-                other_entities_incoming = Entity.objects.filter(
-                    workspace=workspace,
-                    id__in=Relationship.objects.filter(
-                        workspace=workspace,
-                        relationship_type=rule.source_relationship_type,
-                        source_content_type=entity_content_type,
-                        source_object_id=common_entity_id,
-                        target_content_type=entity_content_type
-                    ).exclude(target_object_id=entity.id).values_list('target_object_id', flat=True)
-                )
-                
-                # Combine the results
-                other_entities = other_entities_outgoing | other_entities_incoming
-                
-                # Get the common entity
+            # Process each common entity
+            for common_entity_id in common_entity_ids:
                 try:
-                    common_entity = Entity.objects.get(pk=common_entity_id)
+                    common_entity = Entity.objects.get(id=common_entity_id, workspace=workspace)
                 except Entity.DoesNotExist:
                     continue
                 
-                # Create relationships between this entity and all other entities
-                for other_entity in other_entities:
+                # Find all entities related to this common entity
+                related_entity_ids = set()
+                
+                # Others with outgoing relationship to common entity
+                related_outgoing = Relationship.objects.filter(
+                    workspace=workspace,
+                    relationship_type=rule.source_relationship_type,
+                    source_content_type=entity_content_type,
+                    target_content_type=entity_content_type,
+                    target_object_id=common_entity_id
+                ).values_list('source_object_id', flat=True)
+                related_entity_ids.update(related_outgoing)
+                
+                # Others with incoming relationship from common entity
+                related_incoming = Relationship.objects.filter(
+                    workspace=workspace,
+                    relationship_type=rule.source_relationship_type,
+                    source_content_type=entity_content_type,
+                    source_object_id=common_entity_id,
+                    target_content_type=entity_content_type
+                ).values_list('target_object_id', flat=True)
+                related_entity_ids.update(related_incoming)
+                
+                # Remove the current entity from the related set
+                if entity.id in related_entity_ids:
+                    related_entity_ids.remove(entity.id)
+                
+                # Create relationships with related entities
+                for related_id in related_entity_ids:
+                    # Skip if it's the same entity
+                    if related_id == entity.id:
+                        continue
+                    
+                    # Get the related entity
+                    try:
+                        related_entity = Entity.objects.get(id=related_id, workspace=workspace)
+                    except Entity.DoesNotExist:
+                        continue
+                    
+                    # Create a unique pair identifier (using sorted IDs)
+                    pair_key = tuple(sorted([entity.id, related_id]))
+                    
+                    # Skip if we've already processed this pair
+                    if pair_key in processed_pairs:
+                        continue
+                    
+                    processed_pairs.add(pair_key)
+                    
+                    # Determine source and target (always use lower ID as source)
+                    if entity.id < related_id:
+                        source_entity, target_entity = entity, related_entity
+                    else:
+                        source_entity, target_entity = related_entity, entity
+                    
+                    # Create the relationship
                     _create_inferred_relationship(
                         workspace=workspace,
                         rule=rule,
-                        source_entity=entity,
-                        target_entity=other_entity,
+                        source_entity=source_entity,
+                        target_entity=target_entity,
                         common_entity=common_entity
                     )
-                    
-                    # If bidirectional, also create the reverse relationship
-                    if rule.is_bidirectional:
-                        _create_inferred_relationship(
-                            workspace=workspace,
-                            rule=rule,
-                            source_entity=other_entity,
-                            target_entity=entity,
-                            common_entity=common_entity
-                        )
-            
-            # Repeat the same process for incoming relationships
-            for rel in incoming_relationships:
-                common_entity_id = rel.source_object_id
-                
-                # Find all other entities that the common entity points to
-                other_entities_outgoing = Entity.objects.filter(
-                    workspace=workspace,
-                    id__in=Relationship.objects.filter(
-                        workspace=workspace,
-                        relationship_type=rule.source_relationship_type,
-                        source_content_type=entity_content_type,
-                        source_object_id=common_entity_id,
-                        target_content_type=entity_content_type
-                    ).exclude(target_object_id=entity.id).values_list('target_object_id', flat=True)
-                )
-                
-                # Find all other entities that point to the common entity
-                other_entities_incoming = Entity.objects.filter(
-                    workspace=workspace,
-                    id__in=Relationship.objects.filter(
-                        workspace=workspace,
-                        relationship_type=rule.source_relationship_type,
-                        source_content_type=entity_content_type,
-                        target_content_type=entity_content_type,
-                        target_object_id=common_entity_id
-                    ).exclude(source_object_id=entity.id).values_list('source_object_id', flat=True)
-                )
-                
-                # Combine the results
-                other_entities = other_entities_outgoing | other_entities_incoming
-                
-                # Get the common entity
-                try:
-                    common_entity = Entity.objects.get(pk=common_entity_id)
-                except Entity.DoesNotExist:
-                    continue
-                
-                # Create relationships between this entity and all other entities
-                for other_entity in other_entities:
-                    _create_inferred_relationship(
-                        workspace=workspace,
-                        rule=rule,
-                        source_entity=entity,
-                        target_entity=other_entity,
-                        common_entity=common_entity
-                    )
-                    
-                    # If bidirectional, also create the reverse relationship
-                    if rule.is_bidirectional:
-                        _create_inferred_relationship(
-                            workspace=workspace,
-                            rule=rule,
-                            source_entity=other_entity,
-                            target_entity=entity,
-                            common_entity=common_entity
-                        )
 
 
 def _create_inferred_relationship(workspace, rule, source_entity, target_entity, common_entity):
     """Create a single inferred relationship if it doesn't already exist."""
-    if source_entity.id == target_entity.id:
-        # Don't create self-relationships
-        return None
-        
     entity_content_type = ContentType.objects.get_for_model(Entity)
     
-    # Check if the relationship already exists
-    existing_relationship = Relationship.objects.filter(
+    # Check for existing relationship in either direction
+    existing_forward = Relationship.objects.filter(
         workspace=workspace,
         relationship_type=rule.inferred_relationship_type,
         source_content_type=entity_content_type,
@@ -196,11 +150,28 @@ def _create_inferred_relationship(workspace, rule, source_entity, target_entity,
         target_object_id=target_entity.id
     ).first()
     
-    # If it exists and has a different note, we assume it was manually created
-    if existing_relationship and not existing_relationship.notes.startswith('Auto-inferred'):
+    existing_reverse = Relationship.objects.filter(
+        workspace=workspace,
+        relationship_type=rule.inferred_relationship_type,
+        source_content_type=entity_content_type,
+        source_object_id=target_entity.id,
+        target_content_type=entity_content_type,
+        target_object_id=source_entity.id
+    ).first()
+    
+    # If a manually created relationship exists in either direction, don't change it
+    if (existing_forward and not existing_forward.notes.startswith('Auto-inferred')) or \
+       (existing_reverse and not existing_reverse.notes.startswith('Auto-inferred')):
         return None
     
+    # If an auto-inferred relationship exists in the reverse direction, delete it
+    if existing_reverse and existing_reverse.notes.startswith('Auto-inferred'):
+        existing_reverse.delete()
+    
     # Create or update the relationship
+    notes = (f"Auto-inferred: Both entities share a '{rule.source_relationship_type.display_name}' "
+             f"relationship with '{common_entity.name}' (Rule: {rule.name})")
+    
     relationship, created = Relationship.objects.update_or_create(
         workspace=workspace,
         relationship_type=rule.inferred_relationship_type,
@@ -208,10 +179,7 @@ def _create_inferred_relationship(workspace, rule, source_entity, target_entity,
         source_object_id=source_entity.id,
         target_content_type=entity_content_type,
         target_object_id=target_entity.id,
-        defaults={
-            'notes': f"Auto-inferred: Both entities share a '{rule.source_relationship_type.display_name}' "
-                     f"relationship with '{common_entity.name}' (Rule: {rule.name})"
-        }
+        defaults={'notes': notes}
     )
     
     return relationship
@@ -231,8 +199,10 @@ def handle_relationship_deleted(workspace, relationship):
     if not rules.exists():
         return
     
-    # If we have rules, we need to recalculate all inferred relationships for the affected entities
+    # Get Entity content type
     entity_content_type = ContentType.objects.get_for_model(Entity)
+    
+    # Find affected entities
     affected_entities = []
     
     # Add source entity if it's an Entity
@@ -251,10 +221,30 @@ def handle_relationship_deleted(workspace, relationship):
         except Entity.DoesNotExist:
             pass
     
-    # For each entity, clean up auto-inferred relationships and reapply rules
+    # Process affected entities
     with transaction.atomic():
+        # First, delete all auto-inferred relationships for affected entities
+        for entity in affected_entities:
+            # Delete relationships where entity is source
+            Relationship.objects.filter(
+                workspace=workspace,
+                source_content_type=entity_content_type,
+                source_object_id=entity.id,
+                notes__startswith='Auto-inferred:'
+            ).delete()
+            
+            # Delete relationships where entity is target
+            Relationship.objects.filter(
+                workspace=workspace,
+                target_content_type=entity_content_type,
+                target_object_id=entity.id,
+                notes__startswith='Auto-inferred:'
+            ).delete()
+        
+        # Then, reapply all rules for these entities
         for entity in affected_entities:
             for rule in rules:
+                _apply_rule(rule, entity)
                 # Find auto-inferred relationships for this entity created by this rule
                 Relationship.objects.filter(
                     workspace=workspace,

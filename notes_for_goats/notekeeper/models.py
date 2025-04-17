@@ -111,6 +111,7 @@ class RelationshipType(models.Model):
     display_name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     is_directional = models.BooleanField(default=True)
+    is_bidirectional = models.BooleanField(default=False, help_text="If checked, this is treated as a single bidirectional relationship between entities")
     inverse_name = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -176,10 +177,6 @@ class RelationshipInferenceRule(models.Model):
     )
     
     is_active = models.BooleanField(default=True)
-    is_bidirectional = models.BooleanField(
-        default=True, 
-        help_text="If checked, relationships will be inferred in both directions"
-    )
     auto_update = models.BooleanField(
         default=True,
         help_text="Automatically update inferred relationships when source relationships change"

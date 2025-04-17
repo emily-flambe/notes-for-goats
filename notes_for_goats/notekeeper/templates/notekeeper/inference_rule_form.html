@@ -61,17 +61,6 @@
         
         <div class="form-group checkbox-group">
             <label>
-                {{ form.is_bidirectional }}
-                Is Bidirectional
-            </label>
-            <small class="form-text text-muted">If checked, relationships will be created in both directions</small>
-            {% if form.is_bidirectional.errors %}
-                <div class="error">{{ form.is_bidirectional.errors }}</div>
-            {% endif %}
-        </div>
-        
-        <div class="form-group checkbox-group">
-            <label>
                 {{ form.auto_update }}
                 Auto Update
             </label>
@@ -102,6 +91,13 @@
             </div>
             <p class="mt-3"><strong>Note:</strong> Auto-inferred relationships will not overwrite manually created relationships.</p>
         </div>
+    </div>
+
+    <div class="form-info mt-3">
+        <p><strong>How Inferred Relationships Work:</strong></p>
+        <p>When two entities share a relationship with a common third entity, a new relationship is created between them.</p>
+        <p>For example, if both Alice and Bob are "Member of Team Alpha", they'll get a "Teammate" relationship.</p>
+        <p>Each pair of entities will only get one relationship to avoid duplication.</p>
     </div>
 </div>
 
