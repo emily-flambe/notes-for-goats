@@ -86,7 +86,7 @@
                 </div>
                 
                 <div class="scrollable-table-wrapper">
-                    <table class="table">
+                    <table class="table" id="relationships-table">
                         <colgroup>
                             <col style="width: 15%;">  <!-- Source - narrower -->
                             <col style="width: 15%;">  <!-- Relationship -->
@@ -96,9 +96,9 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <th>Source</th>
-                                <th>Relationship</th>
-                                <th>Target</th>
+                                <th class="sortable" data-column="source">Source <span class="sort-icon">↕</span></th>
+                                <th class="sortable" data-column="relationship">Relationship <span class="sort-icon">↕</span></th>
+                                <th class="sortable" data-column="target">Target <span class="sort-icon">↕</span></th>
                                 <th>Notes</th>
                                 <th>Actions</th>
                             </tr>
@@ -106,7 +106,7 @@
                         <tbody>
                             {% for rel in relationships %}
                             <tr class="relationship-row">
-                                <td class="entity-cell">
+                                <td class="entity-cell" data-sort-value="{{ rel.source|stringformat:'s'|lower }}">
                                     <div class="entity-name">
                                         {% if rel.source_content_type.model == 'entity' %}
                                             <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.source_object_id %}">
@@ -117,7 +117,7 @@
                                         {% endif %}
                                     </div>
                                 </td>
-                                <td class="relationship-cell">
+                                <td class="relationship-cell" data-sort-value="{{ rel.relationship_type.display_name|lower }}">
                                     <div class="relationship-wrapper">
                                         <div class="relationship-direction primary">
                                             {{ rel.relationship_type.display_name }}
@@ -134,7 +134,7 @@
                                         {% endif %}
                                     </div>
                                 </td>
-                                <td class="entity-cell">
+                                <td class="entity-cell" data-sort-value="{{ rel.target|stringformat:'s'|lower }}">
                                     <div class="entity-name">
                                         {% if rel.target_content_type.model == 'entity' %}
                                             <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.target_object_id %}">
@@ -380,22 +380,131 @@
     .select2-search__field {
         padding: 8px !important;
     }
+    
+    /* Sortable column styles */
+    th.sortable {
+        cursor: pointer;
+        position: relative;
+        user-select: none;
+    }
+    
+    th.sortable:hover {
+        background-color: #f0f4f8;
+    }
+    
+    .sort-icon {
+        font-size: 0.8em;
+        margin-left: 5px;
+        color: #aaa;
+    }
+    
+    th.sorted-asc .sort-icon {
+        color: #333;
+    }
+    
+    th.sorted-desc .sort-icon {
+        color: #333;
+    }
+    
+    th.sorted-asc .sort-icon::after {
+        content: "↑";
+    }
+    
+    th.sorted-desc .sort-icon::after {
+        content: "↓";
+    }
 </style>
 
-{% block extra_js %}
-<!-- Include Select2 for searchable dropdown - make sure you have these in your base template or add CDN links -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
+<!-- Move JavaScript directly into the content block -->
 <script>
-    $(document).ready(function() {
-        // Initialize the searchable dropdown
-        $('.searchable-select').select2({
-            placeholder: 'Search...',
-            allowClear: true,
-            width: '100%'
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Select2 if jQuery is loaded
+        if (typeof $ !== 'undefined') {
+            $('.searchable-select').select2({
+                placeholder: 'Search...',
+                allowClear: true,
+                width: '100%'
+            });
+        }
+        
+        // Table sorting functionality
+        const table = document.getElementById('relationships-table');
+        if (!table) {
+            console.log("Table not found");
+            return;
+        }
+        
+        const sortableHeaders = table.querySelectorAll('th.sortable');
+        console.log("Found sortable headers:", sortableHeaders.length);
+        
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                console.log("Header clicked:", this.getAttribute('data-column'));
+                const column = this.getAttribute('data-column');
+                const isAscending = !this.classList.contains('sorted-asc');
+                
+                // Remove sorting classes from all headers
+                sortableHeaders.forEach(h => {
+                    h.classList.remove('sorted-asc', 'sorted-desc');
+                    const icon = h.querySelector('.sort-icon');
+                    if (icon) icon.textContent = '↕';
+                });
+                
+                // Add sorting class to clicked header
+                this.classList.add(isAscending ? 'sorted-asc' : 'sorted-desc');
+                
+                // Update sort icon
+                const sortIcon = this.querySelector('.sort-icon');
+                if (sortIcon) sortIcon.textContent = isAscending ? '↑' : '↓';
+                
+                // Get all rows and convert to array for sorting
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                
+                // Sort rows based on the content of cells in the clicked column
+                rows.sort((a, b) => {
+                    let cellIndex;
+                    
+                    switch(column) {
+                        case 'source': cellIndex = 0; break;
+                        case 'relationship': cellIndex = 1; break;
+                        case 'target': cellIndex = 2; break;
+                        default: return 0;
+                    }
+                    
+                    const aCell = a.cells[cellIndex];
+                    const bCell = b.cells[cellIndex];
+                    
+                    // Use data-sort-value if available, otherwise use text content
+                    const aValue = aCell.getAttribute('data-sort-value') || 
+                                  aCell.textContent.trim().toLowerCase();
+                    const bValue = bCell.getAttribute('data-sort-value') || 
+                                  bCell.textContent.trim().toLowerCase();
+                    
+                    // Compare the values
+                    if (aValue < bValue) return isAscending ? -1 : 1;
+                    if (aValue > bValue) return isAscending ? 1 : -1;
+                    return 0;
+                });
+                
+                // Remove all existing rows
+                while (tbody.firstChild) {
+                    tbody.removeChild(tbody.firstChild);
+                }
+                
+                // Add sorted rows
+                rows.forEach(row => {
+                    tbody.appendChild(row);
+                });
+            });
         });
     });
 </script>
+
 {% endblock %}
+
+<!-- Keep the Select2 CSS in the extra_js block, but move the functional code up to the content block -->
+{% block extra_js %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 {% endblock %} 

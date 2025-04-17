@@ -36,11 +36,11 @@
     
     {% if entity_relationships %}
         <div class="relationships-list">
-            <table class="table">
+            <table class="table" id="relationships-table">
                 <thead>
                     <tr>
-                        <th>Type</th>
-                        <th>Related Entity</th>
+                        <th class="sortable" data-column="type">Type <span class="sort-icon">↕</span></th>
+                        <th class="sortable" data-column="entity">Related Entity <span class="sort-icon">↕</span></th>
                         <th>Notes</th>
                         <th>Actions</th>
                     </tr>
@@ -48,7 +48,7 @@
                 <tbody>
                     {% for rel, related_entity, is_source in entity_relationships %}
                         <tr>
-                            <td>
+                            <td data-sort-value="{{ rel.relationship_type.display_name|lower }}">
                                 {% if is_source %}
                                     {{ rel.relationship_type.display_name }}
                                 {% else %}
@@ -59,7 +59,7 @@
                                     {% endif %}
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-sort-value="{{ related_entity.name|lower }}">
                                 {% if related_entity.id %}
                                     <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=related_entity.id %}">
                                         {{ related_entity.name }}
@@ -130,5 +130,87 @@
     td.actions {
         white-space: nowrap;
     }
+    
+    th.sortable {
+        cursor: pointer;
+        position: relative;
+        user-select: none;
+    }
+    
+    th.sortable:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .sort-icon {
+        font-size: 0.8em;
+        margin-left: 5px;
+        color: #aaa;
+    }
+    
+    th.sorted-asc .sort-icon {
+        content: "↑";
+        color: #333;
+    }
+    
+    th.sorted-desc .sort-icon {
+        content: "↓";
+        color: #333;
+    }
+    
+    th.sorted-asc .sort-icon:after {
+        content: "↑";
+    }
+    
+    th.sorted-desc .sort-icon:after {
+        content: "↓";
+    }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const table = document.getElementById('relationships-table');
+        if (!table) return;
+        
+        const sortableHeaders = table.querySelectorAll('th.sortable');
+        
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const column = this.getAttribute('data-column');
+                const isAscending = !this.classList.contains('sorted-asc');
+                
+                sortableHeaders.forEach(h => {
+                    h.classList.remove('sorted-asc', 'sorted-desc');
+                });
+                
+                this.classList.add(isAscending ? 'sorted-asc' : 'sorted-desc');
+                
+                this.querySelector('.sort-icon').textContent = isAscending ? '↑' : '↓';
+                
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                
+                rows.sort((a, b) => {
+                    let cellIndex = column === 'type' ? 0 : 1;
+                    
+                    const aValue = a.querySelectorAll('td')[cellIndex].getAttribute('data-sort-value') || 
+                                  a.querySelectorAll('td')[cellIndex].textContent.trim().toLowerCase();
+                    const bValue = b.querySelectorAll('td')[cellIndex].getAttribute('data-sort-value') || 
+                                  b.querySelectorAll('td')[cellIndex].textContent.trim().toLowerCase();
+                    
+                    if (aValue < bValue) return isAscending ? -1 : 1;
+                    if (aValue > bValue) return isAscending ? 1 : -1;
+                    return 0;
+                });
+                
+                while (tbody.firstChild) {
+                    tbody.removeChild(tbody.firstChild);
+                }
+                
+                rows.forEach(row => {
+                    tbody.appendChild(row);
+                });
+            });
+        });
+    });
+</script>
 {% endblock %} 
