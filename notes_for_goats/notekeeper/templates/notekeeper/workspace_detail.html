@@ -2,6 +2,20 @@
 
 {% block title %}{{ current_workspace.name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Template-specific styles only */
+    .workspace-dashboard {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-top: 30px;
+    }
+    
+    /* Any other styles specific to this page */
+</style>
+{% endblock %}
+
 {% block content %}
 {% if not current_workspace.id %}
 <div style="background-color: red; color: white; padding: 10px;">
