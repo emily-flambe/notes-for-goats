@@ -17,32 +17,44 @@
         Record and track important events, meetings, and notes about your projects.
     </div>
     
-    {% if entries %}
-        <div class="card">
-            <div class="filter-section">
-                <form method="get" class="filter-controls">
-                    <div class="filter-group">
-                        <label for="entity_filter">Filter by Entity:</label>
-                        <select id="entity_filter" name="entity">
-                            <option value="">All Entries</option>
-                            {% for entity in entities %}
-                                <option value="{{ entity.id }}" {% if entity.id|stringformat:"s" == request.GET.entity %}selected{% endif %}>
-                                    {{ entity.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="search">Search:</label>
-                        <input type="text" id="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search entries...">
-                    </div>
-                    <div class="filter-buttons">
-                        <button type="submit" class="btn">Apply Filters</button>
-                        <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Clear</a>
-                    </div>
-                </form>
-            </div>
-            
+    <!-- Always show the filter section -->
+    <div class="card">
+        <div class="filter-section">
+            <form method="get" class="filter-controls">
+                <div class="filter-group">
+                    <label for="entity_filter">Filter by Entity:</label>
+                    <select id="entity_filter" name="entity">
+                        <option value="">All</option>
+                        {% for entity in entities %}
+                            <option value="{{ entity.id }}" {% if entity.id|stringformat:"s" == request.GET.entity %}selected{% endif %}>
+                                {{ entity.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="entity_type_filter">Filter by Entity Type:</label>
+                    <select id="entity_type_filter" name="entity_type">
+                        <option value="">All</option>
+                        {% for type, label in entity_types %}
+                            <option value="{{ type }}" {% if type == request.GET.entity_type %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="search">Search:</label>
+                    <input type="text" id="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search entries...">
+                </div>
+                <div class="filter-buttons">
+                    <button type="submit" class="btn">Apply Filters</button>
+                    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Clear</a>
+                </div>
+            </form>
+        </div>
+        
+        {% if entries %}
             <div class="journal-entries">
                 {% for entry in entries %}
                     <div class="journal-entry">
@@ -76,8 +88,17 @@
                     </div>
                 {% endfor %}
             </div>
-        </div>
-    {% else %}
+        {% else %}
+            <!-- Show this message if no entries match the filters -->
+            <div class="empty-results">
+                <p>No journal entries match your filter criteria.</p>
+                <p>Try adjusting your filters or <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}">clear all filters</a>.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Only show this if there are NO entries AT ALL in the workspace -->
+    {% if total_entries_count == 0 %}
         <div class="empty-state">
             <p>No journal entries yet.</p>
             <p>Journal entries help you record important events, meetings, and updates.</p>
@@ -187,6 +208,27 @@
     .journal-date {
         color: #718096;
         font-size: 0.9rem;
+    }
+    
+    /* Add this for the empty results message */
+    .empty-results {
+        padding: 30px 20px;
+        text-align: center;
+        color: #718096;
+    }
+    
+    .empty-results p {
+        margin-bottom: 10px;
+    }
+    
+    .empty-results a {
+        color: #3182ce;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .empty-results a:hover {
+        text-decoration: underline;
     }
 </style>
 {% endblock %} 

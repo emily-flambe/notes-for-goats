@@ -44,11 +44,48 @@ def home(request):
 
 def journal_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    entries = workspace.journal_entries.all().order_by('-timestamp')
+    
+    # Get all entity types from the model
+    entity_types = Entity.ENTITY_TYPES
+    
+    # Get entities for the dropdown
+    entities = Entity.objects.filter(workspace=workspace).order_by('name')
+    
+    # Count total entries before filtering
+    total_entries_count = JournalEntry.objects.filter(workspace=workspace).count()
+    
+    # Start with all entries
+    entries = JournalEntry.objects.filter(workspace=workspace).order_by('-timestamp')
+    
+    # Handle filtering
+    entity_filter = request.GET.get('entity')
+    entity_type_filter = request.GET.get('entity_type')
+    search_query = request.GET.get('q')
+    
+    if entity_filter:
+        try:
+            entity = get_object_or_404(Entity, pk=entity_filter)
+            entries = entries.filter(referenced_entities=entity)
+        except (ValueError, TypeError):
+            # Invalid entity ID, ignore filter
+            pass
+    
+    if entity_type_filter:
+        # Filter entries that reference entities of the selected type
+        entries = entries.filter(referenced_entities__type=entity_type_filter).distinct()
+    
+    if search_query:
+        entries = entries.filter(
+            Q(title__icontains=search_query) | 
+            Q(content__icontains=search_query)
+        )
     
     return render(request, 'notekeeper/journal/list.html', {
+        'workspace': workspace,
         'entries': entries,
-        'workspace': workspace
+        'entities': entities,
+        'entity_types': entity_types,
+        'total_entries_count': total_entries_count,  # Pass the total count
     })
 
 def journal_detail(request, workspace_id, pk):
