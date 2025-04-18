@@ -5,7 +5,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
-from notekeeper.models import Workspace, Entity, JournalEntry, CalendarEvent
+from notekeeper.models import Workspace 
 
 class Command(BaseCommand):
     help = 'Export a workspace to a ZIP file'
@@ -57,7 +57,7 @@ class Command(BaseCommand):
                     'id': entity.id,
                     'name': entity.name,
                     'type': entity.type,
-                    'notes': entity.notes,
+                    'notes': entity.details,
                     'created_at': entity.created_at.isoformat(),
                     'updated_at': entity.updated_at.isoformat()
                 }
@@ -66,11 +66,11 @@ class Command(BaseCommand):
             with open(os.path.join(temp_dir, 'entities.json'), 'w') as f:
                 json.dump(entities_data, f, cls=DjangoJSONEncoder, indent=2)
             
-            # Export journal entries
-            entries = workspace.journal_entries.all().prefetch_related('referenced_entities')
-            entries_data = []
+            # Export notes
+            notes = workspace.note_notes.all().prefetch_related('referenced_entities')
+            notes_data = []
             
-            for entry in entries:
+            for entry in notes:
                 entry_data = {
                     'id': entry.id,
                     'title': entry.title,
@@ -80,30 +80,11 @@ class Command(BaseCommand):
                     'updated_at': entry.updated_at.isoformat(),
                     'referenced_entity_ids': list(entry.referenced_entities.values_list('id', flat=True))
                 }
-                entries_data.append(entry_data)
+                notes_data.append(entry_data)
             
-            with open(os.path.join(temp_dir, 'journal_entries.json'), 'w') as f:
-                json.dump(entries_data, f, cls=DjangoJSONEncoder, indent=2)
-            
-            # Export calendar events
-            calendar_events = CalendarEvent.objects.filter(journal_entry__workspace=workspace)
-            events_data = []
-            
-            for event in calendar_events:
-                event_data = {
-                    'id': event.id,
-                    'google_event_id': event.google_event_id,
-                    'title': event.title,
-                    'description': event.description,
-                    'start_time': event.start_time.isoformat(),
-                    'end_time': event.end_time.isoformat(),
-                    'journal_entry_id': event.journal_entry_id
-                }
-                events_data.append(event_data)
-            
-            with open(os.path.join(temp_dir, 'calendar_events.json'), 'w') as f:
-                json.dump(events_data, f, cls=DjangoJSONEncoder, indent=2)
-            
+            with open(os.path.join(temp_dir, 'note_notes.json'), 'w') as f:
+                json.dump(notes_data, f, cls=DjangoJSONEncoder, indent=2)
+        
             # Create a ZIP file with all JSON files
             with zipfile.ZipFile(output_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for root, _, files in os.walk(temp_dir):

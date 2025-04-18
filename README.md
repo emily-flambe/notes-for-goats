@@ -122,13 +122,13 @@ python manage.py runserver
    - Choose the type: Person, Project, or Team
    - Enter details and save
 
-2. **Journal Entries**
-   - Navigate to "Journal" and click "New Journal Entry"
+2. **Notes**
+   - Navigate to "Notes" and click "New Notes Entry"
    - Use #hashtags to reference entities (e.g., "Meeting with #Alice about #ProjectX")
    - Entities will be automatically linked if they exist in the system
 
 3. **Entity References**
-   - Click on any entity to see all journal entries that reference it
+   - Click on any entity to see all notes that reference it
    - Explore relationships between people, projects, and teams
 
 4. **Admin Interface**
@@ -167,7 +167,7 @@ This relationship system helps you map organizational structures, project involv
 
 The system is designed to integrate with Google Calendar to:
 - Import your daily events
-- Generate journal templates pre-populated with meetings
+- Generate note templates pre-populated with meetings
 - Link notes directly to calendar events
 
 ## Data Backup
@@ -238,8 +238,8 @@ SQLite provides the perfect balance for a personal tool:
 The app revolves around the concept of entities (people, projects, teams):
 1. **Centralized Information**: Each entity becomes a hub for related information
 2. **Intuitive Tagging**: Natural writing with #hashtags maintains flow while creating structure
-3. **Relationship Exploration**: Navigate between related entries and entities
-4. **Flexible Journaling**: Combines the freedom of free-form writing with the structure of a database
+3. **Relationship Exploration**: Navigate between related notes and entities
+4. **Flexible Notesing**: Combines the freedom of free-form writing with the structure of a database
 
 ### Relationship and Inference System
 

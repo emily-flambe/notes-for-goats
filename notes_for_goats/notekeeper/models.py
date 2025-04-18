@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 
 class Workspace(models.Model):
     """
-    Top-level container for a set of related journal entries and entities.
+    Top-level container for a set of related notes and entities.
     Enables export/import functionality and better organization.
     """
     name = models.CharField(max_length=200)
@@ -35,7 +35,7 @@ class Entity(models.Model):
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='entities')
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=10, choices=ENTITY_TYPES)
-    notes = models.TextField(blank=True)
+    details = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.CharField(max_length=255, blank=True, default="")
@@ -76,17 +76,17 @@ class Entity(models.Model):
         verbose_name_plural = "Entities"
         ordering = ['name']
 
-class JournalEntry(models.Model):
+class Note(models.Model):
     """
     Represents a timestamped note entry that may reference entities.
     """
-    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='journal_entries')
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='note_notes')
     title = models.CharField(max_length=200)
     content = models.TextField()
     timestamp = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='journal_entries')
+    referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='note_notes')
     
     def __str__(self):
         return f"{self.timestamp.strftime('%Y-%m-%d')}: {self.title}"
@@ -140,26 +140,8 @@ class JournalEntry(models.Model):
             self.referenced_entities.add(*entities_to_add)
     
     class Meta:
-        verbose_name_plural = "Journal Entries"
+        verbose_name_plural = "Notes"
         ordering = ['-timestamp']
-
-class CalendarEvent(models.Model):
-    """
-    Represents a Google Calendar event that can be associated with a journal entry.
-    """
-    google_event_id = models.CharField(max_length=1024)
-    title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    journal_entry = models.ForeignKey(JournalEntry, on_delete=models.CASCADE, 
-                                      blank=True, null=True, related_name='calendar_events')
-    
-    def __str__(self):
-        return f"{self.start_time.strftime('%Y-%m-%d %H:%M')}: {self.title}"
-    
-    class Meta:
-        ordering = ['start_time']
 
 class RelationshipType(models.Model):
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='relationship_types')
@@ -195,7 +177,7 @@ class Relationship(models.Model):
     # Relationship type
     relationship_type = models.ForeignKey(RelationshipType, on_delete=models.CASCADE, related_name='relationships')
     
-    notes = models.TextField(blank=True)
+    details = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

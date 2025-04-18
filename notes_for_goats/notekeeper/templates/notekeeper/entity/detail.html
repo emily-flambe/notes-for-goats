@@ -9,28 +9,28 @@
     <h1>{{ entity.name }} <small class="subtitle">({{ entity.get_type_display }})</small></h1>
 
     <div class="card">
-        <h2>Notes</h2>
-        {% if entity.notes %}
-            {{ entity.notes|linebreaks }}
+        <h2>Details</h2>
+        {% if entity.details %}
+            {{ entity.details|linebreaks }}
         {% else %}
             <p>No notes for this entity.</p>
         {% endif %}
     </div>
 
     <div class="card">
-        <h2>Related Journal Entries</h2>
-        {% if related_entries %}
+        <h2>Related Notes</h2>
+        {% if related_notes %}
             <ul class="entry-list">
-            {% for entry in related_entries %}
+            {% for entry in related_notes %}
                 <li>
-                    <a href="{% url 'notekeeper:journal_detail' workspace_id=workspace.id pk=entry.pk %}">
+                    <a href="{% url 'notekeeper:note_detail' workspace_id=workspace.id pk=entry.pk %}">
                         <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
                     </a>
                 </li>
             {% endfor %}
             </ul>
         {% else %}
-            <p>No related journal entries.</p>
+            <p>No related notes.</p>
         {% endif %}
     </div>
 
@@ -44,7 +44,7 @@
                         <tr>
                             <th class="sortable" data-column="type">Type <span class="sort-icon">↕</span></th>
                             <th class="sortable" data-column="entity">Related Entity <span class="sort-icon">↕</span></th>
-                            <th>Notes</th>
+                            <th>Details</th>
                             <th>Actions</th>
                         </tr>
                     </thead>

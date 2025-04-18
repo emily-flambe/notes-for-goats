@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Workspace, Entity, JournalEntry, CalendarEvent, Relationship, RelationshipType, RelationshipInferenceRule
-from .forms import WorkspaceForm, JournalEntryForm, EntityForm, RelationshipTypeForm, RelationshipForm, RelationshipInferenceRuleForm
+from .models import Workspace, Entity, Note, Relationship, RelationshipType, RelationshipInferenceRule
+from .forms import WorkspaceForm, NoteForm, EntityForm, RelationshipTypeForm, RelationshipForm, RelationshipInferenceRuleForm
 import os
 import tempfile
 from django.http import HttpResponse, JsonResponse, FileResponse
@@ -42,70 +42,107 @@ def home(request):
     workspaces = Workspace.objects.all()
     return render(request, 'notekeeper/home.html', {'all_workspaces': workspaces})
 
-def journal_list(request, workspace_id):
+def note_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    entries = workspace.journal_entries.all().order_by('-timestamp')
     
-    return render(request, 'notekeeper/journal/list.html', {
-        'entries': entries,
-        'workspace': workspace
+    # Get all entity types from the model
+    entity_types = Entity.ENTITY_TYPES
+    
+    # Get entities for the dropdown, include the type field
+    entities = Entity.objects.filter(workspace=workspace).order_by('name')
+    
+    # Count total notes before filtering
+    total_notes_count = Note.objects.filter(workspace=workspace).count()
+    
+    # Start with all notes
+    notes = Note.objects.filter(workspace=workspace).order_by('-timestamp')
+    
+    # Handle filtering
+    entity_filter = request.GET.get('entity')
+    entity_type_filter = request.GET.get('entity_type')
+    search_query = request.GET.get('q')
+    
+    if entity_filter:
+        try:
+            entity = get_object_or_404(Entity, pk=entity_filter)
+            notes = notes.filter(referenced_entities=entity)
+        except (ValueError, TypeError):
+            # Invalid entity ID, ignore filter
+            pass
+    
+    if entity_type_filter:
+        # Filter notes that reference entities of the selected type
+        notes = notes.filter(referenced_entities__type=entity_type_filter).distinct()
+    
+    if search_query:
+        notes = notes.filter(
+            Q(title__icontains=search_query) | 
+            Q(content__icontains=search_query)
+        )
+    
+    return render(request, 'notekeeper/note/list.html', {
+        'workspace': workspace,
+        'notes': notes,
+        'entities': entities,
+        'entity_types': entity_types,
+        'total_notes_count': total_notes_count,
     })
 
-def journal_detail(request, workspace_id, pk):
+def note_detail(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    entry = get_object_or_404(JournalEntry, pk=pk, workspace=workspace)
+    entry = get_object_or_404(Note, pk=pk, workspace=workspace)
     
     # Extract hashtags from content for display
     hashtags = re.findall(r'#(\w+)', entry.content)
     
-    return render(request, 'notekeeper/journal/detail.html', {
+    return render(request, 'notekeeper/note/detail.html', {
         'workspace': workspace,
         'entry': entry,
         'hashtags': hashtags
     })
 
-def journal_create(request, workspace_id):
-    """View to create a new journal entry"""
+def note_create(request, workspace_id):
+    """View to create a new note entry"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     
     if request.method == "POST":
-        form = JournalEntryForm(request.POST)
+        form = NoteForm(request.POST)
         if form.is_valid():
             entry = form.save(commit=False)
             entry.workspace = workspace
             entry.save()  # This will trigger the save method to find hashtags
-            return redirect('notekeeper:journal_detail', workspace_id=workspace_id, pk=entry.pk)
+            return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=entry.pk)
     else:
-        form = JournalEntryForm(initial={'timestamp': timezone.now()})
+        form = NoteForm(initial={'timestamp': timezone.now()})
     
     # Extract hashtags from content if available (for preview)
     hashtags = []
     if request.method == "POST" and 'content' in request.POST:
         hashtags = re.findall(r'#(\w+)', request.POST['content'])
     
-    return render(request, 'notekeeper/journal/form.html', {
+    return render(request, 'notekeeper/note/form.html', {
         'workspace': workspace,
         'form': form,
         'hashtags': hashtags
     })
 
-def journal_edit(request, workspace_id, pk):
-    """View to edit an existing journal entry"""
+def note_edit(request, workspace_id, pk):
+    """View to edit an existing note entry"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    entry = get_object_or_404(JournalEntry, pk=pk, workspace=workspace)
+    entry = get_object_or_404(Note, pk=pk, workspace=workspace)
     
     if request.method == "POST":
-        form = JournalEntryForm(request.POST, instance=entry)
+        form = NoteForm(request.POST, instance=entry)
         if form.is_valid():
             entry = form.save()  # This will trigger the save method to find hashtags
-            return redirect('notekeeper:journal_detail', workspace_id=workspace_id, pk=entry.pk)
+            return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=entry.pk)
     else:
-        form = JournalEntryForm(instance=entry)
+        form = NoteForm(instance=entry)
     
     # Extract hashtags from content (for preview)
     hashtags = re.findall(r'#(\w+)', entry.content)
     
-    return render(request, 'notekeeper/journal/form.html', {
+    return render(request, 'notekeeper/note/form.html', {
         'workspace': workspace,
         'form': form,
         'entry': entry,
@@ -134,8 +171,8 @@ def entity_detail(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entity = get_object_or_404(Entity, pk=pk, workspace=workspace)
     
-    # Get related entries
-    related_entries = JournalEntry.objects.filter(
+    # Get related notes
+    related_notes = Note.objects.filter(
         workspace=workspace, 
         referenced_entities=entity
     ).order_by('-timestamp')
@@ -165,7 +202,7 @@ def entity_detail(request, workspace_id, pk):
         'workspace': workspace,
         'entity': entity,
         'entity_relationships': entity_relationships,
-        'related_entries': related_entries,
+        'related_notes': related_notes,
     })
 
 def entity_create(request, workspace_id):
@@ -230,7 +267,7 @@ def workspace_detail(request, pk):
     
     context = {
         'current_workspace': workspace,
-        'recent_entries': workspace.journal_entries.order_by('-timestamp')[:5],
+        'recent_notes': workspace.note_notes.order_by('-timestamp')[:5],
         'entities_by_type': entities_by_type,
         'recent_relationships': workspace.relationships.select_related('relationship_type').order_by('-created_at')[:5],
         'relationship_types': workspace.relationship_types.all(),

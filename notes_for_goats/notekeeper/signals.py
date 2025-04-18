@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 import time
-from .models import Workspace, Entity, JournalEntry, RelationshipType, Relationship
+from .models import Workspace, Entity, Note, RelationshipType, Relationship
 from .views import create_backup
 
 # Keep track of last backup time to prevent too frequent backups
@@ -11,7 +11,7 @@ _BACKUP_COOLDOWN = 60  # seconds between backups
 
 @receiver([post_save, post_delete], sender=Workspace)
 @receiver([post_save, post_delete], sender=Entity)
-@receiver([post_save, post_delete], sender=JournalEntry)
+@receiver([post_save, post_delete], sender=Note)
 @receiver([post_save, post_delete], sender=RelationshipType)
 @receiver([post_save, post_delete], sender=Relationship)
 def backup_on_data_change(sender, instance, **kwargs):

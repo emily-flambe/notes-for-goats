@@ -1,5 +1,5 @@
 from django import forms
-from .models import Workspace, JournalEntry, Entity, RelationshipType, Relationship, RelationshipInferenceRule
+from .models import Workspace, Note, Entity, RelationshipType, Relationship, RelationshipInferenceRule
 
 class WorkspaceForm(forms.ModelForm):
     class Meta:
@@ -10,9 +10,9 @@ class WorkspaceForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
 
-class JournalEntryForm(forms.ModelForm):
+class NoteForm(forms.ModelForm):
     class Meta:
-        model = JournalEntry
+        model = Note
         fields = ['title', 'content', 'timestamp']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
@@ -23,11 +23,11 @@ class JournalEntryForm(forms.ModelForm):
 class EntityForm(forms.ModelForm):
     class Meta:
         model = Entity
-        fields = ['name', 'type', 'notes', 'tags']
+        fields = ['name', 'type', 'details', 'tags']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'type': forms.Select(attrs={'class': 'form-control'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
+            'details': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
             'tags': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Enter tags separated by commas (e.g., me, myself, I)'
@@ -78,10 +78,10 @@ class RelationshipForm(forms.ModelForm):
     
     class Meta:
         model = Relationship
-        fields = ['relationship_type', 'notes']
+        fields = ['relationship_type', 'details']
         widgets = {
             'relationship_type': forms.Select(attrs={'class': 'form-control'}),
-            'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': 'Optional notes about this relationship'})
+            'details': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': 'Optional notes about this relationship'})
         }
     
     def __init__(self, *args, **kwargs):

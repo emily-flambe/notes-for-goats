@@ -5,7 +5,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
-from notekeeper.models import Workspace, Entity, JournalEntry, CalendarEvent
+from notekeeper.models import Workspace, Entity, Note
 from django.utils.dateparse import parse_datetime
 
 class Command(BaseCommand):
@@ -103,8 +103,8 @@ class Command(BaseCommand):
         # Import entities
         entity_id_map = self._import_entities(temp_dir, workspace)
         
-        # Import journal entries
-        entry_id_map = self._import_journal_entries(temp_dir, workspace, entity_id_map)
+        # Import notes
+        entry_id_map = self._import_note_notes(temp_dir, workspace, entity_id_map)
         
         # Import calendar events
         self._import_calendar_events(temp_dir, entry_id_map)
@@ -158,18 +158,18 @@ class Command(BaseCommand):
         self.stdout.write(f'Imported {len(entities_data)} entities')
         return entity_id_map
     
-    def _import_journal_entries(self, temp_dir, workspace, entity_id_map):
-        """Import journal entries"""
+    def _import_note_notes(self, temp_dir, workspace, entity_id_map):
+        """Import notes"""
         entry_id_map = {}  # Map old IDs to new IDs
         
         try:
-            with open(os.path.join(temp_dir, 'journal_entries.json'), 'r') as f:
-                entries_data = json.load(f)
+            with open(os.path.join(temp_dir, 'note_notes.json'), 'r') as f:
+                notes_data = json.load(f)
         except FileNotFoundError:
-            self.stdout.write(self.style.WARNING('No journal_entries.json found, skipping entries'))
+            self.stdout.write(self.style.WARNING('No note_notes.json found, skipping notes'))
             return entry_id_map
         
-        for entry_data in entries_data:
+        for entry_data in notes_data:
             # Ensure we have strings for text fields
             title = str(entry_data.get('title', ''))
             content = str(entry_data.get('content', ''))
@@ -182,7 +182,7 @@ class Command(BaseCommand):
             except (ValueError, TypeError):
                 timestamp = timezone.now()
             
-            entry = JournalEntry(
+            entry = Note(
                 workspace=workspace,
                 title=title,
                 content=content,
@@ -207,7 +207,7 @@ class Command(BaseCommand):
                     pass
             
             # Don't call the overridden save() yet to avoid processing hashtags
-            super(JournalEntry, entry).save()
+            super(Note, entry).save()
             entry_id_map[entry_data.get('id')] = entry.id
             
             # Add referenced entities
@@ -221,7 +221,7 @@ class Command(BaseCommand):
                         except Entity.DoesNotExist:
                             pass
         
-        self.stdout.write(f'Imported {len(entries_data)} journal entries')
+        self.stdout.write(f'Imported {len(notes_data)} notes')
         return entry_id_map
     
     def _import_calendar_events(self, temp_dir, entry_id_map):
@@ -234,11 +234,11 @@ class Command(BaseCommand):
             return
         
         for event_data in events_data:
-            # Get journal entry ID if available
-            journal_entry_id = None
-            event_journal_entry_id = event_data.get('journal_entry_id')
-            if event_journal_entry_id and event_journal_entry_id in entry_id_map:
-                journal_entry_id = entry_id_map[event_journal_entry_id]
+            # Get note entry ID if available
+            note_id = None
+            event_note_id = event_data.get('note_id')
+            if event_note_id and event_note_id in entry_id_map:
+                note_id = entry_id_map[event_note_id]
             
             # Ensure we have strings for text fields
             google_event_id = str(event_data.get('google_event_id', ''))
@@ -260,32 +260,5 @@ class Command(BaseCommand):
             except (ValueError, TypeError):
                 end_time = timezone.now()
             
-            event = CalendarEvent(
-                google_event_id=google_event_id,
-                title=title,
-                description=description,
-                start_time=start_time,
-                end_time=end_time,
-                journal_entry_id=journal_entry_id
-            )
             
-            # If we have timestamps, preserve them
-            if 'created_at' in event_data:
-                try:
-                    created_at = parse_datetime(event_data['created_at'])
-                    if created_at:
-                        event.created_at = created_at
-                except (ValueError, TypeError):
-                    pass
-                    
-            if 'updated_at' in event_data:
-                try:
-                    updated_at = parse_datetime(event_data['updated_at'])
-                    if updated_at:
-                        event.updated_at = updated_at
-                except (ValueError, TypeError):
-                    pass
-                
-            event.save()
-        
         self.stdout.write(f'Imported {len(events_data)} calendar events') 

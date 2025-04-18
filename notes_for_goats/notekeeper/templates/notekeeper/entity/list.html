@@ -25,8 +25,8 @@
                                         {{ entity.name }}
                                     </a>
                                 </h3>
-                                {% if entity.notes %}
-                                    <p class="entity-notes">{{ entity.notes|truncatechars:100 }}</p>
+                                {% if entity.details %}
+                                    <p class="entity-notes">{{ entity.details|truncatechars:100 }}</p>
                                 {% endif %}
                                 {% if entity.tags %}
                                     <div class="entity-tags">
@@ -56,8 +56,8 @@
                                         {{ entity.name }}
                                     </a>
                                 </h3>
-                                {% if entity.notes %}
-                                    <p class="entity-notes">{{ entity.notes|truncatechars:100 }}</p>
+                                {% if entity.details %}
+                                    <p class="entity-notes">{{ entity.details|truncatechars:100 }}</p>
                                 {% endif %}
                                 {% if entity.tags %}
                                     <div class="entity-tags">
@@ -87,8 +87,8 @@
                                         {{ entity.name }}
                                     </a>
                                 </h3>
-                                {% if entity.notes %}
-                                    <p class="entity-notes">{{ entity.notes|truncatechars:100 }}</p>
+                                {% if entity.details %}
+                                    <p class="entity-notes">{{ entity.details|truncatechars:100 }}</p>
                                 {% endif %}
                                 {% if entity.tags %}
                                     <div class="entity-tags">
@@ -109,7 +109,7 @@
     {% else %}
         <div class="empty-state">
             <p>No entities created yet.</p>
-            <p>Entities represent people, projects, and teams that you can reference in your journal entries.</p>
+            <p>Entities represent people, projects, and teams that you can reference in your notes.</p>
             <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}" class="btn btn-primary">Create Your First Entity</a>
         </div>
     {% endif %}

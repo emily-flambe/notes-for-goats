@@ -13,6 +13,21 @@ body {
     padding: 0 20px;
 }
 
+/* Base Link Styling */
+a {
+    color: #2d3748; /* Match common link color used elsewhere */
+    text-decoration: none; /* Remove underline by default */
+}
+
+a:visited {
+    color: #2d3748; /* Keep visited links the same color as default */
+}
+
+a:hover {
+    color: #4299e1; /* Apply blue color on hover */
+    text-decoration: underline; /* Add underline on hover for visual cue */
+}
+
 /* Header & Navigation */
 header {
     background-color: #4a5568;
@@ -92,41 +107,50 @@ nav a:hover {
 }
 
 /* Buttons */
-.btn {
+.btn, a.btn {
     background-color: #4a5568;
-    color: white;
-    padding: 8px 16px;
+    color: white !important;
+    padding: 10px 15px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     text-decoration: none;
     display: inline-block;
-    font-size: 14px;
+    font-size: 16px;
+    line-height: normal;
+    text-align: center;
 }
 
-.btn:hover {
+.btn:hover, a.btn:hover {
     background-color: #2d3748;
+    color: white !important;
+    text-decoration: none;
 }
 
-.btn-primary {
+.btn-primary, a.btn-primary {
     background-color: #3182ce;
+    color: white !important;
 }
 
-.btn-primary:hover {
+.btn-primary:hover, a.btn-primary:hover {
     background-color: #2b6cb0;
+    color: white !important;
 }
 
-.btn-danger {
+.btn-danger, a.btn-danger {
     background-color: #e53e3e;
+    color: white !important;
 }
 
-.btn-danger:hover {
+.btn-danger:hover, a.btn-danger:hover {
     background-color: #c53030;
+    color: white !important;
 }
 
-.btn-sm {
-    padding: 4px 10px;
-    font-size: 0.875rem;
+.btn-sm, a.btn-sm {
+    padding: 5px 10px;
+    font-size: 14px;
+    color: white !important;
 }
 
 /* Forms */
@@ -503,7 +527,7 @@ th.sorted-desc .sort-icon {
     margin-bottom: 1rem;
 }
 
-/* Journal entries */
+/* Notes notes */
 .journal-entry {
     padding: 1.5rem;
     margin-bottom: 1.5rem;
@@ -823,30 +847,25 @@ input[type="datetime-local"] {
     margin-top: 20px;
 }
 
-.recent-entries, .recent-relationships {
+.recent-notes, .recent-relationships {
     margin-bottom: 20px;
 }
 
-.recent-entries ul, .recent-relationships ul {
+.recent-notes ul, .recent-relationships ul {
     list-style: none;
     padding-left: 0;
 }
 
-.recent-entries li, .recent-relationships li {
+.recent-notes li, .recent-relationships li {
     padding: 8px 0;
     border-bottom: 1px solid #eee;
 }
 
-.recent-entries li:last-child, .recent-relationships li:last-child {
+.recent-notes li:last-child, .recent-relationships li:last-child {
     border-bottom: none;
 }
 
-.recent-entries a, .recent-relationships a {
-    color: #2d3748;
-    text-decoration: none;
-}
-
-.recent-entries a:hover, .recent-relationships a:hover {
+.recent-notes a:hover, .recent-relationships a:hover {
     color: #4299e1;
 }
 
@@ -880,4 +899,22 @@ input[type="datetime-local"] {
 
 .import-instructions ul {
     padding-left: 1.5rem;
+}
+
+.btn-import, a.btn-import {
+    background-color: #4299e1;
+    color: white !important;
+}
+.btn-import:hover, a.btn-import:hover {
+    background-color: #3182ce;
+    color: white !important;
+}
+
+.btn-export, a.btn-export {
+    background-color: #48bb78;
+    color: white !important;
+}
+.btn-export:hover, a.btn-export:hover {
+    background-color: #38a169;
+    color: white !important;
 }

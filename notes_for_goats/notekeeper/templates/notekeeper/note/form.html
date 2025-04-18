@@ -1,13 +1,13 @@
 {% extends "notekeeper/base.html" %}
 
 {% block title %}
-    {% if entry %}Edit{% else %}New{% endif %} Journal Entry - {{ workspace.name }}
+    {% if entry %}Edit{% else %}New{% endif %} Notes Entry - {{ workspace.name }}
 {% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="page-header">
-        <h1>{% if entry and entry.id %}Edit{% else %}Create{% endif %} Journal Entry</h1>
+        <h1>{% if entry and entry.id %}Edit{% else %}Create{% endif %} Notes Entry</h1>
     </div>
     
     <div class="card">
@@ -81,9 +81,9 @@
             <div class="form-actions">
                 <button type="submit" class="btn">Save</button>
                 {% if entry %}
-                    <a href="{% url 'notekeeper:journal_detail' workspace_id=workspace.id pk=entry.id %}" class="btn">Cancel</a>
+                    <a href="{% url 'notekeeper:note_detail' workspace_id=workspace.id pk=entry.id %}" class="btn">Cancel</a>
                 {% else %}
-                    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Back to Journal</a>
+                    <a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}" class="btn">Back to Notes</a>
                 {% endif %}
             </div>
         </form>

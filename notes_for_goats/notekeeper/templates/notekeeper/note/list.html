@@ -1,0 +1,342 @@
+{% extends "notekeeper/base.html" %}
+{% load static %}
+
+{% block title %}Notes - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Notes</h1>
+        <div class="header-actions">
+            <a href="{% url 'notekeeper:note_create' workspace_id=workspace.id %}" class="btn btn-primary">New Entry</a>
+            <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">Back to Workspace</a>
+        </div>
+    </div>
+    
+    <div class="subtitle">
+        Record and track important events, meetings, and notes about your projects.
+    </div>
+    
+    <!-- Always show the filter card, even if no notes match -->
+    <div class="card">
+        <div class="filter-section">
+            <form method="get" class="filter-controls">
+                <!-- Entity Type filter -->
+                <div class="filter-group">
+                    <label for="entity_type_filter">Entity Type:</label>
+                    <select id="entity_type_filter" name="entity_type">
+                        <option value="">All</option>
+                        {% for type, label in entity_types %}
+                            <option value="{{ type }}" {% if type == request.GET.entity_type %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Entity filter -->
+                <div class="filter-group">
+                    <label for="entity_filter">Entity:</label>
+                    <select id="entity_filter" name="entity">
+                        <option value="">All</option>
+                        {% for entity in entities %}
+                            <option value="{{ entity.id }}" 
+                                    data-type="{{ entity.type }}"
+                                    {% if entity.id|stringformat:"s" == request.GET.entity %}selected{% endif %}>
+                                {{ entity.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Search input -->
+                <div class="filter-group">
+                    <label for="search">Search:</label>
+                    <input type="text" id="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search notes...">
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="filter-buttons">
+                    <button type="submit" class="btn">Apply Filters</button>
+                    <a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}" class="btn">Clear</a>
+                </div>
+            </form>
+        </div>
+        
+        {% if notes %}
+            <div class="journal-notes">
+                {% for entry in notes %}
+                    <a href="{% url 'notekeeper:note_detail' workspace_id=workspace.id pk=entry.id %}" class="journal-entry-link">
+                        <div class="journal-entry">
+                            <div class="journal-header">
+                                <div>
+                                    <h3 class="journal-title">
+                                        {{ entry.title }}
+                                    </h3>
+                                    <div class="journal-date">{{ entry.timestamp|date:"F j, Y - g:i A" }}</div>
+                                </div>
+                                <div class="actions">
+                                    <button class="btn btn-sm edit-button" data-url="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.id %}">Edit</button>
+                                </div>
+                            </div>
+                            
+                            <div class="journal-content">
+                                {{ entry.content|linebreaks }}
+                            </div>
+                            
+                            {% if entry.referenced_entities.all %}
+                                <div class="journal-entities">
+                                    <div class="entity-list">
+                                        {% for entity in entry.referenced_entities.all %}
+                                            <span class="entity-reference">
+                                                {{ entity.name }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% elif request.GET.entity or request.GET.entity_type or request.GET.q %}
+            <!-- Show this when no notes match the filter criteria but filters are applied -->
+            <div class="no-results-message">
+                <p>No notes were found matching the selected criteria.</p>
+                <p>Try adjusting your filters or <a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}">clear all filters</a>.</p>
+            </div>
+        {% elif total_notes_count > 0 %}
+            <!-- This means there are notes but none match the current page/view -->
+            <div class="no-results-message">
+                <p>There are {{ total_notes_count }} notes, but none are displayed with current filters.</p>
+                <p><a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}">View all notes</a></p>
+            </div>
+        {% else %}
+            <!-- No notes exist at all in this workspace -->
+            <div class="no-results-message">
+                <p>No notes have been created in this workspace yet.</p>
+                <p>Create your first entry to get started.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Only show this empty state if there are truly no notes in the workspace -->
+    {% if total_notes_count == 0 and not request.GET.entity and not request.GET.entity_type and not request.GET.q %}
+        <div class="empty-state">
+            <p>No notes yet.</p>
+            <p>Notes notes help you record important events, meetings, and updates.</p>
+            <a href="{% url 'notekeeper:note_create' workspace_id=workspace.id %}" class="btn btn-primary">Create Your First Entry</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Filter controls styling */
+    .filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 15px;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+        padding-left: 15px;
+    }
+    
+    /* Entity references styling - slightly reduced margins */
+    .journal-entities {
+        margin-top: 6px; /* Reduced from 10px */
+        font-size: 0.9em;
+        color: #4a5568;
+    }
+    
+    .entity-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px; /* Reduced from 8px */
+        margin-top: 3px; /* Reduced from 5px */
+    }
+    
+    .entity-reference {
+        display: inline-block;
+        padding: 2px 8px;
+        margin: 1px 4px 1px 0; /* Slightly reduced margins */
+        background-color: #edf2f7;
+        border-radius: 12px;
+        font-size: 0.85em;
+        color: #4a5568;
+        text-decoration: none;
+    }
+    
+    .entity-reference:hover {
+        background-color: #e2e8f0;
+        color: #2d3748;
+        text-decoration: none;
+    }
+    
+    /* Enhanced notes container */
+    .journal-notes {
+        padding: 0 10px; /* Reduced from 15px */
+        display: flex;
+        flex-direction: column;
+        gap: 8px; /* Added gap between entries */
+    }
+    
+    /* Enhanced note entry styling to make it pop */
+    .journal-entry {
+        padding: 16px 14px; /* Reduced from 20px 15px */
+        margin: 0; /* Removed margin in favor of flex gap */
+        border-radius: 6px; /* Added rounded corners */
+        background-color: #f8fafc; /* Very light background color */
+        border: 1px solid #edf2f7; /* Light border */
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Subtle shadow */
+        transition: all 0.2s ease; /* Smooth transition for hover effects */
+    }
+    
+    /* Hover effect */
+    .journal-entry:hover {
+        background-color: #c7e0ef; /* Slightly darker on hover */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08); /* Enhanced shadow */
+    }
+    
+    .journal-entry:last-child {
+        border-bottom: 1px solid #edf2f7; /* Ensure last item has bottom border */
+    }
+    
+    /* Reduced padding for content to decrease space after timestamp */
+    .journal-content {
+        padding: -10px 0 4px; /* Reduced from 6px 0 4px - less space at the top */
+        line-height: 1.2;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-height: calc(1.5em * 3);
+        color: #4a5568;
+        position: relative;
+    }
+    
+    /* Reduce bottom margin on the journal header */
+    .journal-header {
+        padding-bottom: 1px; /* Reduced from 3px */
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    
+    /* Reduce bottom margin on title */
+    .journal-title {
+        margin-top: 0;
+        margin-bottom: 1px; /* Reduced from 3px */
+        font-size: 1.15rem;
+    }
+    
+    .journal-title a {
+        color: #2d3748;
+        font-weight: 600;
+    }
+    
+    .journal-title a:hover {
+        color: #4299e1;
+        text-decoration: none;
+    }
+    
+    /* Smaller margin after date */
+    .journal-date {
+        font-size: 0.825rem;
+        color: #718096;
+        margin-bottom: 1px; /* Added small margin */
+    }
+    
+    /* No results message styling */
+    .no-results-message {
+        padding: 30px 20px;
+        text-align: center;
+        color: #4a5568;
+        background-color: #f9fafb;
+        border-radius: 6px;
+        margin: 20px 15px;
+    }
+    
+    .no-results-message p {
+        margin-bottom: 10px;
+    }
+    
+    .no-results-message a {
+        color: #3182ce;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .no-results-message a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get references to both filter dropdowns
+        const entityTypeFilter = document.getElementById('entity_type_filter');
+        const entityFilter = document.getElementById('entity_filter');
+        
+        // Store all original entity options for filtering
+        const allEntityOptions = Array.from(entityFilter.options);
+        
+        // Function to filter entity options based on selected type
+        function filterEntityOptions() {
+            const selectedType = entityTypeFilter.value;
+            
+            // Clear existing options (except the first "All" option)
+            while (entityFilter.options.length > 1) {
+                entityFilter.remove(1);
+            }
+            
+            // If no type is selected, show all entities
+            if (!selectedType) {
+                allEntityOptions.forEach(function(option) {
+                    if (option.value !== "") { // Skip the "All" option
+                        entityFilter.appendChild(option.cloneNode(true));
+                    }
+                });
+            } else {
+                // Otherwise, only show entities of the selected type
+                allEntityOptions.forEach(function(option) {
+                    if (option.value !== "" && option.dataset.type === selectedType) {
+                        entityFilter.appendChild(option.cloneNode(true));
+                    }
+                });
+            }
+        }
+        
+        // Initialize filtering on page load
+        filterEntityOptions();
+        
+        // Update filtering when entity type changes
+        entityTypeFilter.addEventListener('change', filterEntityOptions);
+        
+        // NEW: Check if content fits within 3 lines
+        const journalContents = document.querySelectorAll('.journal-content');
+        journalContents.forEach(content => {
+            const actualHeight = content.scrollHeight;
+            const lineHeight = parseFloat(getComputedStyle(content).lineHeight);
+            const maxHeight = lineHeight * 3;
+            
+            if (actualHeight <= maxHeight) {
+                content.classList.add('fits-content');
+            }
+        });
+    });
+</script>
+{% endblock %} 
