@@ -249,7 +249,7 @@
                 {% if current_workspace %}
                     <!-- Only show these links if we have a workspace in context AND it has a valid ID -->
                     {% if current_workspace.id %}
-                        <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}">Notes</a>
+                        <a href="{% url 'notekeeper:note_list' workspace_id=current_workspace.id %}">Notes</a>
                         <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}">Entities</a>
                         <a href="{% url 'notekeeper:relationship_list' workspace_id=current_workspace.id %}">Relationships</a>
                     {% endif %}

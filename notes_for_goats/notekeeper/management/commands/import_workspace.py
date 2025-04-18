@@ -5,7 +5,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
-from notekeeper.models import Workspace, Entity, NotesEntry, CalendarEvent
+from notekeeper.models import Workspace, Entity, NotesEntry
 from django.utils.dateparse import parse_datetime
 
 class Command(BaseCommand):
@@ -104,7 +104,7 @@ class Command(BaseCommand):
         entity_id_map = self._import_entities(temp_dir, workspace)
         
         # Import notes
-        entry_id_map = self._import_journal_notes(temp_dir, workspace, entity_id_map)
+        entry_id_map = self._import_note_notes(temp_dir, workspace, entity_id_map)
         
         # Import calendar events
         self._import_calendar_events(temp_dir, entry_id_map)
@@ -158,15 +158,15 @@ class Command(BaseCommand):
         self.stdout.write(f'Imported {len(entities_data)} entities')
         return entity_id_map
     
-    def _import_journal_notes(self, temp_dir, workspace, entity_id_map):
+    def _import_note_notes(self, temp_dir, workspace, entity_id_map):
         """Import notes"""
         entry_id_map = {}  # Map old IDs to new IDs
         
         try:
-            with open(os.path.join(temp_dir, 'journal_notes.json'), 'r') as f:
+            with open(os.path.join(temp_dir, 'note_notes.json'), 'r') as f:
                 notes_data = json.load(f)
         except FileNotFoundError:
-            self.stdout.write(self.style.WARNING('No journal_notes.json found, skipping notes'))
+            self.stdout.write(self.style.WARNING('No note_notes.json found, skipping notes'))
             return entry_id_map
         
         for entry_data in notes_data:
@@ -234,11 +234,11 @@ class Command(BaseCommand):
             return
         
         for event_data in events_data:
-            # Get journal entry ID if available
-            journal_entry_id = None
-            event_journal_entry_id = event_data.get('journal_entry_id')
-            if event_journal_entry_id and event_journal_entry_id in entry_id_map:
-                journal_entry_id = entry_id_map[event_journal_entry_id]
+            # Get note entry ID if available
+            note_id = None
+            event_note_id = event_data.get('note_id')
+            if event_note_id and event_note_id in entry_id_map:
+                note_id = entry_id_map[event_note_id]
             
             # Ensure we have strings for text fields
             google_event_id = str(event_data.get('google_event_id', ''))
@@ -260,32 +260,5 @@ class Command(BaseCommand):
             except (ValueError, TypeError):
                 end_time = timezone.now()
             
-            event = CalendarEvent(
-                google_event_id=google_event_id,
-                title=title,
-                description=description,
-                start_time=start_time,
-                end_time=end_time,
-                journal_entry_id=journal_entry_id
-            )
             
-            # If we have timestamps, preserve them
-            if 'created_at' in event_data:
-                try:
-                    created_at = parse_datetime(event_data['created_at'])
-                    if created_at:
-                        event.created_at = created_at
-                except (ValueError, TypeError):
-                    pass
-                    
-            if 'updated_at' in event_data:
-                try:
-                    updated_at = parse_datetime(event_data['updated_at'])
-                    if updated_at:
-                        event.updated_at = updated_at
-                except (ValueError, TypeError):
-                    pass
-                
-            event.save()
-        
         self.stdout.write(f'Imported {len(events_data)} calendar events') 

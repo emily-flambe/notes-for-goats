@@ -5,7 +5,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
-from notekeeper.models import Workspace, Entity, NotesEntry, CalendarEvent
+from notekeeper.models import Workspace 
 
 class Command(BaseCommand):
     help = 'Export a workspace to a ZIP file'
@@ -67,7 +67,7 @@ class Command(BaseCommand):
                 json.dump(entities_data, f, cls=DjangoJSONEncoder, indent=2)
             
             # Export notes
-            notes = workspace.journal_notes.all().prefetch_related('referenced_entities')
+            notes = workspace.note_notes.all().prefetch_related('referenced_entities')
             notes_data = []
             
             for entry in notes:
@@ -82,28 +82,9 @@ class Command(BaseCommand):
                 }
                 notes_data.append(entry_data)
             
-            with open(os.path.join(temp_dir, 'journal_notes.json'), 'w') as f:
+            with open(os.path.join(temp_dir, 'note_notes.json'), 'w') as f:
                 json.dump(notes_data, f, cls=DjangoJSONEncoder, indent=2)
-            
-            # Export calendar events
-            calendar_events = CalendarEvent.objects.filter(journal_entry__workspace=workspace)
-            events_data = []
-            
-            for event in calendar_events:
-                event_data = {
-                    'id': event.id,
-                    'google_event_id': event.google_event_id,
-                    'title': event.title,
-                    'description': event.description,
-                    'start_time': event.start_time.isoformat(),
-                    'end_time': event.end_time.isoformat(),
-                    'journal_entry_id': event.journal_entry_id
-                }
-                events_data.append(event_data)
-            
-            with open(os.path.join(temp_dir, 'calendar_events.json'), 'w') as f:
-                json.dump(events_data, f, cls=DjangoJSONEncoder, indent=2)
-            
+        
             # Create a ZIP file with all JSON files
             with zipfile.ZipFile(output_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for root, _, files in os.walk(temp_dir):

@@ -80,13 +80,13 @@ class NotesEntry(models.Model):
     """
     Represents a timestamped note entry that may reference entities.
     """
-    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='journal_notes')
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='note_notes')
     title = models.CharField(max_length=200)
     content = models.TextField()
     timestamp = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='journal_notes')
+    referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='note_notes')
     
     def __str__(self):
         return f"{self.timestamp.strftime('%Y-%m-%d')}: {self.title}"

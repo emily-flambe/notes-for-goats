@@ -157,13 +157,13 @@ workspace.id: {{ current_workspace.id }}
 <p class="workspace-description">{{ current_workspace.description }}</p>
 
 <div class="workspace-dashboard">
-    <!-- RECENT JOURNAL ENTRIES SECTION -->
+    <!-- RECENT note ENTRIES SECTION -->
     <div class="recent-notes">
         <div class="section-header">
             <h2>Recent Notes</h2>
             <div class="action-buttons">
-                <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}" class="btn" style="color: white;">View All</a>
-                <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn" style="color: white;">+</a>
+                <a href="{% url 'notekeeper:note_list' workspace_id=current_workspace.id %}" class="btn" style="color: white;">View All</a>
+                <a href="{% url 'notekeeper:note_create' workspace_id=current_workspace.id %}" class="btn" style="color: white;">+</a>
             </div>
         </div>
         {% if recent_notes %}
@@ -171,7 +171,7 @@ workspace.id: {{ current_workspace.id }}
                 {% for entry in recent_notes %}
                     <div class="journal-entry-item">
                         <div class="journal-entry-title">
-                            <a href="{% url 'notekeeper:journal_detail' workspace_id=current_workspace.id pk=entry.pk %}">
+                            <a href="{% url 'notekeeper:note_detail' workspace_id=current_workspace.id pk=entry.pk %}">
                                 <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
                             </a>
                         </div>
@@ -190,7 +190,7 @@ workspace.id: {{ current_workspace.id }}
             </div>
         {% else %}
             <p>No notes yet.</p>
-            <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn">Create First Entry</a>
+            <a href="{% url 'notekeeper:note_create' workspace_id=current_workspace.id %}" class="btn">Create First Entry</a>
         {% endif %}
     </div>
     

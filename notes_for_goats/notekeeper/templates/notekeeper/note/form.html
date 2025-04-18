@@ -81,9 +81,9 @@
             <div class="form-actions">
                 <button type="submit" class="btn">Save</button>
                 {% if entry %}
-                    <a href="{% url 'notekeeper:journal_detail' workspace_id=workspace.id pk=entry.id %}" class="btn">Cancel</a>
+                    <a href="{% url 'notekeeper:note_detail' workspace_id=workspace.id pk=entry.id %}" class="btn">Cancel</a>
                 {% else %}
-                    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Back to Notes</a>
+                    <a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}" class="btn">Back to Notes</a>
                 {% endif %}
             </div>
         </form>

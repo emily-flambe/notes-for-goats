@@ -39,8 +39,8 @@
     </div>
     
     <div class="actions">
-        <a href="{% url 'notekeeper:journal_edit' workspace_id=workspace.id pk=entry.id %}" class="btn">Edit</a>
-        <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Back to Notes</a>
+        <a href="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.id %}" class="btn">Edit</a>
+        <a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}" class="btn">Back to Notes</a>
     </div>
 </div>
 {% endblock %}

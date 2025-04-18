@@ -11,8 +11,8 @@
         <p>You are about to permanently delete this workspace and all of its contents:</p>
         <ul>
             <li><strong>{{ workspace.entities.count }}</strong> entities</li>
-            <li><strong>{{ workspace.journal_notes.count }}</strong> notes</li>
-            {% with calendar_events_count=workspace.journal_notes.all|join:','|default:'0'|length %}
+            <li><strong>{{ workspace.note_notes.count }}</strong> notes</li>
+            {% with calendar_events_count=workspace.note_notes.all|join:','|default:'0'|length %}
             <li><strong>{{ calendar_events_count }}</strong> calendar events</li>
             {% endwith %}
         </ul>

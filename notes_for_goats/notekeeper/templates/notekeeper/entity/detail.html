@@ -23,7 +23,7 @@
             <ul class="entry-list">
             {% for entry in related_notes %}
                 <li>
-                    <a href="{% url 'notekeeper:journal_detail' workspace_id=workspace.id pk=entry.pk %}">
+                    <a href="{% url 'notekeeper:note_detail' workspace_id=workspace.id pk=entry.pk %}">
                         <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
                     </a>
                 </li>

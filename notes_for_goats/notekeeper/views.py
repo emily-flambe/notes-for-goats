@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Workspace, Entity, NotesEntry, CalendarEvent, Relationship, RelationshipType, RelationshipInferenceRule
+from .models import Workspace, Entity, NotesEntry, Relationship, RelationshipType, RelationshipInferenceRule
 from .forms import WorkspaceForm, NotesEntryForm, EntityForm, RelationshipTypeForm, RelationshipForm, RelationshipInferenceRuleForm
 import os
 import tempfile
@@ -42,7 +42,7 @@ def home(request):
     workspaces = Workspace.objects.all()
     return render(request, 'notekeeper/home.html', {'all_workspaces': workspaces})
 
-def journal_list(request, workspace_id):
+def note_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     
     # Get all entity types from the model
@@ -88,7 +88,7 @@ def journal_list(request, workspace_id):
         'total_notes_count': total_notes_count,
     })
 
-def journal_detail(request, workspace_id, pk):
+def note_detail(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entry = get_object_or_404(NotesEntry, pk=pk, workspace=workspace)
     
@@ -101,8 +101,8 @@ def journal_detail(request, workspace_id, pk):
         'hashtags': hashtags
     })
 
-def journal_create(request, workspace_id):
-    """View to create a new journal entry"""
+def note_create(request, workspace_id):
+    """View to create a new note entry"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     
     if request.method == "POST":
@@ -111,7 +111,7 @@ def journal_create(request, workspace_id):
             entry = form.save(commit=False)
             entry.workspace = workspace
             entry.save()  # This will trigger the save method to find hashtags
-            return redirect('notekeeper:journal_detail', workspace_id=workspace_id, pk=entry.pk)
+            return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=entry.pk)
     else:
         form = NotesEntryForm(initial={'timestamp': timezone.now()})
     
@@ -126,8 +126,8 @@ def journal_create(request, workspace_id):
         'hashtags': hashtags
     })
 
-def journal_edit(request, workspace_id, pk):
-    """View to edit an existing journal entry"""
+def note_edit(request, workspace_id, pk):
+    """View to edit an existing note entry"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entry = get_object_or_404(NotesEntry, pk=pk, workspace=workspace)
     
@@ -135,7 +135,7 @@ def journal_edit(request, workspace_id, pk):
         form = NotesEntryForm(request.POST, instance=entry)
         if form.is_valid():
             entry = form.save()  # This will trigger the save method to find hashtags
-            return redirect('notekeeper:journal_detail', workspace_id=workspace_id, pk=entry.pk)
+            return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=entry.pk)
     else:
         form = NotesEntryForm(instance=entry)
     
@@ -267,7 +267,7 @@ def workspace_detail(request, pk):
     
     context = {
         'current_workspace': workspace,
-        'recent_notes': workspace.journal_notes.order_by('-timestamp')[:5],
+        'recent_notes': workspace.note_notes.order_by('-timestamp')[:5],
         'entities_by_type': entities_by_type,
         'recent_relationships': workspace.relationships.select_related('relationship_type').order_by('-created_at')[:5],
         'relationship_types': workspace.relationship_types.all(),

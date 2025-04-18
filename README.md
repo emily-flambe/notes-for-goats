@@ -167,7 +167,7 @@ This relationship system helps you map organizational structures, project involv
 
 The system is designed to integrate with Google Calendar to:
 - Import your daily events
-- Generate journal templates pre-populated with meetings
+- Generate note templates pre-populated with meetings
 - Link notes directly to calendar events
 
 ## Data Backup

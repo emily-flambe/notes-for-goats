@@ -8,7 +8,7 @@
     <div class="page-header">
         <h1>Notes</h1>
         <div class="header-actions">
-            <a href="{% url 'notekeeper:journal_create' workspace_id=workspace.id %}" class="btn btn-primary">New Entry</a>
+            <a href="{% url 'notekeeper:note_create' workspace_id=workspace.id %}" class="btn btn-primary">New Entry</a>
             <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">Back to Workspace</a>
         </div>
     </div>
@@ -58,7 +58,7 @@
                 <!-- Action buttons -->
                 <div class="filter-buttons">
                     <button type="submit" class="btn">Apply Filters</button>
-                    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Clear</a>
+                    <a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}" class="btn">Clear</a>
                 </div>
             </form>
         </div>
@@ -70,14 +70,14 @@
                         <div class="journal-header">
                             <div>
                                 <h3 class="journal-title">
-                                    <a href="{% url 'notekeeper:journal_detail' workspace_id=workspace.id pk=entry.id %}">
+                                    <a href="{% url 'notekeeper:note_detail' workspace_id=workspace.id pk=entry.id %}">
                                         {{ entry.title }}
                                     </a>
                                 </h3>
                                 <div class="journal-date">{{ entry.timestamp|date:"F j, Y - g:i A" }}</div>
                             </div>
                             <div class="actions">
-                                <a href="{% url 'notekeeper:journal_edit' workspace_id=workspace.id pk=entry.id %}" class="btn btn-sm">Edit</a>
+                                <a href="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.id %}" class="btn btn-sm">Edit</a>
                             </div>
                         </div>
                         
@@ -103,13 +103,13 @@
             <!-- Show this when no notes match the filter criteria but filters are applied -->
             <div class="no-results-message">
                 <p>No notes were found matching the selected criteria.</p>
-                <p>Try adjusting your filters or <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}">clear all filters</a>.</p>
+                <p>Try adjusting your filters or <a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}">clear all filters</a>.</p>
             </div>
         {% elif total_notes_count > 0 %}
             <!-- This means there are notes but none match the current page/view -->
             <div class="no-results-message">
                 <p>There are {{ total_notes_count }} notes, but none are displayed with current filters.</p>
-                <p><a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}">View all notes</a></p>
+                <p><a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}">View all notes</a></p>
             </div>
         {% else %}
             <!-- No notes exist at all in this workspace -->
@@ -125,7 +125,7 @@
         <div class="empty-state">
             <p>No notes yet.</p>
             <p>Notes notes help you record important events, meetings, and updates.</p>
-            <a href="{% url 'notekeeper:journal_create' workspace_id=workspace.id %}" class="btn btn-primary">Create Your First Entry</a>
+            <a href="{% url 'notekeeper:note_create' workspace_id=workspace.id %}" class="btn btn-primary">Create Your First Entry</a>
         </div>
     {% endif %}
 </div>
@@ -215,7 +215,7 @@
         max-height: calc(1.6em * 3); /* Calculate height based on line-height × 3 lines */
     }
     
-    /* Add padding to journal header for better spacing */
+    /* Add padding to note header for better spacing */
     .journal-header {
         padding-bottom: 5px;
     }
