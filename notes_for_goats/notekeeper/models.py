@@ -143,24 +143,6 @@ class NotesEntry(models.Model):
         verbose_name_plural = "Notes"
         ordering = ['-timestamp']
 
-class CalendarEvent(models.Model):
-    """
-    Represents a Google Calendar event that can be associated with a journal entry.
-    """
-    google_event_id = models.CharField(max_length=1024)
-    title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    journal_entry = models.ForeignKey(NotesEntry, on_delete=models.CASCADE, 
-                                      blank=True, null=True, related_name='calendar_events')
-    
-    def __str__(self):
-        return f"{self.start_time.strftime('%Y-%m-%d %H:%M')}: {self.title}"
-    
-    class Meta:
-        ordering = ['start_time']
-
 class RelationshipType(models.Model):
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='relationship_types')
     name = models.CharField(max_length=50)
