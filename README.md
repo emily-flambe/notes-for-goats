@@ -196,4 +196,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-*Notes for Goats: Because even leaders need to keep track of their flock* 🐐📝
+*Notes for Goats: Because you're worth it* 🐐📝
