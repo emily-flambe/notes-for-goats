@@ -218,6 +218,9 @@ def workspace_list(request):
 def workspace_detail(request, pk):
     workspace = get_object_or_404(Workspace, pk=pk)
     
+    # Save the current workspace ID in the session
+    request.session['current_workspace_id'] = workspace.id
+    
     # Get all entities grouped by type
     entities_by_type = {}
     for entity in workspace.entities.all():
