@@ -222,12 +222,26 @@
         .admin-dropdown a:hover {
             background-color: #f1f1f1;
         }
+        
+        header nav > a {
+            color: white !important;
+            font-size: 22px;
+            font-weight: 500;
+            padding: 0 15px;
+            margin-right: 5px;
+        }
+        
+        header nav > a:hover {
+            color: #4299e1 !important;
+        }
+    
     </style>
 </head>
 <body>
     <header>
         <div class="container">
-            <h1>Notes for Goats</h1>
+            <h1>Notes for Goats 🐐</h1>
+            <hr>
             <nav>
                 <a href="{% url 'notekeeper:home' %}">Home</a>
                 
