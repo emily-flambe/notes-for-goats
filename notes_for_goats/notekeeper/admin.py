@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Workspace, Entity, JournalEntry, CalendarEvent, RelationshipType, Relationship
+from .models import Workspace, Entity, NotesEntry, CalendarEvent, RelationshipType, Relationship
 
 # Simple admin registrations with minimal customization
 @admin.register(Entity)
@@ -38,5 +38,5 @@ class RelationshipAdmin(admin.ModelAdmin):
 
 # Register other models
 admin.site.register(Workspace)
-admin.site.register(JournalEntry)
+admin.site.register(NotesEntry)
 admin.site.register(CalendarEvent)

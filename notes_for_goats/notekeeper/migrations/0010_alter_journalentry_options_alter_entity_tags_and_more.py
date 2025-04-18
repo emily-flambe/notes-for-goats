@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name="journalentry",
             options={
                 "ordering": ["-timestamp"],
-                "verbose_name_plural": "Journal Notes",
+                "verbose_name_plural": "Notes",
             },
         ),
         migrations.AlterField(

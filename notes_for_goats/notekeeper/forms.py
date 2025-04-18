@@ -1,5 +1,5 @@
 from django import forms
-from .models import Workspace, JournalEntry, Entity, RelationshipType, Relationship, RelationshipInferenceRule
+from .models import Workspace, NotesEntry, Entity, RelationshipType, Relationship, RelationshipInferenceRule
 
 class WorkspaceForm(forms.ModelForm):
     class Meta:
@@ -10,9 +10,9 @@ class WorkspaceForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
 
-class JournalEntryForm(forms.ModelForm):
+class NotesEntryForm(forms.ModelForm):
     class Meta:
-        model = JournalEntry
+        model = NotesEntry
         fields = ['title', 'content', 'timestamp']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),

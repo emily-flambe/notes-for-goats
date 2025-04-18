@@ -5,7 +5,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
-from notekeeper.models import Workspace, Entity, JournalEntry, CalendarEvent
+from notekeeper.models import Workspace, Entity, NotesEntry, CalendarEvent
 
 class Command(BaseCommand):
     help = 'Export a workspace to a ZIP file'
@@ -66,7 +66,7 @@ class Command(BaseCommand):
             with open(os.path.join(temp_dir, 'entities.json'), 'w') as f:
                 json.dump(entities_data, f, cls=DjangoJSONEncoder, indent=2)
             
-            # Export journal notes
+            # Export notes
             notes = workspace.journal_notes.all().prefetch_related('referenced_entities')
             notes_data = []
             

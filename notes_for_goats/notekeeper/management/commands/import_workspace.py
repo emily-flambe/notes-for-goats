@@ -5,7 +5,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
-from notekeeper.models import Workspace, Entity, JournalEntry, CalendarEvent
+from notekeeper.models import Workspace, Entity, NotesEntry, CalendarEvent
 from django.utils.dateparse import parse_datetime
 
 class Command(BaseCommand):
@@ -103,7 +103,7 @@ class Command(BaseCommand):
         # Import entities
         entity_id_map = self._import_entities(temp_dir, workspace)
         
-        # Import journal notes
+        # Import notes
         entry_id_map = self._import_journal_notes(temp_dir, workspace, entity_id_map)
         
         # Import calendar events
@@ -159,7 +159,7 @@ class Command(BaseCommand):
         return entity_id_map
     
     def _import_journal_notes(self, temp_dir, workspace, entity_id_map):
-        """Import journal notes"""
+        """Import notes"""
         entry_id_map = {}  # Map old IDs to new IDs
         
         try:
@@ -182,7 +182,7 @@ class Command(BaseCommand):
             except (ValueError, TypeError):
                 timestamp = timezone.now()
             
-            entry = JournalEntry(
+            entry = NotesEntry(
                 workspace=workspace,
                 title=title,
                 content=content,
@@ -207,7 +207,7 @@ class Command(BaseCommand):
                     pass
             
             # Don't call the overridden save() yet to avoid processing hashtags
-            super(JournalEntry, entry).save()
+            super(NotesEntry, entry).save()
             entry_id_map[entry_data.get('id')] = entry.id
             
             # Add referenced entities
@@ -221,7 +221,7 @@ class Command(BaseCommand):
                         except Entity.DoesNotExist:
                             pass
         
-        self.stdout.write(f'Imported {len(notes_data)} journal notes')
+        self.stdout.write(f'Imported {len(notes_data)} notes')
         return entry_id_map
     
     def _import_calendar_events(self, temp_dir, entry_id_map):
