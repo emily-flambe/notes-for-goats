@@ -45,6 +45,93 @@
         text-align: right;
         margin-top: 10px;
     }
+    
+    /* New styles for the revamped design */
+    .journal-entry-item {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #edf2f7;
+    }
+    
+    .journal-entry-title {
+        font-size: 1.1em;
+        margin-bottom: 5px;
+    }
+    
+    .journal-entry-references {
+        font-size: 0.9em;
+        color: #4a5568;
+        margin-top: 5px;
+        margin-left: 15px;
+    }
+    
+    .journal-entry-references .reference-label {
+        font-weight: 500;
+    }
+    
+    .journal-entry-references .entity-reference {
+        display: inline-block;
+        padding: 2px 8px;
+        margin: 2px 5px 2px 0;
+        background-color: #edf2f7;
+        border-radius: 12px;
+        font-size: 0.85em;
+    }
+    
+    .entities-search-container {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 15px;
+    }
+    
+    .entity-search-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .entity-search-controls input {
+        flex-grow: 1;
+    }
+    
+    .entities-list {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        background: white;
+    }
+    
+    .entity-item {
+        padding: 8px 12px;
+        border-bottom: 1px solid #edf2f7;
+    }
+    
+    .entity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .entity-item-type {
+        font-size: 0.8em;
+        text-transform: uppercase;
+        color: #718096;
+        margin-left: 5px;
+    }
+    
+    .workspace-dashboard {
+        display: grid;
+        grid-template-columns: 65fr 35fr;
+        gap: 30px;
+        margin-top: 30px;
+    }
+    
+    @media (max-width: 768px) {
+        .workspace-dashboard {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -70,52 +157,83 @@ workspace.id: {{ current_workspace.id }}
 <p class="workspace-description">{{ current_workspace.description }}</p>
 
 <div class="workspace-dashboard">
+    <!-- RECENT JOURNAL ENTRIES SECTION -->
     <div class="recent-entries">
-        <h2>Recent Journal Entries</h2>
+        <div class="section-header">
+            <h2>Recent Journal Entries</h2>
+            <div class="action-buttons">
+                <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}" class="btn" style="color: white;">View All</a>
+                <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn" style="color: white;">+</a>
+            </div>
+        </div>
         {% if recent_entries %}
-            <ul>
-            {% for entry in recent_entries %}
-                <li>
-                    <a href="{% url 'notekeeper:journal_detail' workspace_id=current_workspace.id pk=entry.pk %}">
-                        <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
-                    </a>
-                </li>
-            {% endfor %}
-            </ul>
-            <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}" class="btn">View All Entries</a>
+            <div class="journal-entries-list">
+                {% for entry in recent_entries %}
+                    <div class="journal-entry-item">
+                        <div class="journal-entry-title">
+                            <a href="{% url 'notekeeper:journal_detail' workspace_id=current_workspace.id pk=entry.pk %}">
+                                <strong>{{ entry.timestamp|date:"Y-m-d H:i" }}</strong>: {{ entry.title }}
+                            </a>
+                        </div>
+                        {% if entry.referenced_entities.all %}
+                            <div class="journal-entry-references">
+                                <span class="reference-label">References:</span>
+                                {% for entity in entry.referenced_entities.all %}
+                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=current_workspace.id pk=entity.pk %}" class="entity-reference">
+                                        {{ entity.name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
         {% else %}
             <p>No journal entries yet.</p>
             <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn">Create First Entry</a>
         {% endif %}
     </div>
     
+    <!-- SEARCHABLE ENTITIES SECTION -->
     <div class="entities-overview">
-        <h2>Entities</h2>
+        <div class="section-header">
+            <h2>Entities</h2>
+            <div class="action-buttons">
+                <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}" class="btn">View All</a>
+                <a href="{% url 'notekeeper:entity_create' workspace_id=current_workspace.id %}" class="btn">+</a>
+            </div>
+        </div>
         
-        {% if entities_by_type %}
-            {% for type, entities in entities_by_type.items %}
-                <h3>{{ type|title }}s</h3>
-                <ul>
-                {% for entity in entities %}
-                    <li>
-                        <a href="{% url 'notekeeper:entity_detail' workspace_id=current_workspace.id pk=entity.pk %}">
-                            {{ entity.name }}
-                        </a>
-                    </li>
+        <div class="entities-search-container">
+            <div class="entity-search-controls">
+                <input type="text" id="entity-search" placeholder="Search entities..." class="search-input">
+                <select id="entity-type-filter" class="select-input">
+                    <option value="">All Types</option>
+                    <option value="PERSON">People</option>
+                    <option value="PROJECT">Projects</option>
+                    <option value="TEAM">Teams</option>
+                </select>
+            </div>
+            
+            <div class="entities-list" id="entities-list">
+                {% for type, entities in entities_by_type.items %}
+                    {% for entity in entities %}
+                        <div class="entity-item" data-entity-type="{{ type }}">
+                            <a href="{% url 'notekeeper:entity_detail' workspace_id=current_workspace.id pk=entity.pk %}">
+                                {{ entity.name }}
+                            </a>
+                            <span class="entity-item-type">({{ type|title }})</span>
+                        </div>
+                    {% endfor %}
+                {% empty %}
+                    <div class="entity-item">No entities found</div>
                 {% endfor %}
-                </ul>
-            {% endfor %}
-        {% else %}
-            <p>No entities yet.</p>
-        {% endif %}
-        
-        <div class="entity-actions">
-            <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}" class="btn">View All Entities</a>
-            <a href="{% url 'notekeeper:entity_create' workspace_id=current_workspace.id %}" class="btn">Create New Entity</a>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- KEEP RELATIONSHIPS SECTION AS-IS -->
 <div class="relationships-summary">
     <div class="section-header">
         <h2>Relationships</h2>
@@ -195,16 +313,9 @@ workspace.id: {{ current_workspace.id }}
             </p>
         </div>
     {% endif %}
-    
 </div>
 
 <style>
-    .workspace-dashboard {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px;
-        margin-top: 30px;
-    }
     .workspace-actions {
         margin: 20px 0;
         display: flex;
@@ -217,11 +328,6 @@ workspace.id: {{ current_workspace.id }}
         margin-bottom: 25px;
     }
     
-    @media (max-width: 768px) {
-        .workspace-dashboard {
-            grid-template-columns: 1fr;
-        }
-    }
     .relationships-summary {
         margin-top: 40px;
     }
@@ -290,36 +396,38 @@ workspace.id: {{ current_workspace.id }}
         text-align: right;
         margin-top: 10px;
     }
-    .entities-overview h3 {
-        margin-top: 20px;
-        margin-bottom: 10px;
-        color: #4a5568;
-        font-size: 1.1em;
-    }
-    
-    .entities-overview ul {
-        list-style: none;
-        padding-left: 0;
-        margin: 0;
-    }
-    
-    .entities-overview li {
-        padding: 5px 0;
-    }
-    
-    .entities-overview li a {
-        color: #2d3748;
-        text-decoration: none;
-    }
-    
-    .entities-overview li a:hover {
-        color: #4299e1;
-    }
-    
     .entity-actions {
         margin-top: 20px;
         display: flex;
         gap: 10px;
     }
 </style>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const entitySearch = document.getElementById('entity-search');
+        const entityTypeFilter = document.getElementById('entity-type-filter');
+        const entityItems = document.querySelectorAll('.entity-item');
+        
+        function filterEntities() {
+            const searchText = entitySearch.value.toLowerCase();
+            const typeFilter = entityTypeFilter.value;
+            
+            entityItems.forEach(item => {
+                const entityName = item.querySelector('a').textContent.toLowerCase();
+                const entityType = item.getAttribute('data-entity-type');
+                
+                const matchesSearch = entityName.includes(searchText);
+                const matchesType = !typeFilter || entityType === typeFilter;
+                
+                item.style.display = (matchesSearch && matchesType) ? 'block' : 'none';
+            });
+        }
+        
+        entitySearch.addEventListener('input', filterEntities);
+        entityTypeFilter.addEventListener('change', filterEntities);
+    });
+</script>
+{% endblock %}
 {% endblock %} 
