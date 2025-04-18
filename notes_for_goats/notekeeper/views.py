@@ -80,7 +80,7 @@ def journal_list(request, workspace_id):
             Q(content__icontains=search_query)
         )
     
-    return render(request, 'notekeeper/journal/list.html', {
+    return render(request, 'notekeeper/note/list.html', {
         'workspace': workspace,
         'notes': notes,
         'entities': entities,
@@ -95,7 +95,7 @@ def journal_detail(request, workspace_id, pk):
     # Extract hashtags from content for display
     hashtags = re.findall(r'#(\w+)', entry.content)
     
-    return render(request, 'notekeeper/journal/detail.html', {
+    return render(request, 'notekeeper/note/detail.html', {
         'workspace': workspace,
         'entry': entry,
         'hashtags': hashtags
@@ -120,7 +120,7 @@ def journal_create(request, workspace_id):
     if request.method == "POST" and 'content' in request.POST:
         hashtags = re.findall(r'#(\w+)', request.POST['content'])
     
-    return render(request, 'notekeeper/journal/form.html', {
+    return render(request, 'notekeeper/note/form.html', {
         'workspace': workspace,
         'form': form,
         'hashtags': hashtags
@@ -142,7 +142,7 @@ def journal_edit(request, workspace_id, pk):
     # Extract hashtags from content (for preview)
     hashtags = re.findall(r'#(\w+)', entry.content)
     
-    return render(request, 'notekeeper/journal/form.html', {
+    return render(request, 'notekeeper/note/form.html', {
         'workspace': workspace,
         'form': form,
         'entry': entry,

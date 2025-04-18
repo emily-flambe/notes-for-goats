@@ -12,10 +12,10 @@ urlpatterns = [
     path('workspaces/<int:pk>/edit/', views.workspace_edit, name='workspace_edit'),
     
     # Nested under workspaces
-    path('workspaces/<int:workspace_id>/journal/', views.journal_list, name='journal_list'),
-    path('workspaces/<int:workspace_id>/journal/<int:pk>/', views.journal_detail, name='journal_detail'),
-    path('workspaces/<int:workspace_id>/journal/new/', views.journal_create, name='journal_create'),
-    path('workspaces/<int:workspace_id>/journal/<int:pk>/edit/', views.journal_edit, name='journal_edit'),
+    path('workspaces/<int:workspace_id>/note/', views.journal_list, name='journal_list'),
+    path('workspaces/<int:workspace_id>/note/<int:pk>/', views.journal_detail, name='journal_detail'),
+    path('workspaces/<int:workspace_id>/note/new/', views.journal_create, name='journal_create'),
+    path('workspaces/<int:workspace_id>/note/<int:pk>/edit/', views.journal_edit, name='journal_edit'),
     
     path('workspaces/<int:workspace_id>/entities/', views.entity_list, name='entity_list'),
     path('workspaces/<int:workspace_id>/entities/<int:pk>/', views.entity_detail, name='entity_detail'),
