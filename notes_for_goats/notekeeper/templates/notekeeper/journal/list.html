@@ -17,52 +17,53 @@
         Record and track important events, meetings, and notes about your projects.
     </div>
     
-    {% if entries %}
-        <div class="card">
-            <div class="filter-section">
-                <form method="get" class="filter-controls">
-                    <!-- Entity Type filter -->
-                    <div class="filter-group">
-                        <label for="entity_type_filter">Entity Type:</label>
-                        <select id="entity_type_filter" name="entity_type">
-                            <option value="">All Types</option>
-                            {% for type, label in entity_types %}
-                                <option value="{{ type }}" {% if type == request.GET.entity_type %}selected{% endif %}>
-                                    {{ label }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <!-- Entity filter -->
-                    <div class="filter-group">
-                        <label for="entity_filter">Entity:</label>
-                        <select id="entity_filter" name="entity">
-                            <option value="">All Entries</option>
-                            {% for entity in entities %}
-                                <option value="{{ entity.id }}" 
-                                        data-type="{{ entity.type }}"
-                                        {% if entity.id|stringformat:"s" == request.GET.entity %}selected{% endif %}>
-                                    {{ entity.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <!-- Search input -->
-                    <div class="filter-group">
-                        <label for="search">Search:</label>
-                        <input type="text" id="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search entries...">
-                    </div>
-                    
-                    <!-- Action buttons -->
-                    <div class="filter-buttons">
-                        <button type="submit" class="btn">Apply Filters</button>
-                        <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Clear</a>
-                    </div>
-                </form>
-            </div>
-            
+    <!-- Always show the filter card, even if no entries match -->
+    <div class="card">
+        <div class="filter-section">
+            <form method="get" class="filter-controls">
+                <!-- Entity Type filter -->
+                <div class="filter-group">
+                    <label for="entity_type_filter">Entity Type:</label>
+                    <select id="entity_type_filter" name="entity_type">
+                        <option value="">All</option>
+                        {% for type, label in entity_types %}
+                            <option value="{{ type }}" {% if type == request.GET.entity_type %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Entity filter -->
+                <div class="filter-group">
+                    <label for="entity_filter">Entity:</label>
+                    <select id="entity_filter" name="entity">
+                        <option value="">All</option>
+                        {% for entity in entities %}
+                            <option value="{{ entity.id }}" 
+                                    data-type="{{ entity.type }}"
+                                    {% if entity.id|stringformat:"s" == request.GET.entity %}selected{% endif %}>
+                                {{ entity.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Search input -->
+                <div class="filter-group">
+                    <label for="search">Search:</label>
+                    <input type="text" id="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search entries...">
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="filter-buttons">
+                    <button type="submit" class="btn">Apply Filters</button>
+                    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Clear</a>
+                </div>
+            </form>
+        </div>
+        
+        {% if entries %}
             <div class="journal-entries">
                 {% for entry in entries %}
                     <div class="journal-entry">
@@ -86,7 +87,6 @@
                         
                         {% if entry.referenced_entities.all %}
                             <div class="journal-entities">
-                                <div class="references-label">References:</div>
                                 <ul class="references-list">
                                     {% for entity in entry.referenced_entities.all %}
                                         <li>
@@ -101,8 +101,29 @@
                     </div>
                 {% endfor %}
             </div>
-        </div>
-    {% else %}
+        {% elif request.GET.entity or request.GET.entity_type or request.GET.q %}
+            <!-- Show this when no entries match the filter criteria but filters are applied -->
+            <div class="no-results-message">
+                <p>No journal entries were found matching the selected criteria.</p>
+                <p>Try adjusting your filters or <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}">clear all filters</a>.</p>
+            </div>
+        {% elif total_entries_count > 0 %}
+            <!-- This means there are entries but none match the current page/view -->
+            <div class="no-results-message">
+                <p>There are {{ total_entries_count }} journal entries, but none are displayed with current filters.</p>
+                <p><a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}">View all journal entries</a></p>
+            </div>
+        {% else %}
+            <!-- No entries exist at all in this workspace -->
+            <div class="no-results-message">
+                <p>No journal entries have been created in this workspace yet.</p>
+                <p>Create your first entry to get started.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Only show this empty state if there are truly no entries in the workspace -->
+    {% if total_entries_count == 0 and not request.GET.entity and not request.GET.entity_type and not request.GET.q %}
         <div class="empty-state">
             <p>No journal entries yet.</p>
             <p>Journal entries help you record important events, meetings, and updates.</p>
@@ -195,6 +216,30 @@
     .journal-header {
         padding-bottom: 5px;
     }
+    
+    /* No results message styling */
+    .no-results-message {
+        padding: 30px 20px;
+        text-align: center;
+        color: #4a5568;
+        background-color: #f9fafb;
+        border-radius: 6px;
+        margin: 20px 15px;
+    }
+    
+    .no-results-message p {
+        margin-bottom: 10px;
+    }
+    
+    .no-results-message a {
+        color: #3182ce;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .no-results-message a:hover {
+        text-decoration: underline;
+    }
 </style>
 {% endblock %}
 
@@ -205,21 +250,12 @@
         const entityTypeFilter = document.getElementById('entity_type_filter');
         const entityFilter = document.getElementById('entity_filter');
         
-        // Debug output
-        console.log("Entity type filter selected:", entityTypeFilter.value);
-        
         // Store all original entity options for filtering
         const allEntityOptions = Array.from(entityFilter.options);
-        
-        // Debug: Check entity options and their data-type attributes
-        allEntityOptions.forEach(function(option) {
-            console.log(`Entity option: ${option.text}, Value: ${option.value}, Type: ${option.dataset.type}`);
-        });
         
         // Function to filter entity options based on selected type
         function filterEntityOptions() {
             const selectedType = entityTypeFilter.value;
-            console.log("Selected entity type:", selectedType);
             
             // Clear existing options (except the first "All Entries" option)
             while (entityFilter.options.length > 1) {
@@ -242,7 +278,6 @@
                         matchCount++;
                     }
                 });
-                console.log(`Found ${matchCount} matching entities for type: ${selectedType}`);
             }
         }
         
