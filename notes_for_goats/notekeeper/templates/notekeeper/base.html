@@ -201,7 +201,7 @@
             background: none;
             border: none;
             color: white;
-            font-size: 24px;
+            font-size: 42px;
             cursor: pointer;
             padding: 5px;
             display: flex;
@@ -238,10 +238,6 @@
         
         .admin-dropdown a:hover {
             background-color: #f1f1f1;
-        }
-        
-        .admin-menu:hover .admin-dropdown {
-            display: block;
         }
     </style>
 </head>
@@ -283,14 +279,13 @@
                 
                 <!-- New Admin Menu -->
                 <div class="admin-menu">
-                    <button class="hamburger-button">☰</button>
-                    <div class="admin-dropdown">
+                    <button id="admin-toggle" class="hamburger-button">⚙</button>
+                    <div id="admin-dropdown" class="admin-dropdown">
+                        <a href="{% url 'notekeeper:backup_list' %}">Database Backups</a>
                         <a href="{% url 'notekeeper:workspace_list' %}">Manage Workspaces</a>
                         <a href="{% url 'admin:index' %}">Django Admin</a>
                     </div>
                 </div>
-
-                <a href="{% url 'notekeeper:backup_list' %}" class="nav-link">Database Backups</a>
             </nav>
         </div>
     </header>
@@ -318,8 +313,9 @@
     </footer>
 
     <script>
-        // Optional JavaScript to make dropdown work better on mobile
+        // Optional JavaScript to make dropdowns work better
         document.addEventListener('DOMContentLoaded', function() {
+            // Existing code for workspace dropdown
             const dropdown = document.querySelector('.dropdown-toggle');
             const dropdownContent = document.querySelector('.dropdown-content');
             
@@ -333,6 +329,25 @@
                 document.addEventListener('click', function(e) {
                     if (!dropdown.contains(e.target)) {
                         dropdownContent.style.display = 'none';
+                    }
+                });
+            }
+            
+            // New code for admin dropdown
+            const adminToggle = document.getElementById('admin-toggle');
+            const adminDropdown = document.getElementById('admin-dropdown');
+            
+            if (adminToggle && adminDropdown) {
+                adminToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    adminDropdown.style.display = adminDropdown.style.display === 'block' ? 'none' : 'block';
+                });
+                
+                // Close the dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!adminToggle.contains(e.target) && !adminDropdown.contains(e.target)) {
+                        adminDropdown.style.display = 'none';
                     }
                 });
             }

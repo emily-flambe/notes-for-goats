@@ -874,7 +874,7 @@ def backup_list(request):
     # Get the backup limit from settings
     max_backups = getattr(settings, 'MAX_BACKUP_FILES', 50)
     
-    return render(request, 'notekeeper/backup_list.html', {
+    return render(request, 'notekeeper/backup/list.html', {
         'all_backups': all_backups,
         'max_backups': max_backups
     })
