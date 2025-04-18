@@ -20,21 +20,11 @@
     <!-- Always show the filter section -->
     <div class="card">
         <div class="filter-section">
-            <form method="get" class="filter-controls">
+            <form method="get" class="filter-controls" id="journal-filter-form">
+                <!-- Entity Type filter moved to the left -->
                 <div class="filter-group">
-                    <label for="entity_filter">Filter by Entity:</label>
-                    <select id="entity_filter" name="entity">
-                        <option value="">All</option>
-                        {% for entity in entities %}
-                            <option value="{{ entity.id }}" {% if entity.id|stringformat:"s" == request.GET.entity %}selected{% endif %}>
-                                {{ entity.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="entity_type_filter">Filter by Entity Type:</label>
-                    <select id="entity_type_filter" name="entity_type">
+                    <label for="entity_type_filter">Entity Type:</label>
+                    <select id="entity_type_filter" name="entity_type" class="dynamic-filter">
                         <option value="">All</option>
                         {% for type, label in entity_types %}
                             <option value="{{ type }}" {% if type == request.GET.entity_type %}selected{% endif %}>
@@ -43,6 +33,22 @@
                         {% endfor %}
                     </select>
                 </div>
+                
+                <!-- Entity filter, now searchable -->
+                <div class="filter-group">
+                    <label for="entity_filter">Entity:</label>
+                    <select id="entity_filter" name="entity" class="searchable-select">
+                        <option value="">All</option>
+                        {% for entity in entities %}
+                            <option value="{{ entity.id }}" 
+                                    data-type="{{ entity.type }}"
+                                    {% if entity.id|stringformat:"s" == request.GET.entity %}selected{% endif %}>
+                                {{ entity.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
                 <div class="filter-group">
                     <label for="search">Search:</label>
                     <input type="text" id="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search entries...">
@@ -230,5 +236,134 @@
     .empty-results a:hover {
         text-decoration: underline;
     }
+    
+    /* Choices.js styling for better integration */
+    .choices {
+        margin-bottom: 0;
+    }
+    
+    .choices__inner {
+        padding: 4px 7.5px 3.75px;
+        background-color: white;
+        border: 1px solid #ccc;
+        min-height: 38px;
+    }
+    
+    .choices__list--dropdown {
+        z-index: 10; /* Ensure dropdown appears above other elements */
+    }
+    
+    .choices__list--dropdown .choices__item {
+        padding: 10px;
+    }
+    
+    .choices__list--dropdown .choices__item--selectable.is-highlighted {
+        background-color: #f1f5f9;
+    }
+    
+    /* Adjust filter controls spacing */
+    .filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 15px;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+        margin-bottom: 0;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Add Choices.js CDN for searchable dropdowns -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Choices.js for searchable dropdown
+        const entityFilter = document.getElementById('entity_filter');
+        const entityOptions = Array.from(entityFilter.options);
+        
+        // Create Choices instance for entity filter
+        const entityFilterChoices = new Choices(entityFilter, {
+            searchEnabled: true,
+            searchPlaceholderValue: "Search entities...",
+            itemSelectText: '',
+            shouldSort: false,
+            position: 'bottom',
+            searchResultLimit: 50
+        });
+        
+        // Get reference to the entity type filter
+        const entityTypeFilter = document.getElementById('entity_type_filter');
+        
+        // Function to filter the entity dropdown based on selected type
+        function filterEntityDropdown() {
+            const selectedType = entityTypeFilter.value;
+            
+            // Prepare filtered choices
+            let filteredChoices = [
+                { value: '', label: 'All', selected: true }
+            ];
+            
+            // If a specific type is selected, only show entities of that type
+            if (selectedType) {
+                entityOptions.forEach(function(option) {
+                    if (option.value && option.dataset.type === selectedType) {
+                        filteredChoices.push({
+                            value: option.value,
+                            label: option.textContent,
+                            selected: option.selected
+                        });
+                    }
+                });
+            } else {
+                // No type filter, show all entities
+                entityOptions.forEach(function(option) {
+                    if (option.value) { // Skip the "All" option which we already added
+                        filteredChoices.push({
+                            value: option.value,
+                            label: option.textContent,
+                            selected: option.selected
+                        });
+                    }
+                });
+            }
+            
+            // Update choices
+            entityFilterChoices.setChoices(filteredChoices, 'value', 'label', true);
+            
+            // If the previously selected entity is not available in the filtered list,
+            // reset the entity filter to "All"
+            const urlParams = new URLSearchParams(window.location.search);
+            const selectedEntityId = urlParams.get('entity');
+            
+            if (selectedEntityId) {
+                const availableValues = filteredChoices.map(choice => choice.value);
+                if (!availableValues.includes(selectedEntityId)) {
+                    entityFilterChoices.setChoiceByValue('');
+                } else {
+                    entityFilterChoices.setChoiceByValue(selectedEntityId);
+                }
+            }
+        }
+        
+        // Initialize Choices.js for entity type filter too (optional but makes UI consistent)
+        const entityTypeChoices = new Choices(entityTypeFilter, {
+            searchEnabled: false,
+            itemSelectText: '',
+            shouldSort: false
+        });
+        
+        // Initial filtering when page loads
+        filterEntityDropdown();
+        
+        // Re-filter when the entity type selection changes
+        entityTypeFilter.addEventListener('change', filterEntityDropdown);
+    });
+</script>
 {% endblock %} 

@@ -48,7 +48,7 @@ def journal_list(request, workspace_id):
     # Get all entity types from the model
     entity_types = Entity.ENTITY_TYPES
     
-    # Get entities for the dropdown
+    # Get entities for the dropdown, include the type field
     entities = Entity.objects.filter(workspace=workspace).order_by('name')
     
     # Count total entries before filtering
@@ -85,7 +85,7 @@ def journal_list(request, workspace_id):
         'entries': entries,
         'entities': entities,
         'entity_types': entity_types,
-        'total_entries_count': total_entries_count,  # Pass the total count
+        'total_entries_count': total_entries_count,
     })
 
 def journal_detail(request, workspace_id, pk):
