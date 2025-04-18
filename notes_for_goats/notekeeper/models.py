@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 
 class Workspace(models.Model):
     """
-    Top-level container for a set of related journal entries and entities.
+    Top-level container for a set of related journal notes and entities.
     Enables export/import functionality and better organization.
     """
     name = models.CharField(max_length=200)
@@ -80,13 +80,13 @@ class JournalEntry(models.Model):
     """
     Represents a timestamped note entry that may reference entities.
     """
-    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='journal_entries')
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='journal_notes')
     title = models.CharField(max_length=200)
     content = models.TextField()
     timestamp = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='journal_entries')
+    referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='journal_notes')
     
     def __str__(self):
         return f"{self.timestamp.strftime('%Y-%m-%d')}: {self.title}"
@@ -140,7 +140,7 @@ class JournalEntry(models.Model):
             self.referenced_entities.add(*entities_to_add)
     
     class Meta:
-        verbose_name_plural = "Journal Entries"
+        verbose_name_plural = "Journal Notes"
         ordering = ['-timestamp']
 
 class CalendarEvent(models.Model):

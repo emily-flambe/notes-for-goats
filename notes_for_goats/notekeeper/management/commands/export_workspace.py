@@ -66,11 +66,11 @@ class Command(BaseCommand):
             with open(os.path.join(temp_dir, 'entities.json'), 'w') as f:
                 json.dump(entities_data, f, cls=DjangoJSONEncoder, indent=2)
             
-            # Export journal entries
-            entries = workspace.journal_entries.all().prefetch_related('referenced_entities')
-            entries_data = []
+            # Export journal notes
+            notes = workspace.journal_notes.all().prefetch_related('referenced_entities')
+            notes_data = []
             
-            for entry in entries:
+            for entry in notes:
                 entry_data = {
                     'id': entry.id,
                     'title': entry.title,
@@ -80,10 +80,10 @@ class Command(BaseCommand):
                     'updated_at': entry.updated_at.isoformat(),
                     'referenced_entity_ids': list(entry.referenced_entities.values_list('id', flat=True))
                 }
-                entries_data.append(entry_data)
+                notes_data.append(entry_data)
             
-            with open(os.path.join(temp_dir, 'journal_entries.json'), 'w') as f:
-                json.dump(entries_data, f, cls=DjangoJSONEncoder, indent=2)
+            with open(os.path.join(temp_dir, 'journal_notes.json'), 'w') as f:
+                json.dump(notes_data, f, cls=DjangoJSONEncoder, indent=2)
             
             # Export calendar events
             calendar_events = CalendarEvent.objects.filter(journal_entry__workspace=workspace)

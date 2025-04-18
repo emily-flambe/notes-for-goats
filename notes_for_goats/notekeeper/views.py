@@ -51,11 +51,11 @@ def journal_list(request, workspace_id):
     # Get entities for the dropdown, include the type field
     entities = Entity.objects.filter(workspace=workspace).order_by('name')
     
-    # Count total entries before filtering
-    total_entries_count = JournalEntry.objects.filter(workspace=workspace).count()
+    # Count total notes before filtering
+    total_notes_count = JournalEntry.objects.filter(workspace=workspace).count()
     
-    # Start with all entries
-    entries = JournalEntry.objects.filter(workspace=workspace).order_by('-timestamp')
+    # Start with all notes
+    notes = JournalEntry.objects.filter(workspace=workspace).order_by('-timestamp')
     
     # Handle filtering
     entity_filter = request.GET.get('entity')
@@ -65,27 +65,27 @@ def journal_list(request, workspace_id):
     if entity_filter:
         try:
             entity = get_object_or_404(Entity, pk=entity_filter)
-            entries = entries.filter(referenced_entities=entity)
+            notes = notes.filter(referenced_entities=entity)
         except (ValueError, TypeError):
             # Invalid entity ID, ignore filter
             pass
     
     if entity_type_filter:
-        # Filter entries that reference entities of the selected type
-        entries = entries.filter(referenced_entities__type=entity_type_filter).distinct()
+        # Filter notes that reference entities of the selected type
+        notes = notes.filter(referenced_entities__type=entity_type_filter).distinct()
     
     if search_query:
-        entries = entries.filter(
+        notes = notes.filter(
             Q(title__icontains=search_query) | 
             Q(content__icontains=search_query)
         )
     
     return render(request, 'notekeeper/journal/list.html', {
         'workspace': workspace,
-        'entries': entries,
+        'notes': notes,
         'entities': entities,
         'entity_types': entity_types,
-        'total_entries_count': total_entries_count,
+        'total_notes_count': total_notes_count,
     })
 
 def journal_detail(request, workspace_id, pk):
@@ -171,8 +171,8 @@ def entity_detail(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     entity = get_object_or_404(Entity, pk=pk, workspace=workspace)
     
-    # Get related entries
-    related_entries = JournalEntry.objects.filter(
+    # Get related notes
+    related_notes = JournalEntry.objects.filter(
         workspace=workspace, 
         referenced_entities=entity
     ).order_by('-timestamp')
@@ -202,7 +202,7 @@ def entity_detail(request, workspace_id, pk):
         'workspace': workspace,
         'entity': entity,
         'entity_relationships': entity_relationships,
-        'related_entries': related_entries,
+        'related_notes': related_notes,
     })
 
 def entity_create(request, workspace_id):
@@ -267,7 +267,7 @@ def workspace_detail(request, pk):
     
     context = {
         'current_workspace': workspace,
-        'recent_entries': workspace.journal_entries.order_by('-timestamp')[:5],
+        'recent_notes': workspace.journal_notes.order_by('-timestamp')[:5],
         'entities_by_type': entities_by_type,
         'recent_relationships': workspace.relationships.select_related('relationship_type').order_by('-created_at')[:5],
         'relationship_types': workspace.relationship_types.all(),

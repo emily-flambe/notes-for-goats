@@ -103,8 +103,8 @@ class Command(BaseCommand):
         # Import entities
         entity_id_map = self._import_entities(temp_dir, workspace)
         
-        # Import journal entries
-        entry_id_map = self._import_journal_entries(temp_dir, workspace, entity_id_map)
+        # Import journal notes
+        entry_id_map = self._import_journal_notes(temp_dir, workspace, entity_id_map)
         
         # Import calendar events
         self._import_calendar_events(temp_dir, entry_id_map)
@@ -158,18 +158,18 @@ class Command(BaseCommand):
         self.stdout.write(f'Imported {len(entities_data)} entities')
         return entity_id_map
     
-    def _import_journal_entries(self, temp_dir, workspace, entity_id_map):
-        """Import journal entries"""
+    def _import_journal_notes(self, temp_dir, workspace, entity_id_map):
+        """Import journal notes"""
         entry_id_map = {}  # Map old IDs to new IDs
         
         try:
-            with open(os.path.join(temp_dir, 'journal_entries.json'), 'r') as f:
-                entries_data = json.load(f)
+            with open(os.path.join(temp_dir, 'journal_notes.json'), 'r') as f:
+                notes_data = json.load(f)
         except FileNotFoundError:
-            self.stdout.write(self.style.WARNING('No journal_entries.json found, skipping entries'))
+            self.stdout.write(self.style.WARNING('No journal_notes.json found, skipping notes'))
             return entry_id_map
         
-        for entry_data in entries_data:
+        for entry_data in notes_data:
             # Ensure we have strings for text fields
             title = str(entry_data.get('title', ''))
             content = str(entry_data.get('content', ''))
@@ -221,7 +221,7 @@ class Command(BaseCommand):
                         except Entity.DoesNotExist:
                             pass
         
-        self.stdout.write(f'Imported {len(entries_data)} journal entries')
+        self.stdout.write(f'Imported {len(notes_data)} journal notes')
         return entry_id_map
     
     def _import_calendar_events(self, temp_dir, entry_id_map):

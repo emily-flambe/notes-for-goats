@@ -122,13 +122,13 @@ python manage.py runserver
    - Choose the type: Person, Project, or Team
    - Enter details and save
 
-2. **Journal Entries**
+2. **Journal Notes**
    - Navigate to "Journal" and click "New Journal Entry"
    - Use #hashtags to reference entities (e.g., "Meeting with #Alice about #ProjectX")
    - Entities will be automatically linked if they exist in the system
 
 3. **Entity References**
-   - Click on any entity to see all journal entries that reference it
+   - Click on any entity to see all journal notes that reference it
    - Explore relationships between people, projects, and teams
 
 4. **Admin Interface**
@@ -238,7 +238,7 @@ SQLite provides the perfect balance for a personal tool:
 The app revolves around the concept of entities (people, projects, teams):
 1. **Centralized Information**: Each entity becomes a hub for related information
 2. **Intuitive Tagging**: Natural writing with #hashtags maintains flow while creating structure
-3. **Relationship Exploration**: Navigate between related entries and entities
+3. **Relationship Exploration**: Navigate between related notes and entities
 4. **Flexible Journaling**: Combines the freedom of free-form writing with the structure of a database
 
 ### Relationship and Inference System

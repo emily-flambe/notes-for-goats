@@ -109,7 +109,7 @@
     {% else %}
         <div class="empty-state">
             <p>No entities created yet.</p>
-            <p>Entities represent people, projects, and teams that you can reference in your journal entries.</p>
+            <p>Entities represent people, projects, and teams that you can reference in your journal notes.</p>
             <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}" class="btn btn-primary">Create Your First Entity</a>
         </div>
     {% endif %}

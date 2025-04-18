@@ -158,17 +158,17 @@ workspace.id: {{ current_workspace.id }}
 
 <div class="workspace-dashboard">
     <!-- RECENT JOURNAL ENTRIES SECTION -->
-    <div class="recent-entries">
+    <div class="recent-notes">
         <div class="section-header">
-            <h2>Recent Journal Entries</h2>
+            <h2>Recent Journal Notes</h2>
             <div class="action-buttons">
                 <a href="{% url 'notekeeper:journal_list' workspace_id=current_workspace.id %}" class="btn" style="color: white;">View All</a>
                 <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn" style="color: white;">+</a>
             </div>
         </div>
-        {% if recent_entries %}
-            <div class="journal-entries-list">
-                {% for entry in recent_entries %}
+        {% if recent_notes %}
+            <div class="journal-notes-list">
+                {% for entry in recent_notes %}
                     <div class="journal-entry-item">
                         <div class="journal-entry-title">
                             <a href="{% url 'notekeeper:journal_detail' workspace_id=current_workspace.id pk=entry.pk %}">
@@ -189,7 +189,7 @@ workspace.id: {{ current_workspace.id }}
                 {% endfor %}
             </div>
         {% else %}
-            <p>No journal entries yet.</p>
+            <p>No journal notes yet.</p>
             <a href="{% url 'notekeeper:journal_create' workspace_id=current_workspace.id %}" class="btn">Create First Entry</a>
         {% endif %}
     </div>

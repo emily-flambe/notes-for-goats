@@ -17,7 +17,7 @@
                         <p>{{ workspace.description|truncatechars:100 }}</p>
                         <div class="workspace-stats">
                             <span>{{ workspace.entities.count }} entities</span>
-                            <span>{{ workspace.journal_entries.count }} entries</span>
+                            <span>{{ workspace.journal_notes.count }} notes</span>
                         </div>
                         <div class="card-actions">
                             <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">Open</a>
