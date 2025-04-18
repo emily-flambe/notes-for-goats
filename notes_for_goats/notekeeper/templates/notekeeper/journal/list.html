@@ -17,50 +17,52 @@
         Record and track important events, meetings, and notes about your projects.
     </div>
     
-    <!-- Always show the filter section -->
-    <div class="card">
-        <div class="filter-section">
-            <form method="get" class="filter-controls" id="journal-filter-form">
-                <!-- Entity Type filter moved to the left -->
-                <div class="filter-group">
-                    <label for="entity_type_filter">Entity Type:</label>
-                    <select id="entity_type_filter" name="entity_type" class="dynamic-filter">
-                        <option value="">All</option>
-                        {% for type, label in entity_types %}
-                            <option value="{{ type }}" {% if type == request.GET.entity_type %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <!-- Entity filter, now searchable -->
-                <div class="filter-group">
-                    <label for="entity_filter">Entity:</label>
-                    <select id="entity_filter" name="entity" class="searchable-select">
-                        <option value="">All</option>
-                        {% for entity in entities %}
-                            <option value="{{ entity.id }}" 
-                                    data-type="{{ entity.type }}"
-                                    {% if entity.id|stringformat:"s" == request.GET.entity %}selected{% endif %}>
-                                {{ entity.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <div class="filter-group">
-                    <label for="search">Search:</label>
-                    <input type="text" id="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search entries...">
-                </div>
-                <div class="filter-buttons">
-                    <button type="submit" class="btn">Apply Filters</button>
-                    <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Clear</a>
-                </div>
-            </form>
-        </div>
-        
-        {% if entries %}
+    {% if entries %}
+        <div class="card">
+            <div class="filter-section">
+                <form method="get" class="filter-controls">
+                    <!-- Entity Type filter -->
+                    <div class="filter-group">
+                        <label for="entity_type_filter">Entity Type:</label>
+                        <select id="entity_type_filter" name="entity_type">
+                            <option value="">All Types</option>
+                            {% for type, label in entity_types %}
+                                <option value="{{ type }}" {% if type == request.GET.entity_type %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Entity filter -->
+                    <div class="filter-group">
+                        <label for="entity_filter">Entity:</label>
+                        <select id="entity_filter" name="entity">
+                            <option value="">All Entries</option>
+                            {% for entity in entities %}
+                                <option value="{{ entity.id }}" 
+                                        data-type="{{ entity.type }}"
+                                        {% if entity.id|stringformat:"s" == request.GET.entity %}selected{% endif %}>
+                                    {{ entity.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Search input -->
+                    <div class="filter-group">
+                        <label for="search">Search:</label>
+                        <input type="text" id="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search entries...">
+                    </div>
+                    
+                    <!-- Action buttons -->
+                    <div class="filter-buttons">
+                        <button type="submit" class="btn">Apply Filters</button>
+                        <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}" class="btn">Clear</a>
+                    </div>
+                </form>
+            </div>
+            
             <div class="journal-entries">
                 {% for entry in entries %}
                     <div class="journal-entry">
@@ -79,32 +81,28 @@
                         </div>
                         
                         <div class="journal-content">
-                            {{ entry.content|truncatewords:100 }}
+                            {{ entry.content|linebreaks|truncatewords:50 }}
                         </div>
                         
                         {% if entry.referenced_entities.all %}
-                            <div class="journal-entry-references">
-                                {% for entity in entry.referenced_entities.all %}
-                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="entity-reference">
-                                        {{ entity.name }}
-                                    </a>
-                                {% endfor %}
+                            <div class="journal-entities">
+                                <div class="references-label">References:</div>
+                                <ul class="references-list">
+                                    {% for entity in entry.referenced_entities.all %}
+                                        <li>
+                                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="entity-ref">
+                                                {{ entity.name }}
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
                             </div>
                         {% endif %}
                     </div>
                 {% endfor %}
             </div>
-        {% else %}
-            <!-- Show this message if no entries match the filters -->
-            <div class="empty-results">
-                <p>No journal entries match your filter criteria.</p>
-                <p>Try adjusting your filters or <a href="{% url 'notekeeper:journal_list' workspace_id=workspace.id %}">clear all filters</a>.</p>
-            </div>
-        {% endif %}
-    </div>
-    
-    <!-- Only show this if there are NO entries AT ALL in the workspace -->
-    {% if total_entries_count == 0 %}
+        </div>
+    {% else %}
         <div class="empty-state">
             <p>No journal entries yet.</p>
             <p>Journal entries help you record important events, meetings, and updates.</p>
@@ -135,235 +133,124 @@
         padding-left: 15px;
     }
     
-    /* Entity references styling - updated to match workspace detail page */
-    .journal-entry-references {
+    /* Entity references styling */
+    .journal-entities {
+        margin-top: 10px;
         font-size: 0.9em;
         color: #4a5568;
-        margin-top: 10px;
-        margin-left: 0;
     }
     
-    .journal-entry-references .reference-label {
+    .references-label {
         font-weight: 500;
-        margin-right: 5px;
+        margin-bottom: 5px;
     }
     
-    .journal-entry-references .entity-reference {
-        display: inline-block;
-        padding: 2px 8px;
-        margin: 2px 5px 2px 0;
-        background-color: #edf2f7;
-        border-radius: 12px;
-        font-size: 0.85em;
-        color: #4a5568;
+    .references-list {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .references-list li {
+        margin-bottom: 5px;
+        padding-left: 10px;
+        line-height: 1.5;
+        display: block;
+    }
+    
+    .entity-ref {
+        font-weight: 500;
+        color: #3182ce;
         text-decoration: none;
+        display: block;
     }
     
-    .journal-entry-references .entity-reference:hover {
-        background-color: #e2e8f0;
-        color: #2d3748;
-        text-decoration: none;
+    .entity-ref:hover {
+        color: #2c5282;
+        text-decoration: underline;
     }
     
-    /* Ensure journal entries are well-separated and properly padded */
+    /* Improved journal entries styling with better padding */
+    .journal-entries {
+        padding: 0 15px; /* Add horizontal padding to the container */
+    }
+    
     .journal-entry {
-        padding: 20px;
+        padding: 20px 15px; /* Increased vertical padding and add horizontal padding */
+        margin: 5px 0; /* Add small vertical margin */
         border-bottom: 1px solid #e2e8f0;
-        margin-bottom: 10px;
     }
     
     .journal-entry:last-child {
         border-bottom: none;
-        margin-bottom: 0;
     }
     
-    /* Add padding to the journal entries container */
-    .journal-entries {
-        padding: 10px;
-    }
-    
-    /* Journal content styling */
+    /* Improved content padding */
     .journal-content {
-        margin-top: 10px;
-        line-height: 1.5;
-        color: #4a5568;
+        padding: 10px 0; /* Add vertical padding to the content */
+        line-height: 1.6; /* Slightly increased line height for better readability */
     }
     
-    .read-more {
-        display: inline-block;
-        margin-top: 5px;
-        color: #3182ce;
-        font-weight: 500;
-        text-decoration: none;
-    }
-    
-    .read-more:hover {
-        text-decoration: underline;
-    }
-    
-    /* Journal title and date styling */
-    .journal-title a {
-        color: #2d3748;
-        text-decoration: none;
-    }
-    
-    .journal-title a:hover {
-        color: #3182ce;
-    }
-    
-    .journal-date {
-        color: #718096;
-        font-size: 0.9rem;
-    }
-    
-    /* Add this for the empty results message */
-    .empty-results {
-        padding: 30px 20px;
-        text-align: center;
-        color: #718096;
-    }
-    
-    .empty-results p {
-        margin-bottom: 10px;
-    }
-    
-    .empty-results a {
-        color: #3182ce;
-        text-decoration: none;
-        font-weight: 500;
-    }
-    
-    .empty-results a:hover {
-        text-decoration: underline;
-    }
-    
-    /* Choices.js styling for better integration */
-    .choices {
-        margin-bottom: 0;
-    }
-    
-    .choices__inner {
-        padding: 4px 7.5px 3.75px;
-        background-color: white;
-        border: 1px solid #ccc;
-        min-height: 38px;
-    }
-    
-    .choices__list--dropdown {
-        z-index: 10; /* Ensure dropdown appears above other elements */
-    }
-    
-    .choices__list--dropdown .choices__item {
-        padding: 10px;
-    }
-    
-    .choices__list--dropdown .choices__item--selectable.is-highlighted {
-        background-color: #f1f5f9;
-    }
-    
-    /* Adjust filter controls spacing */
-    .filter-controls {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-end;
-        gap: 15px;
-    }
-    
-    .filter-group {
-        flex: 1;
-        min-width: 200px;
-        margin-bottom: 0;
+    /* Add padding to journal header for better spacing */
+    .journal-header {
+        padding-bottom: 5px;
     }
 </style>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Add Choices.js CDN for searchable dropdowns -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Choices.js for searchable dropdown
+        // Get references to both filter dropdowns
+        const entityTypeFilter = document.getElementById('entity_type_filter');
         const entityFilter = document.getElementById('entity_filter');
-        const entityOptions = Array.from(entityFilter.options);
         
-        // Create Choices instance for entity filter
-        const entityFilterChoices = new Choices(entityFilter, {
-            searchEnabled: true,
-            searchPlaceholderValue: "Search entities...",
-            itemSelectText: '',
-            shouldSort: false,
-            position: 'bottom',
-            searchResultLimit: 50
+        // Debug output
+        console.log("Entity type filter selected:", entityTypeFilter.value);
+        
+        // Store all original entity options for filtering
+        const allEntityOptions = Array.from(entityFilter.options);
+        
+        // Debug: Check entity options and their data-type attributes
+        allEntityOptions.forEach(function(option) {
+            console.log(`Entity option: ${option.text}, Value: ${option.value}, Type: ${option.dataset.type}`);
         });
         
-        // Get reference to the entity type filter
-        const entityTypeFilter = document.getElementById('entity_type_filter');
-        
-        // Function to filter the entity dropdown based on selected type
-        function filterEntityDropdown() {
+        // Function to filter entity options based on selected type
+        function filterEntityOptions() {
             const selectedType = entityTypeFilter.value;
+            console.log("Selected entity type:", selectedType);
             
-            // Prepare filtered choices
-            let filteredChoices = [
-                { value: '', label: 'All', selected: true }
-            ];
+            // Clear existing options (except the first "All Entries" option)
+            while (entityFilter.options.length > 1) {
+                entityFilter.remove(1);
+            }
             
-            // If a specific type is selected, only show entities of that type
-            if (selectedType) {
-                entityOptions.forEach(function(option) {
-                    if (option.value && option.dataset.type === selectedType) {
-                        filteredChoices.push({
-                            value: option.value,
-                            label: option.textContent,
-                            selected: option.selected
-                        });
+            // If no type is selected, show all entities
+            if (!selectedType) {
+                allEntityOptions.forEach(function(option) {
+                    if (option.value !== "") { // Skip the "All Entries" option
+                        entityFilter.appendChild(option.cloneNode(true));
                     }
                 });
             } else {
-                // No type filter, show all entities
-                entityOptions.forEach(function(option) {
-                    if (option.value) { // Skip the "All" option which we already added
-                        filteredChoices.push({
-                            value: option.value,
-                            label: option.textContent,
-                            selected: option.selected
-                        });
+                // Otherwise, only show entities of the selected type
+                let matchCount = 0;
+                allEntityOptions.forEach(function(option) {
+                    if (option.value !== "" && option.dataset.type === selectedType) {
+                        entityFilter.appendChild(option.cloneNode(true));
+                        matchCount++;
                     }
                 });
-            }
-            
-            // Update choices
-            entityFilterChoices.setChoices(filteredChoices, 'value', 'label', true);
-            
-            // If the previously selected entity is not available in the filtered list,
-            // reset the entity filter to "All"
-            const urlParams = new URLSearchParams(window.location.search);
-            const selectedEntityId = urlParams.get('entity');
-            
-            if (selectedEntityId) {
-                const availableValues = filteredChoices.map(choice => choice.value);
-                if (!availableValues.includes(selectedEntityId)) {
-                    entityFilterChoices.setChoiceByValue('');
-                } else {
-                    entityFilterChoices.setChoiceByValue(selectedEntityId);
-                }
+                console.log(`Found ${matchCount} matching entities for type: ${selectedType}`);
             }
         }
         
-        // Initialize Choices.js for entity type filter too (optional but makes UI consistent)
-        const entityTypeChoices = new Choices(entityTypeFilter, {
-            searchEnabled: false,
-            itemSelectText: '',
-            shouldSort: false
-        });
+        // Initialize filtering on page load
+        filterEntityOptions();
         
-        // Initial filtering when page loads
-        filterEntityDropdown();
-        
-        // Re-filter when the entity type selection changes
-        entityTypeFilter.addEventListener('change', filterEntityDropdown);
+        // Update filtering when entity type changes
+        entityTypeFilter.addEventListener('change', filterEntityOptions);
     });
 </script>
 {% endblock %} 
