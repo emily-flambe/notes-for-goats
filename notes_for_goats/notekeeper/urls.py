@@ -52,4 +52,10 @@ urlpatterns = [
     path('workspaces/<int:workspace_id>/inference-rules/<int:pk>/edit/', views.inference_rule_edit, name='inference_rule_edit'),
     path('workspaces/<int:workspace_id>/inference-rules/<int:pk>/delete/', views.inference_rule_delete, name='inference_rule_delete'),
     path('workspaces/<int:workspace_id>/inference-rules/<int:pk>/apply/', views.apply_rule_now, name='apply_rule_now'),
+
+    # Backup URLs
+    path('backups/', views.backup_list, name='backup_list'),
+    path('backups/create/', views.create_manual_backup, name='create_backup'),
+    path('backups/download/<str:filename>/', views.download_backup, name='download_backup'),
+    path('backups/restore/<str:filename>/', views.restore_backup, name='restore_backup'),
 ] 
