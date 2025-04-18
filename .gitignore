@@ -189,3 +189,6 @@ docker-volume/
 .vscode/
 *.swp
 *.swo
+
+# Backup
+backups/

@@ -1,0 +1,159 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Database Backups - Notes for Goats{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Database Backups</h1>
+    
+    <div class="actions">
+        <form method="post" action="{% url 'notekeeper:create_backup' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn">Create Manual Backup</button>
+        </form>
+    </div>
+    
+    <div class="backup-sections">
+        <!-- Daily Backups -->
+        <div class="card">
+            <h2>Regular Backups</h2>
+            {% if daily_backups %}
+                <table class="backup-table">
+                    <thead>
+                        <tr>
+                            <th>Backup File</th>
+                            <th>Created</th>
+                            <th>Size</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for backup in daily_backups %}
+                            <tr>
+                                <td>{{ backup.filename }}</td>
+                                <td>{{ backup.timestamp|date:"F j, Y, g:i a" }}</td>
+                                <td>{{ backup.size }}</td>
+                                <td>
+                                    <a href="{% url 'notekeeper:download_backup' filename=backup.filename %}" class="btn btn-sm">Download</a>
+                                    <form method="post" action="{% url 'notekeeper:restore_backup' filename=backup.filename %}" style="display: inline-block;" 
+                                          onsubmit="return confirm('Are you absolutely sure you want to restore from this backup? This will replace your current database.')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger">Restore</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No regular backups found.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Incremental Backups -->
+        <div class="card">
+            <h2>Change-Based Backups</h2>
+            <p class="info-text">These backups are created automatically when you make changes to your data.</p>
+            
+            {% if incremental_backups %}
+                <table class="backup-table">
+                    <thead>
+                        <tr>
+                            <th>Backup File</th>
+                            <th>Created</th>
+                            <th>Change Type</th>
+                            <th>Size</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for backup in incremental_backups %}
+                            <tr>
+                                <td>{{ backup.filename }}</td>
+                                <td>{{ backup.timestamp|date:"F j, Y, g:i a" }}</td>
+                                <td><span class="change-type">{{ backup.reason }}</span></td>
+                                <td>{{ backup.size }}</td>
+                                <td>
+                                    <a href="{% url 'notekeeper:download_backup' filename=backup.filename %}" class="btn btn-sm">Download</a>
+                                    <form method="post" action="{% url 'notekeeper:restore_backup' filename=backup.filename %}" style="display: inline-block;"
+                                          onsubmit="return confirm('Are you absolutely sure you want to restore from this backup? This will replace your current database.')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger">Restore</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No incremental backups found yet. They will appear when you make changes to your data.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .backup-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        margin-top: 20px;
+    }
+    
+    .card h2 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .backup-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .backup-table th, .backup-table td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .backup-table th {
+        background-color: #f8f9fa;
+        font-weight: 500;
+    }
+    
+    .backup-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .actions {
+        margin-bottom: 20px;
+    }
+    
+    .info-text {
+        color: #718096;
+        font-style: italic;
+        margin-bottom: 15px;
+    }
+    
+    .change-type {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: #e2e8f0;
+        border-radius: 12px;
+        font-size: 0.8em;
+    }
+    
+    .btn-danger {
+        background-color: #e53e3e;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background-color: #c53030;
+    }
+</style>
+{% endblock %} 

@@ -3,7 +3,7 @@ from .models import Workspace, Entity, JournalEntry, CalendarEvent, Relationship
 from .forms import WorkspaceForm, JournalEntryForm, EntityForm, RelationshipTypeForm, RelationshipForm, RelationshipInferenceRuleForm
 import os
 import tempfile
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, FileResponse
 from django.core.management import call_command
 from io import StringIO
 from django.contrib import messages
@@ -12,6 +12,11 @@ from .inference import apply_inference_rules, handle_relationship_deleted
 from django.db.models import Q
 import re
 from django.utils import timezone
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+import shutil
+import glob
+import datetime
 
 def home(request):
     """
@@ -819,4 +824,170 @@ def apply_rule_now(request, workspace_id, pk):
         messages.success(request, "Rule applied successfully to existing relationships.")
     
     return redirect('notekeeper:inference_rule_list', workspace_id=workspace_id)
+
+# Define the backup directories
+BACKUP_DIR = os.path.join(settings.BASE_DIR, 'backups')
+if not os.path.exists(BACKUP_DIR):
+    os.makedirs(BACKUP_DIR)
+
+INCREMENTAL_BACKUP_DIR = os.path.join(BACKUP_DIR, 'incremental')
+if not os.path.exists(INCREMENTAL_BACKUP_DIR):
+    os.makedirs(INCREMENTAL_BACKUP_DIR)
+
+def backup_list(request):
+    """View to list available backups"""
+    # Get daily backups
+    daily_backups = []
+    for filepath in glob.glob(os.path.join(BACKUP_DIR, "*.sqlite3")):
+        filename = os.path.basename(filepath)
+        mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(filepath))
+        size = os.path.getsize(filepath) / (1024 * 1024)  # Convert to MB
+        daily_backups.append({
+            'filename': filename,
+            'timestamp': mod_time,
+            'size': f"{size:.2f} MB",
+            'type': 'Daily'
+        })
+    
+    # Get incremental backups
+    incremental_backups = []
+    if os.path.exists(INCREMENTAL_BACKUP_DIR):
+        for filepath in glob.glob(os.path.join(INCREMENTAL_BACKUP_DIR, "*.sqlite3")):
+            filename = os.path.basename(filepath)
+            mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(filepath))
+            size = os.path.getsize(filepath) / (1024 * 1024)  # Convert to MB
+            
+            # Extract reason from filename
+            parts = filename.split('_')
+            if len(parts) >= 3:
+                reason = parts[-1].split('.')[0]  # Get the reason without .sqlite3
+            else:
+                reason = "unknown"
+                
+            incremental_backups.append({
+                'filename': filename,
+                'timestamp': mod_time,
+                'size': f"{size:.2f} MB",
+                'type': 'Incremental',
+                'reason': reason
+            })
+    
+    # Sort by timestamp, newest first
+    daily_backups.sort(key=lambda x: x['timestamp'], reverse=True)
+    incremental_backups.sort(key=lambda x: x['timestamp'], reverse=True)
+    
+    return render(request, 'notekeeper/backup_list.html', {
+        'daily_backups': daily_backups,
+        'incremental_backups': incremental_backups[:50]  # Limit to prevent overwhelming the page
+    })
+
+def create_backup(reason="manual", max_incremental=100):
+    """
+    Create a database backup with an optional reason tag
+    """
+    db_path = settings.DATABASES['default']['NAME']
+    
+    if not os.path.exists(db_path):
+        return None
+    
+    # Generate backup filename with timestamp and reason
+    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    db_name = os.path.basename(db_path)
+    backup_filename = f"{os.path.splitext(db_name)[0]}_{timestamp}_{reason}.sqlite3"
+    backup_path = os.path.join(INCREMENTAL_BACKUP_DIR, backup_filename)
+    
+    try:
+        # Create backup - using shutil.copy2 to preserve metadata
+        shutil.copy2(db_path, backup_path)
+        
+        # Clean up old backups if needed
+        cleanup_old_backups(INCREMENTAL_BACKUP_DIR, max_incremental)
+        
+        return backup_path
+    except Exception as e:
+        return None
+
+def cleanup_old_backups(backup_dir, max_backups, pattern="*.sqlite3"):
+    """
+    Remove oldest backups when the count exceeds max_backups
+    """
+    # Get all backup files matching the pattern
+    backups = []
+    for filepath in glob.glob(os.path.join(backup_dir, pattern)):
+        backups.append((os.path.getmtime(filepath), filepath))
+    
+    # Sort by modified time, oldest first
+    backups.sort()
+    
+    # Remove oldest backups if we have too many
+    if len(backups) > max_backups:
+        for _, filepath in backups[:-max_backups]:
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass
+
+def create_manual_backup(request):
+    """View to create a new backup manually"""
+    if request.method == 'POST':
+        backup_path = create_backup(reason="manual")
+        if backup_path:
+            messages.success(request, 'Database backup created successfully.')
+        else:
+            messages.error(request, 'Failed to create backup.')
+    
+    return redirect('notekeeper:backup_list')
+
+def download_backup(request, filename):
+    """View to download a backup file"""
+    # Check both backup directories
+    if os.path.exists(os.path.join(BACKUP_DIR, filename)):
+        file_path = os.path.join(BACKUP_DIR, filename)
+    elif os.path.exists(os.path.join(INCREMENTAL_BACKUP_DIR, filename)):
+        file_path = os.path.join(INCREMENTAL_BACKUP_DIR, filename)
+    else:
+        messages.error(request, f'Backup file not found: {filename}')
+        return redirect('notekeeper:backup_list')
+    
+    # Open the file in binary mode
+    try:
+        return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=filename)
+    except Exception as e:
+        messages.error(request, f'Error downloading backup: {e}')
+        return redirect('notekeeper:backup_list')
+
+def restore_backup(request, filename):
+    """View to restore from a backup file"""
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method.')
+        return redirect('notekeeper:backup_list')
+    
+    # Check both backup directories
+    if os.path.exists(os.path.join(BACKUP_DIR, filename)):
+        file_path = os.path.join(BACKUP_DIR, filename)
+    elif os.path.exists(os.path.join(INCREMENTAL_BACKUP_DIR, filename)):
+        file_path = os.path.join(INCREMENTAL_BACKUP_DIR, filename)
+    else:
+        messages.error(request, f'Backup file not found: {filename}')
+        return redirect('notekeeper:backup_list')
+    
+    # Get database path from Django settings
+    db_path = settings.DATABASES['default']['NAME']
+    
+    # Create a backup of the current database before restoring
+    pre_restore_backup = create_backup(reason="pre_restore")
+    
+    if not pre_restore_backup:
+        messages.error(request, 'Failed to create pre-restore backup. Restore aborted for safety.')
+        return redirect('notekeeper:backup_list')
+    
+    try:
+        # Restore from selected backup
+        shutil.copy2(file_path, db_path)
+        
+        messages.success(request, f'Database restored successfully from {filename}. You may need to restart the application for changes to take effect.')
+    except Exception as e:
+        messages.error(request, f'Restore failed: {e}')
+    
+    return redirect('notekeeper:backup_list')
 
