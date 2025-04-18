@@ -160,16 +160,16 @@ def _create_inferred_relationship(workspace, rule, source_entity, target_entity,
     ).first()
     
     # If a manually created relationship exists in either direction, don't change it
-    if (existing_forward and not existing_forward.notes.startswith('Auto-inferred')) or \
-       (existing_reverse and not existing_reverse.notes.startswith('Auto-inferred')):
+    if (existing_forward and not existing_forward.details.startswith('Auto-inferred')) or \
+       (existing_reverse and not existing_reverse.details.startswith('Auto-inferred')):
         return None
     
     # If an auto-inferred relationship exists in the reverse direction, delete it
-    if existing_reverse and existing_reverse.notes.startswith('Auto-inferred'):
+    if existing_reverse and existing_reverse.details.startswith('Auto-inferred'):
         existing_reverse.delete()
     
     # Create or update the relationship
-    notes = (f"Auto-inferred: Both entities share a '{rule.source_relationship_type.display_name}' "
+    details = (f"Auto-inferred: Both entities share a '{rule.source_relationship_type.display_name}' "
              f"relationship with '{common_entity.name}' (Rule: {rule.name})")
     
     relationship, created = Relationship.objects.update_or_create(
@@ -179,7 +179,7 @@ def _create_inferred_relationship(workspace, rule, source_entity, target_entity,
         source_object_id=source_entity.id,
         target_content_type=entity_content_type,
         target_object_id=target_entity.id,
-        defaults={'notes': notes}
+        defaults={'details': details}
     )
     
     return relationship
@@ -230,7 +230,7 @@ def handle_relationship_deleted(workspace, relationship):
                 workspace=workspace,
                 source_content_type=entity_content_type,
                 source_object_id=entity.id,
-                notes__startswith='Auto-inferred:'
+                details__startswith='Auto-inferred:'
             ).delete()
             
             # Delete relationships where entity is target
@@ -238,7 +238,7 @@ def handle_relationship_deleted(workspace, relationship):
                 workspace=workspace,
                 target_content_type=entity_content_type,
                 target_object_id=entity.id,
-                notes__startswith='Auto-inferred:'
+                details__startswith='Auto-inferred:'
             ).delete()
         
         # Then, reapply all rules for these entities
@@ -251,7 +251,7 @@ def handle_relationship_deleted(workspace, relationship):
                     relationship_type=rule.inferred_relationship_type,
                     source_content_type=entity_content_type,
                     source_object_id=entity.id,
-                    notes__startswith="Auto-inferred:"
+                    details__startswith="Auto-inferred:"
                 ).delete()
                 
                 # Also delete relationships where this entity is the target
@@ -260,7 +260,7 @@ def handle_relationship_deleted(workspace, relationship):
                     relationship_type=rule.inferred_relationship_type,
                     target_content_type=entity_content_type,
                     target_object_id=entity.id,
-                    notes__startswith="Auto-inferred:"
+                    details__startswith="Auto-inferred:"
                 ).delete()
         
         # Reapply inference rules for all affected entities

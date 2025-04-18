@@ -92,7 +92,7 @@
                             <col style="width: 15%;">  <!-- Source - narrower -->
                             <col style="width: 15%;">  <!-- Relationship -->
                             <col style="width: 15%;">  <!-- Target - narrower -->
-                            <col style="width: 40%;">  <!-- Notes - much wider column -->
+                            <col style="width: 40%;">  <!-- details - much wider column -->
                             <col style="width: 15%;">  <!-- Actions -->
                         </colgroup>
                         <thead>
@@ -100,7 +100,7 @@
                                 <th class="sortable" data-column="source">Source <span class="sort-icon">↕</span></th>
                                 <th class="sortable" data-column="relationship">Relationship <span class="sort-icon">↕</span></th>
                                 <th class="sortable" data-column="target">Target <span class="sort-icon">↕</span></th>
-                                <th>Notes</th>
+                                <th>Details</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -146,9 +146,9 @@
                                         {% endif %}
                                     </div>
                                 </td>
-                                <td class="notes-cell">
-                                    <div class="notes-content">
-                                        {{ rel.notes|truncatechars:100|default:"-" }}
+                                <td class="details-cell">
+                                    <div class="details-content">
+                                        {{ rel.details|truncatechars:100|default:"-" }}
                                     </div>
                                 </td>
                                 <td class="actions-cell">
@@ -188,7 +188,7 @@
         padding-bottom: 4px;
     }
     
-    .notes-content {
+    .details-content {
         word-break: break-word;
     }
     

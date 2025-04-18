@@ -4,8 +4,8 @@ def copy_relationship_notes_to_details(apps, schema_editor):
     Relationship = apps.get_model('notekeeper', 'Relationship')
     for relationship in Relationship.objects.all():
         # Only copy if details is empty and notes has content
-        if not relationship.details and relationship.notes:
-            relationship.details = relationship.notes
+        if not relationship.details and relationship.details:
+            relationship.details = relationship.details
             relationship.save()
 
 class Migration(migrations.Migration):
