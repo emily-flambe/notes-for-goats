@@ -82,20 +82,18 @@
                         </div>
                         
                         <div class="journal-content">
-                            {{ entry.content|linebreaks|truncatewords:50 }}
+                            {{ entry.content|linebreaks }}
                         </div>
                         
                         {% if entry.referenced_entities.all %}
                             <div class="journal-entities">
-                                <ul class="references-list">
+                                <div class="entity-list">
                                     {% for entity in entry.referenced_entities.all %}
-                                        <li>
-                                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="entity-ref">
-                                                {{ entity.name }}
-                                            </a>
-                                        </li>
+                                        <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="entity-reference">
+                                            {{ entity.name }}
+                                        </a>
                                     {% endfor %}
-                                </ul>
+                                </div>
                             </div>
                         {% endif %}
                     </div>
@@ -154,7 +152,7 @@
         padding-left: 15px;
     }
     
-    /* Entity references styling */
+    /* Updated entity references styling to match workspace detail */
     .journal-entities {
         margin-top: 10px;
         font-size: 0.9em;
@@ -166,29 +164,28 @@
         margin-bottom: 5px;
     }
     
-    .references-list {
-        list-style-type: none;
-        padding: 0;
-        margin: 0;
+    .entity-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 5px;
     }
     
-    .references-list li {
-        margin-bottom: 5px;
-        padding-left: 10px;
-        line-height: 1.5;
-        display: block;
-    }
-    
-    .entity-ref {
-        font-weight: 500;
-        color: #3182ce;
+    .entity-reference {
+        display: inline-block;
+        padding: 2px 8px;
+        margin: 2px 5px 2px 0;
+        background-color: #edf2f7;
+        border-radius: 12px;
+        font-size: 0.85em;
+        color: #4a5568;
         text-decoration: none;
-        display: block;
     }
     
-    .entity-ref:hover {
-        color: #2c5282;
-        text-decoration: underline;
+    .entity-reference:hover {
+        background-color: #e2e8f0;
+        color: #2d3748;
+        text-decoration: none;
     }
     
     /* Improved journal entries styling with better padding */
@@ -206,10 +203,16 @@
         border-bottom: none;
     }
     
-    /* Improved content padding */
+    /* Updated content styling to limit to 3 lines */
     .journal-content {
         padding: 10px 0; /* Add vertical padding to the content */
         line-height: 1.6; /* Slightly increased line height for better readability */
+        display: -webkit-box;
+        -webkit-line-clamp: 3; /* Limit to 3 lines */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis; /* Add ellipsis when text is truncated */
+        max-height: calc(1.6em * 3); /* Calculate height based on line-height × 3 lines */
     }
     
     /* Add padding to journal header for better spacing */
