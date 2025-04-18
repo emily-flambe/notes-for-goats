@@ -6,6 +6,8 @@
 <div class="container">
     <h1>Database Backups</h1>
     
+    <p class="backup-info"><i>Notes for Goats automatically creates backups whenever you make important changes to your data. Backups are stored locally and limited to a maximum of {{ max_backups }} files, with older backups being automatically removed. You can also create manual backups at any time using the button below.</i></p>
+    
     <div class="actions">
         <form method="post" action="{% url 'notekeeper:create_backup' %}">
             {% csrf_token %}
@@ -14,48 +16,8 @@
     </div>
     
     <div class="backup-sections">
-        <!-- Daily Backups -->
         <div class="card">
-            <h2>Regular Backups</h2>
-            {% if daily_backups %}
-                <table class="backup-table">
-                    <thead>
-                        <tr>
-                            <th>Backup File</th>
-                            <th>Created</th>
-                            <th>Size</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for backup in daily_backups %}
-                            <tr>
-                                <td>{{ backup.filename }}</td>
-                                <td>{{ backup.timestamp|date:"F j, Y, g:i a" }}</td>
-                                <td>{{ backup.size }}</td>
-                                <td>
-                                    <a href="{% url 'notekeeper:download_backup' filename=backup.filename %}" class="btn btn-sm">Download</a>
-                                    <form method="post" action="{% url 'notekeeper:restore_backup' filename=backup.filename %}" style="display: inline-block;" 
-                                          onsubmit="return confirm('Are you absolutely sure you want to restore from this backup? This will replace your current database.')">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-danger">Restore</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p>No regular backups found.</p>
-            {% endif %}
-        </div>
-        
-        <!-- Incremental Backups -->
-        <div class="card">
-            <h2>Change-Based Backups</h2>
-            <p class="info-text">These backups are created automatically when you make changes to your data.</p>
-            
-            {% if incremental_backups %}
+            {% if all_backups %}
                 <table class="backup-table">
                     <thead>
                         <tr>
@@ -67,26 +29,28 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for backup in incremental_backups %}
+                        {% for backup in all_backups %}
                             <tr>
                                 <td>{{ backup.filename }}</td>
                                 <td>{{ backup.timestamp|date:"F j, Y, g:i a" }}</td>
                                 <td><span class="change-type">{{ backup.reason }}</span></td>
                                 <td>{{ backup.size }}</td>
                                 <td>
-                                    <a href="{% url 'notekeeper:download_backup' filename=backup.filename %}" class="btn btn-sm">Download</a>
-                                    <form method="post" action="{% url 'notekeeper:restore_backup' filename=backup.filename %}" style="display: inline-block;"
-                                          onsubmit="return confirm('Are you absolutely sure you want to restore from this backup? This will replace your current database.')">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-danger">Restore</button>
-                                    </form>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'notekeeper:download_backup' filename=backup.filename %}" class="btn btn-sm">Download</a>
+                                        <form method="post" action="{% url 'notekeeper:restore_backup' filename=backup.filename %}" style="display: inline-block;"
+                                              onsubmit="return confirm('Are you absolutely sure you want to restore from this backup? This will replace your current database.')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-danger">Restore</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             {% else %}
-                <p>No incremental backups found yet. They will appear when you make changes to your data.</p>
+                <p>No backups found yet. Click "Create Manual Backup" to create your first backup.</p>
             {% endif %}
         </div>
     </div>
@@ -100,6 +64,12 @@
         flex-direction: column;
         gap: 30px;
         margin-top: 20px;
+    }
+    
+    .backup-info {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 20px;
     }
     
     .card h2 {
@@ -133,18 +103,37 @@
         margin-bottom: 20px;
     }
     
-    .info-text {
-        color: #718096;
-        font-style: italic;
-        margin-bottom: 15px;
-    }
-    
     .change-type {
         display: inline-block;
         padding: 3px 8px;
         background-color: #e2e8f0;
         border-radius: 12px;
         font-size: 0.8em;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .action-buttons form {
+        margin: 0;
+    }
+    
+    /* Force identical appearance for both buttons */
+    .action-buttons .btn-sm,
+    .action-buttons button.btn-sm {
+        display: inline-block;
+        width: 100px;
+        height: 32px;
+        line-height: 24px;
+        text-align: center;
+        padding: 4px 8px;
+        font-size: 0.9em;
+        box-sizing: border-box;
+        vertical-align: middle;
+        border-radius: 4px;
+        margin: 0;
     }
     
     .btn-danger {
