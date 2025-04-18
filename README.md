@@ -174,7 +174,21 @@ Keep your valuable notes safe:
 
 ## Planned Features
 
-<!-- Fill out your planned features here -->
+### AI stuff lmao
+
+Provide summaries, answer questions! It'll be great! RAG even maybe???
+
+### Google Calendar integration
+
+Read your calendar! Link events to notes! Use events to start new notes from a template! I don't know lol
+
+### Note templates
+
+Create templates for notes and use them to create new notes!
+
+### Cute visual graph of relationships
+
+I dunno, D3 or something lmao
 
 ## License
 
