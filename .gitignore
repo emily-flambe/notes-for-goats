@@ -192,3 +192,4 @@ docker-volume/
 
 # Backup
 backups/
+*.sqlite3

@@ -841,25 +841,36 @@ def backup_list(request):
             mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(filepath))
             size = os.path.getsize(filepath) / (1024 * 1024)  # Convert to MB
             
-            # Extract reason from filename
-            parts = filename.split('_')
-            if len(parts) >= 3:
-                reason = parts[-1].split('.')[0]  # Get the reason without .sqlite3
-                
-                # Clean up the reason for display
-                if reason == "manual":
-                    reason = "manual"
-                elif reason == "pre_restore":
-                    reason = "pre-restore"
-                elif reason == "daily":
-                    reason = "scheduled"
-                else:
-                    # For entity_create, workspace_update etc.
-                    parts = reason.split('_')
-                    if len(parts) >= 2:
-                        reason = f"{parts[1]} {parts[0]}"  # e.g. "create entity"
+            # For uploaded files that don't follow our naming convention,
+            # we need to determine their type using file metadata
+            
+            # First check if it's a file that was just uploaded directly (not following our naming pattern)
+            if '_' not in filename:
+                reason = "Uploaded"
             else:
-                reason = "auto"
+                # Extract reason from filename for files following our naming convention
+                parts = filename.split('_')
+                if len(parts) >= 3:
+                    reason = parts[-1].split('.')[0]  # Get the reason without .sqlite3
+                    
+                    # Clean up the reason for display
+                    if reason == "manual":
+                        reason = "Manual"
+                    elif reason == "pre_restore":
+                        reason = "Pre-restore"
+                    elif reason == "daily":
+                        reason = "Scheduled"
+                    elif reason == "uploaded":
+                        reason = "Uploaded"
+                    else:
+                        # For entity_create, workspace_update etc.
+                        parts = reason.split('_')
+                        if len(parts) >= 2:
+                            reason = f"Auto ({parts[1]} {parts[0]})"  # e.g. "Auto (create entity)"
+                        else:
+                            reason = "Auto"
+                else:
+                    reason = "Uploaded"  # Default for non-standard filenames
                 
             all_backups.append({
                 'filename': filename,
@@ -1023,4 +1034,70 @@ def restore_backup(request, filename):
         messages.error(request, f'Restore failed: {e}')
     
     return redirect('notekeeper:backup_list')
+
+def upload_backup(request):
+    """View to upload an existing backup file"""
+    if request.method == 'POST' and request.FILES.get('backup_file'):
+        uploaded_file = request.FILES['backup_file']
+        
+        # Validate file type (should be SQLite database)
+        if not uploaded_file.name.endswith('.sqlite3'):
+            messages.error(request, 'Invalid file type. Only SQLite database files (.sqlite3) are supported.')
+            return redirect('notekeeper:backup_list')
+        
+        # Keep the exact original filename
+        backup_filename = os.path.basename(uploaded_file.name)
+        backup_path = os.path.join(BACKUP_DIR, backup_filename)
+        
+        try:
+            # Save the uploaded file to the backup directory, overwriting if it exists
+            with open(backup_path, 'wb+') as destination:
+                for chunk in uploaded_file.chunks():
+                    destination.write(chunk)
+            
+            # Get maximum number of backups from settings
+            max_backups = getattr(settings, 'MAX_BACKUP_FILES', 50)
+            
+            # Clean up old backups to maintain the limit
+            cleanup_old_backups(BACKUP_DIR, max_backups-1)
+            
+            messages.success(request, f'Backup file "{backup_filename}" uploaded successfully.')
+        except Exception as e:
+            messages.error(request, f'Error uploading backup: {e}')
+            
+    return redirect('notekeeper:backup_list')
+
+def check_backup_exists(request):
+    """Check if a backup with the given filename already exists"""
+    if request.method == 'POST' and request.POST.get('filename'):
+        filename = os.path.basename(request.POST.get('filename'))
+        file_path = os.path.join(BACKUP_DIR, filename)
+        
+        exists = os.path.exists(file_path)
+        
+        return JsonResponse({
+            'exists': exists,
+            'filename': filename
+        })
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+def show_message(request):
+    """Add a message to the Django messages framework and redirect"""
+    if request.method == 'POST':
+        message = request.POST.get('message', '')
+        message_type = request.POST.get('message_type', 'info')
+        redirect_url = request.POST.get('redirect_url', 'notekeeper:backup_list')
+        
+        if message:
+            if message_type == 'error':
+                messages.error(request, message)
+            elif message_type == 'warning':
+                messages.warning(request, message)
+            elif message_type == 'success':
+                messages.success(request, message)
+            else:
+                messages.info(request, message)
+    
+    return redirect(redirect_url)
 
