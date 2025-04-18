@@ -66,37 +66,37 @@
         {% if notes %}
             <div class="journal-notes">
                 {% for entry in notes %}
-                    <div class="journal-entry">
-                        <div class="journal-header">
-                            <div>
-                                <h3 class="journal-title">
-                                    <a href="{% url 'notekeeper:note_detail' workspace_id=workspace.id pk=entry.id %}">
+                    <a href="{% url 'notekeeper:note_detail' workspace_id=workspace.id pk=entry.id %}" class="journal-entry-link">
+                        <div class="journal-entry">
+                            <div class="journal-header">
+                                <div>
+                                    <h3 class="journal-title">
                                         {{ entry.title }}
-                                    </a>
-                                </h3>
-                                <div class="journal-date">{{ entry.timestamp|date:"F j, Y - g:i A" }}</div>
-                            </div>
-                            <div class="actions">
-                                <a href="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.id %}" class="btn btn-sm">Edit</a>
-                            </div>
-                        </div>
-                        
-                        <div class="journal-content">
-                            {{ entry.content|linebreaks }}
-                        </div>
-                        
-                        {% if entry.referenced_entities.all %}
-                            <div class="journal-entities">
-                                <div class="entity-list">
-                                    {% for entity in entry.referenced_entities.all %}
-                                        <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}" class="entity-reference">
-                                            {{ entity.name }}
-                                        </a>
-                                    {% endfor %}
+                                    </h3>
+                                    <div class="journal-date">{{ entry.timestamp|date:"F j, Y - g:i A" }}</div>
+                                </div>
+                                <div class="actions">
+                                    <button class="btn btn-sm edit-button" data-url="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.id %}">Edit</button>
                                 </div>
                             </div>
-                        {% endif %}
-                    </div>
+                            
+                            <div class="journal-content">
+                                {{ entry.content|linebreaks }}
+                            </div>
+                            
+                            {% if entry.referenced_entities.all %}
+                                <div class="journal-entities">
+                                    <div class="entity-list">
+                                        {% for entity in entry.referenced_entities.all %}
+                                            <span class="entity-reference">
+                                                {{ entity.name }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </a>
                 {% endfor %}
             </div>
         {% elif request.GET.entity or request.GET.entity_type or request.GET.q %}
@@ -152,29 +152,24 @@
         padding-left: 15px;
     }
     
-    /* Updated entity references styling to match workspace detail */
+    /* Entity references styling - slightly reduced margins */
     .journal-entities {
-        margin-top: 10px;
+        margin-top: 6px; /* Reduced from 10px */
         font-size: 0.9em;
         color: #4a5568;
-    }
-    
-    .references-label {
-        font-weight: 500;
-        margin-bottom: 5px;
     }
     
     .entity-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 5px;
+        gap: 6px; /* Reduced from 8px */
+        margin-top: 3px; /* Reduced from 5px */
     }
     
     .entity-reference {
         display: inline-block;
         padding: 2px 8px;
-        margin: 2px 5px 2px 0;
+        margin: 1px 4px 1px 0; /* Slightly reduced margins */
         background-color: #edf2f7;
         border-radius: 12px;
         font-size: 0.85em;
@@ -188,36 +183,79 @@
         text-decoration: none;
     }
     
-    /* Improved notes styling with better padding */
+    /* Enhanced notes container */
     .journal-notes {
-        padding: 0 15px; /* Add horizontal padding to the container */
+        padding: 0 10px; /* Reduced from 15px */
+        display: flex;
+        flex-direction: column;
+        gap: 8px; /* Added gap between entries */
     }
     
+    /* Enhanced note entry styling to make it pop */
     .journal-entry {
-        padding: 20px 15px; /* Increased vertical padding and add horizontal padding */
-        margin: 5px 0; /* Add small vertical margin */
-        border-bottom: 1px solid #e2e8f0;
+        padding: 16px 14px; /* Reduced from 20px 15px */
+        margin: 0; /* Removed margin in favor of flex gap */
+        border-radius: 6px; /* Added rounded corners */
+        background-color: #f8fafc; /* Very light background color */
+        border: 1px solid #edf2f7; /* Light border */
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Subtle shadow */
+        transition: all 0.2s ease; /* Smooth transition for hover effects */
+    }
+    
+    /* Hover effect */
+    .journal-entry:hover {
+        background-color: #c7e0ef; /* Slightly darker on hover */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08); /* Enhanced shadow */
     }
     
     .journal-entry:last-child {
-        border-bottom: none;
+        border-bottom: 1px solid #edf2f7; /* Ensure last item has bottom border */
     }
     
-    /* Updated content styling to limit to 3 lines */
+    /* Reduced padding for content to decrease space after timestamp */
     .journal-content {
-        padding: 10px 0; /* Add vertical padding to the content */
-        line-height: 1.6; /* Slightly increased line height for better readability */
+        padding: -10px 0 4px; /* Reduced from 6px 0 4px - less space at the top */
+        line-height: 1.2;
         display: -webkit-box;
-        -webkit-line-clamp: 3; /* Limit to 3 lines */
+        -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis; /* Add ellipsis when text is truncated */
-        max-height: calc(1.6em * 3); /* Calculate height based on line-height × 3 lines */
+        text-overflow: ellipsis;
+        max-height: calc(1.5em * 3);
+        color: #4a5568;
+        position: relative;
     }
     
-    /* Add padding to note header for better spacing */
+    /* Reduce bottom margin on the journal header */
     .journal-header {
-        padding-bottom: 5px;
+        padding-bottom: 1px; /* Reduced from 3px */
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    
+    /* Reduce bottom margin on title */
+    .journal-title {
+        margin-top: 0;
+        margin-bottom: 1px; /* Reduced from 3px */
+        font-size: 1.15rem;
+    }
+    
+    .journal-title a {
+        color: #2d3748;
+        font-weight: 600;
+    }
+    
+    .journal-title a:hover {
+        color: #4299e1;
+        text-decoration: none;
+    }
+    
+    /* Smaller margin after date */
+    .journal-date {
+        font-size: 0.825rem;
+        color: #718096;
+        margin-bottom: 1px; /* Added small margin */
     }
     
     /* No results message styling */
@@ -260,7 +298,7 @@
         function filterEntityOptions() {
             const selectedType = entityTypeFilter.value;
             
-            // Clear existing options (except the first "All Notes" option)
+            // Clear existing options (except the first "All" option)
             while (entityFilter.options.length > 1) {
                 entityFilter.remove(1);
             }
@@ -268,17 +306,15 @@
             // If no type is selected, show all entities
             if (!selectedType) {
                 allEntityOptions.forEach(function(option) {
-                    if (option.value !== "") { // Skip the "All Notes" option
+                    if (option.value !== "") { // Skip the "All" option
                         entityFilter.appendChild(option.cloneNode(true));
                     }
                 });
             } else {
                 // Otherwise, only show entities of the selected type
-                let matchCount = 0;
                 allEntityOptions.forEach(function(option) {
                     if (option.value !== "" && option.dataset.type === selectedType) {
                         entityFilter.appendChild(option.cloneNode(true));
-                        matchCount++;
                     }
                 });
             }
@@ -289,6 +325,18 @@
         
         // Update filtering when entity type changes
         entityTypeFilter.addEventListener('change', filterEntityOptions);
+        
+        // NEW: Check if content fits within 3 lines
+        const journalContents = document.querySelectorAll('.journal-content');
+        journalContents.forEach(content => {
+            const actualHeight = content.scrollHeight;
+            const lineHeight = parseFloat(getComputedStyle(content).lineHeight);
+            const maxHeight = lineHeight * 3;
+            
+            if (actualHeight <= maxHeight) {
+                content.classList.add('fits-content');
+            }
+        });
     });
 </script>
 {% endblock %} 

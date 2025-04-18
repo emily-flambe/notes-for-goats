@@ -9,7 +9,7 @@
     <h1>{{ entity.name }} <small class="subtitle">({{ entity.get_type_display }})</small></h1>
 
     <div class="card">
-        <h2>Notes</h2>
+        <h2>Details</h2>
         {% if entity.notes %}
             {{ entity.notes|linebreaks }}
         {% else %}
@@ -44,7 +44,7 @@
                         <tr>
                             <th class="sortable" data-column="type">Type <span class="sort-icon">↕</span></th>
                             <th class="sortable" data-column="entity">Related Entity <span class="sort-icon">↕</span></th>
-                            <th>Notes</th>
+                            <th>Details</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
