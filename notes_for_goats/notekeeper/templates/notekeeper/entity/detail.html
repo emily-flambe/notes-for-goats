@@ -10,8 +10,8 @@
 
     <div class="card">
         <h2>Details</h2>
-        {% if entity.notes %}
-            {{ entity.notes|linebreaks }}
+        {% if entity.details %}
+            {{ entity.details|linebreaks }}
         {% else %}
             <p>No notes for this entity.</p>
         {% endif %}

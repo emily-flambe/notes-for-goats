@@ -35,7 +35,7 @@ class Entity(models.Model):
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='entities')
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=10, choices=ENTITY_TYPES)
-    notes = models.TextField(blank=True)
+    details = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.CharField(max_length=255, blank=True, default="")
@@ -76,7 +76,7 @@ class Entity(models.Model):
         verbose_name_plural = "Entities"
         ordering = ['name']
 
-class NotesEntry(models.Model):
+class Note(models.Model):
     """
     Represents a timestamped note entry that may reference entities.
     """
@@ -177,7 +177,7 @@ class Relationship(models.Model):
     # Relationship type
     relationship_type = models.ForeignKey(RelationshipType, on_delete=models.CASCADE, related_name='relationships')
     
-    notes = models.TextField(blank=True)
+    details = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

@@ -1,10 +1,10 @@
 from django.contrib import admin
-from .models import Workspace, Entity, NotesEntry, RelationshipType, Relationship
+from .models import Workspace, Entity, Note, RelationshipType, Relationship
 
 # Simple admin registrations with minimal customization
 @admin.register(Entity)
 class EntityAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'workspace', 'get_relationships')
+    list_display = ('name', 'type', 'workspace', 'get_relationships', 'details')
     list_filter = ('workspace', 'type')
     search_fields = ('name',)
 
@@ -25,7 +25,7 @@ class RelationshipTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Relationship)
 class RelationshipAdmin(admin.ModelAdmin):
-    list_display = ('source_str', 'relationship_type', 'target_str', 'workspace')
+    list_display = ('source_str', 'relationship_type', 'target_str', 'workspace', 'details')
     list_filter = ('workspace', 'relationship_type')
     
     def source_str(self, obj):
@@ -38,4 +38,4 @@ class RelationshipAdmin(admin.ModelAdmin):
 
 # Register other models
 admin.site.register(Workspace)
-admin.site.register(NotesEntry)
+admin.site.register(Note)

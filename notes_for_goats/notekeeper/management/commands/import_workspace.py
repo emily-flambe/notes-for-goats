@@ -5,7 +5,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
-from notekeeper.models import Workspace, Entity, NotesEntry
+from notekeeper.models import Workspace, Entity, Note
 from django.utils.dateparse import parse_datetime
 
 class Command(BaseCommand):
@@ -182,7 +182,7 @@ class Command(BaseCommand):
             except (ValueError, TypeError):
                 timestamp = timezone.now()
             
-            entry = NotesEntry(
+            entry = Note(
                 workspace=workspace,
                 title=title,
                 content=content,
@@ -207,7 +207,7 @@ class Command(BaseCommand):
                     pass
             
             # Don't call the overridden save() yet to avoid processing hashtags
-            super(NotesEntry, entry).save()
+            super(Note, entry).save()
             entry_id_map[entry_data.get('id')] = entry.id
             
             # Add referenced entities

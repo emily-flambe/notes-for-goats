@@ -57,7 +57,7 @@ class Command(BaseCommand):
                     'id': entity.id,
                     'name': entity.name,
                     'type': entity.type,
-                    'notes': entity.notes,
+                    'notes': entity.details,
                     'created_at': entity.created_at.isoformat(),
                     'updated_at': entity.updated_at.isoformat()
                 }
