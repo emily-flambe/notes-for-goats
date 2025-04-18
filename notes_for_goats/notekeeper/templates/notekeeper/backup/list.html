@@ -6,13 +6,32 @@
 <div class="container">
     <h1>Database Backups</h1>
     
-    <p class="backup-info"><i>Notes for Goats automatically creates backups whenever you make important changes to your data. Backups are stored locally and limited to a maximum of {{ max_backups }} files, with older backups being automatically removed. You can also create manual backups at any time using the button below.</i></p>
+    <p class="backup-info"><i>Notes for Goats automatically creates backups whenever you make important changes to your data. Backups are stored locally and limited to a maximum of {{ max_backups }} files, with older backups being automatically removed. You can also create manual backups or upload existing database files using the buttons below.</i></p>
     
     <div class="actions">
         <form method="post" action="{% url 'notekeeper:create_backup' %}">
             {% csrf_token %}
             <button type="submit" class="btn">Create Manual Backup</button>
         </form>
+        
+        <form method="post" action="{% url 'notekeeper:upload_backup' %}" enctype="multipart/form-data" id="upload-form">
+            {% csrf_token %}
+            <input type="file" name="backup_file" id="backup_file" accept=".sqlite3" style="display: none;">
+            <button type="button" class="btn" id="upload-trigger">Upload Backup</button>
+        </form>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>File Already Exists</h3>
+            <p>A backup file with the name <span id="existing-filename"></span> already exists.</p>
+            <p>Do you want to overwrite the existing file?</p>
+            <div class="modal-actions">
+                <button id="confirm-overwrite" class="btn btn-danger">Overwrite</button>
+                <button id="cancel-overwrite" class="btn">Cancel</button>
+            </div>
+        </div>
     </div>
     
     <div class="backup-sections">
@@ -23,7 +42,7 @@
                         <tr>
                             <th>Backup File</th>
                             <th>Created</th>
-                            <th>Change Type</th>
+                            <th>Type</th>
                             <th>Size</th>
                             <th>Actions</th>
                         </tr>
@@ -101,6 +120,12 @@
     
     .actions {
         margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .actions form {
+        margin: 0;
     }
     
     .change-type {
@@ -144,5 +169,204 @@
     .btn-danger:hover {
         background-color: #c53030;
     }
+    
+    /* Modal styles */
+    .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-content {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 4px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        max-width: 500px;
+        width: 90%;
+    }
+    
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    /* Notification styles */
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background-color: #fff;
+        color: #333;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 1100;
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: opacity 0.3s, transform 0.3s;
+        max-width: 300px;
+    }
+    
+    .notification.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .notification.warning {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .notification.success {
+        background-color: #d4edda;
+        border-left: 4px solid #28a745;
+    }
+    
+    .notification.error {
+        background-color: #f8d7da;
+        border-left: 4px solid #dc3545;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const uploadTrigger = document.getElementById('upload-trigger');
+        const fileInput = document.getElementById('backup_file');
+        const uploadForm = document.getElementById('upload-form');
+        const modal = document.getElementById('confirmation-modal');
+        const existingFilename = document.getElementById('existing-filename');
+        const confirmOverwrite = document.getElementById('confirm-overwrite');
+        const cancelOverwrite = document.getElementById('cancel-overwrite');
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        
+        let selectedFile = null;
+        
+        // When the "Upload Backup" button is clicked, trigger the hidden file input
+        uploadTrigger.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        // When a file is selected, check if it already exists
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length > 0) {
+                selectedFile = fileInput.files[0];
+                
+                // Check if file with this name already exists
+                const formData = new FormData();
+                formData.append('filename', selectedFile.name);
+                formData.append('csrfmiddlewaretoken', csrfToken);
+                
+                fetch('{% url "notekeeper:check_backup_exists" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        // Show confirmation modal
+                        existingFilename.textContent = data.filename;
+                        modal.style.display = 'flex';
+                    } else {
+                        // No conflict, proceed with upload
+                        uploadForm.submit();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking if file exists:', error);
+                    // Fall back to direct upload on error
+                    if (confirm('Upload file: ' + selectedFile.name + '?')) {
+                        uploadForm.submit();
+                    }
+                });
+            }
+        });
+        
+        // Handle confirm overwrite
+        confirmOverwrite.addEventListener('click', function() {
+            modal.style.display = 'none';
+            uploadForm.submit();
+        });
+        
+        // Handle cancel overwrite
+        cancelOverwrite.addEventListener('click', function() {
+            modal.style.display = 'none';
+            // Reset file input
+            fileInput.value = '';
+            selectedFile = null;
+            
+            // Redirect to the same page with a message parameter to show cancellation message
+            window.location.href = '{% url "notekeeper:backup_list" %}?message=cancelled';
+        });
+        
+        // Close modal if user clicks outside of it
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+                // Reset file input
+                fileInput.value = '';
+                selectedFile = null;
+                
+                // Redirect to the same page with a message parameter to show cancellation message
+                window.location.href = '{% url "notekeeper:backup_list" %}?message=cancelled';
+            }
+        });
+        
+        // Check for message parameter on page load
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('message') === 'cancelled') {
+            // Remove the message parameter from the URL
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+            
+            // Submit a form to create a Django message
+            const messageForm = document.createElement('form');
+            messageForm.method = 'POST';
+            messageForm.action = '{% url "notekeeper:show_message" %}';
+            messageForm.style.display = 'none';
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken;
+            
+            const messageInput = document.createElement('input');
+            messageInput.type = 'hidden';
+            messageInput.name = 'message';
+            messageInput.value = 'File upload cancelled.';
+            
+            const messageTypeInput = document.createElement('input');
+            messageTypeInput.type = 'hidden';
+            messageTypeInput.name = 'message_type';
+            messageTypeInput.value = 'warning';
+            
+            const redirectInput = document.createElement('input');
+            redirectInput.type = 'hidden';
+            redirectInput.name = 'redirect_url';
+            redirectInput.value = '{% url "notekeeper:backup_list" %}';
+            
+            messageForm.appendChild(csrfInput);
+            messageForm.appendChild(messageInput);
+            messageForm.appendChild(messageTypeInput);
+            messageForm.appendChild(redirectInput);
+            
+            document.body.appendChild(messageForm);
+            messageForm.submit();
+        }
+    });
+</script>
 {% endblock %} 

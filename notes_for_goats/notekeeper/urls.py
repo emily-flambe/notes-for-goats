@@ -56,6 +56,11 @@ urlpatterns = [
     # Backup URLs
     path('backups/', views.backup_list, name='backup_list'),
     path('backups/create/', views.create_manual_backup, name='create_backup'),
+    path('backups/check-exists/', views.check_backup_exists, name='check_backup_exists'),
+    path('backups/upload/', views.upload_backup, name='upload_backup'),
     path('backups/download/<str:filename>/', views.download_backup, name='download_backup'),
     path('backups/restore/<str:filename>/', views.restore_backup, name='restore_backup'),
+
+    # Utility URLs
+    path('show-message/', views.show_message, name='show_message'),
 ] 
