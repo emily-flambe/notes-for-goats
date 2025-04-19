@@ -10,6 +10,7 @@ A personal note-taking application designed for professionals to organize struct
 ![Entities](screenshots/entities.png)
 ![Relationships](screenshots/relationships.png)
 ![Backups](screenshots/backups.png)
+![AI](screenshots/ai.png)
 
 </details>
 
@@ -29,6 +30,9 @@ The easiest way to get started is with Docker:
    # Clone the repository
    git clone https://github.com/yourusername/notes-for-goats.git
    cd notes-for-goats
+   
+   # Set up environment variables (including OpenAI API key)
+   make env
    
    # Build and start the application
    docker-compose up -d
@@ -61,6 +65,9 @@ If you prefer to run directly on your machine:
    git clone https://github.com/yourusername/notes-for-goats.git
    cd notes-for-goats
    
+   # Set up environment variables (including OpenAI API key)
+   make env
+   
    # Create and activate a virtual environment
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -79,6 +86,27 @@ If you prefer to run directly on your machine:
 3. **Access the application**
    - Main app: http://127.0.0.1:8000/
    - Admin interface: http://127.0.0.1:8000/admin/
+
+### Setting Up Environment Variables
+
+Notes for Goats uses a `.env` file to store configuration settings. Use our convenient setup script to create this file:
+
+1. **Run the setup command**
+   
+   ```bash
+   make env
+   ```
+
+2. **Follow the prompts**
+   - For each variable, you'll see the default value
+   - Press Enter to accept the default or type a new value
+   - For the SECRET_KEY, a secure random key will be generated automatically
+   - **When prompted for OPENAI_API_KEY**, enter your OpenAI API key
+     (Get one at https://platform.openai.com/api-keys if you don't have one)
+
+3. **The script creates a `.env` file** containing all your settings
+
+Your OpenAI API key is required for the Ask AI feature. If you don't have one yet, you can still run the application, but the AI features won't work.
 
 ## How to Use Notes for Goats
 
@@ -148,6 +176,32 @@ Relationships help you track connections between entities:
    - Example: When two people work on the same project, create a "Collaborator" relationship
    - Automatically maintain your organizational structure with minimal effort
 
+### Ask AI
+
+The Ask AI feature lets you interact with your notes using natural language:
+
+1. **Accessing Ask AI**
+   - From any workspace, click on the "Ask AI" button
+   - You'll see a form where you can enter your question
+
+2. **How It Works**
+   - The AI analyzes your notes, entities, and relationships within the current workspace
+   - It uses this context to provide informed answers to your questions
+   - The AI response is generated using OpenAI's language models
+
+3. **Example Questions**
+   - "Summarize what I know about Project X"
+   - "What were the key points from my meeting with Alice last week?"
+   - "What relationships exist between the Marketing team and the Sales team?"
+   - "Find all notes mentioning budget concerns"
+
+4. **Limitations**
+   - Responses are based only on the information in your notes
+   - The AI cannot access external information or your personal knowledge
+   - Quality of responses depends on the detail and organization of your notes
+
+Note: The Ask AI feature requires a valid OpenAI API key to be configured in your `.env` file.
+
 ## Data Backup and Migration
 
 Keep your valuable notes safe:
@@ -161,39 +215,4 @@ Keep your valuable notes safe:
 2. **Direct Database Backup**
    - For standard installations: Copy the `db.sqlite3` file to a secure location
    - For Docker installations:
-     ```bash
-     docker-compose exec web bash -c "cd notes_for_goats && python manage.py export_data"
      ```
-
-### Importing Data
-
-1. **Import a Workspace**
-   - From the Workspaces page, click "Import Workspace"
-   - Select your exported JSON file
-   - Review and confirm the import
-
-## Planned Features
-
-### AI stuff lmao
-
-Provide summaries, answer questions! It'll be great! RAG even maybe???
-
-### Google Calendar integration
-
-Read your calendar! Link events to notes! Use events to start new notes from a template! I don't know lol
-
-### Note templates
-
-Create templates for notes and use them to create new notes!
-
-### Cute visual graph of relationships
-
-I dunno, D3 or something lmao
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-*Notes for Goats: Because you're worth it* 🐐📝

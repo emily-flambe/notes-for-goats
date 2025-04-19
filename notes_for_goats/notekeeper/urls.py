@@ -63,4 +63,7 @@ urlpatterns = [
 
     # Utility URLs
     path('show-message/', views.show_message, name='show_message'),
+
+    # Ask AI
+    path('workspaces/<int:workspace_id>/ask-ai/', views.ask_ai, name='ask_ai'),
 ] 

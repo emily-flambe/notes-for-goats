@@ -1,0 +1,56 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Ask AI - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Ask AI</h1>
+        <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn btn-outline-secondary">
+            Back to {{ workspace.name }}
+        </a>
+    </div>
+    
+    <p class="text-muted">Ask questions about your notes and get AI-powered answers based on the data in your {{ workspace.name }} workspace.</p>
+    
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="POST" id="ai-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="user_query">Your Question:</label>
+                    <textarea name="user_query" id="user_query" class="form-control" rows="3" 
+                        placeholder="E.g., Summarize my notes about ProjectX or What did I discuss with Alice last week?" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3" id="submit-btn">Ask AI</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="loading" class="text-center my-4" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Thinking...</p>
+    </div>
+    
+    {% if ai_response %}
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">AI Response</h5>
+        </div>
+        <div class="card-body">
+            <div class="ai-response">{{ ai_response|linebreaks }}</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.getElementById('ai-form').addEventListener('submit', function() {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('submit-btn').disabled = true;
+        document.getElementById('submit-btn').innerHTML = 'Processing...';
+    });
+</script>
+{% endblock %}
