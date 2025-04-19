@@ -18,6 +18,8 @@ from django.conf import settings
 import shutil
 import glob
 import datetime
+import openai
+import json
 
 def home(request):
     """
@@ -1142,3 +1144,98 @@ def show_message(request):
     
     return redirect(redirect_url)
 
+def ask_ai(request, workspace_id):
+    """
+    View for the Ask AI page with workspace context
+    """
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    ai_response = None
+    
+    if request.method == 'POST':
+        user_query = request.POST.get('user_query', '')
+        
+        # If we have a valid API key and a query
+        if settings.OPENAI_API_KEY and user_query:
+            try:
+                # Fetch context data from database for this workspace
+                context_data = get_database_context(workspace)
+                
+                # Create the prompt with context and user query
+                prompt = f"""
+                I have a personal note-taking app with data from my "{workspace.name}" workspace:
+                
+                {context_data}
+                
+                Based on this information, please answer the following question:
+                {user_query}
+                """
+                
+                # Set up OpenAI client
+                client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+                
+                # Call the OpenAI API
+                response = client.chat.completions.create(
+                    model=settings.OPENAI_MODEL,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant that analyzes personal notes and provides insights."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=1000,
+                    temperature=0.7,
+                )
+                
+                # Extract the response text
+                ai_response = response.choices[0].message.content
+                
+            except Exception as e:
+                ai_response = f"Error: {str(e)}"
+        else:
+            if not settings.OPENAI_API_KEY:
+                ai_response = "Error: OpenAI API key is not configured. Please add OPENAI_API_KEY in your settings."
+            else:
+                ai_response = "Error: No question provided."
+    
+    return render(request, 'notekeeper/ai/ask_ai.html', {
+        'workspace': workspace,
+        'ai_response': ai_response,
+    })
+
+def get_database_context(workspace):
+    """
+    Retrieve relevant data from the database for a specific workspace
+    """
+    # Filter by workspace
+    entities = Entity.objects.filter(workspace=workspace)
+    notes = Note.objects.filter(workspace=workspace)
+    relationships = Relationship.objects.filter(workspace=workspace)
+    
+    # Format the data as a string
+    context = f"WORKSPACE: {workspace.name}\n"
+    if workspace.description:
+        context += f"Description: {workspace.description}\n\n"
+    else:
+        context += "\n"
+    
+    context += "ENTITIES:\n"
+    for entity in entities:
+        context += f"- {entity.name} (Type: {entity.type})\n"
+        if entity.details:
+            context += f"  Details: {entity.details}\n"
+        if entity.tags:
+            context += f"  Tags: {entity.tags}\n"
+    
+    context += "\nNOTES:\n"
+    for note in notes:
+        context += f"- {note.title} (Date: {note.timestamp.strftime('%Y-%m-%d')})\n"
+        context += f"  Content: {note.content}\n"
+        if note.referenced_entities.exists():
+            entities_list = ", ".join([e.name for e in note.referenced_entities.all()])
+            context += f"  References: {entities_list}\n"
+    
+    context += "\nRELATIONSHIPS:\n"
+    for rel in relationships:
+        context += f"- {rel}\n"
+        if rel.details:
+            context += f"  Details: {rel.details}\n"
+    
+    return context 
