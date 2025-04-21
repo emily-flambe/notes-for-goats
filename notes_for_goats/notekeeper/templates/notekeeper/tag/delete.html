@@ -1,0 +1,38 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Delete Tag - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h1>Delete Tag</h1>
+        
+        <p>Are you sure you want to delete the tag <strong>#{{ tag.name }}</strong>?</p>
+        
+        <p class="warning">
+            This will remove the tag from {{ tag.tagged_entities.count }} entities and {{ tag.tagged_notes.count }} notes.
+            This action cannot be undone.
+        </p>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">Delete Tag</button>
+                <a href="{% url 'notekeeper:tag_detail' workspace_id=workspace.id pk=tag.id %}" class="btn">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .warning {
+        color: #e53e3e;
+        background-color: #fed7d7;
+        border-radius: 4px;
+        padding: 10px;
+        margin: 15px 0;
+    }
+</style>
+{% endblock %} 

@@ -21,167 +21,185 @@
     </div>
     
     <!-- Filter section -->
-    <div class="filter-section card">
-        <form id="relationship-filter-form" method="get" action="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}">
-            <div class="filter-controls">
+    <div class="card">
+        <div class="filter-section">
+            <form id="relationship-filter-form" method="get" action="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="filter-controls">
+                <!-- Entity filter -->
                 <div class="filter-group">
                     <label for="entity_filter">Filter by Entity:</label>
-                    <div class="filter-dropdown-container">
-                        <select id="entity_filter" name="entity_id" class="searchable-select">
-                            <option value="">All Entities</option>
-                            {% for entity in all_entities %}
-                                <option value="{{ entity.id }}" {% if selected_entity_id == entity.id %}selected{% endif %}>
-                                    {{ entity.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
+                    <select id="entity_filter" name="entity_id" class="searchable-select">
+                        <option value="">All Entities</option>
+                        {% for entity in all_entities %}
+                            <option value="{{ entity.id }}" {% if selected_entity_id == entity.id %}selected{% endif %}>
+                                {{ entity.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
                 
+                <!-- Relationship Type filter -->
                 <div class="filter-group">
                     <label for="relationship_type_filter">Filter by Relationship Type:</label>
-                    <div class="filter-dropdown-container">
-                        <select id="relationship_type_filter" name="relationship_type_id" class="searchable-select">
-                            <option value="">All Relationship Types</option>
-                            {% for rel_type in all_relationship_types %}
-                                <option value="{{ rel_type.id }}" {% if selected_relationship_type_id == rel_type.id %}selected{% endif %}>
-                                    {{ rel_type.display_name }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                    <select id="relationship_type_filter" name="relationship_type_id" class="searchable-select">
+                        <option value="">All Relationship Types</option>
+                        {% for rel_type in all_relationship_types %}
+                            <option value="{{ rel_type.id }}" {% if selected_relationship_type_id == rel_type.id %}selected{% endif %}>
+                                {{ rel_type.display_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="filter-buttons">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="btn">Clear</a>
+                </div>
+            </form>
+        </div>
+        
+        {% if relationships %}
+            <div class="card relationships-list-container">
+                {% if selected_entity_id or selected_relationship_type_id %}
+                    <div class="active-filters">
+                        <span>Active Filters:</span>
+                        {% if selected_entity_id %}
+                            <span class="filter-badge">
+                                Entity: {{ selected_entity_name }}
+                                <a href="?{% if selected_relationship_type_id %}relationship_type_id={{ selected_relationship_type_id }}{% endif %}" class="filter-remove" title="Remove filter">×</a>
+                            </span>
+                        {% endif %}
+                        
+                        {% if selected_relationship_type_id %}
+                            <span class="filter-badge">
+                                Type: {{ selected_relationship_type_name }}
+                                <a href="?{% if selected_entity_id %}entity_id={{ selected_entity_id }}{% endif %}" class="filter-remove" title="Remove filter">×</a>
+                            </span>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                
+                <div class="relationships-list-wrapper">
+                    <div class="relationship-count">
+                        {{ relationships|length }} relationship{{ relationships|length|pluralize }} found
+                    </div>
+                    
+                    <div class="scrollable-table-wrapper">
+                        <table class="table" id="relationships-table">
+                            <colgroup>
+                                <col style="width: 15%;">  <!-- Source - narrower -->
+                                <col style="width: 15%;">  <!-- Relationship -->
+                                <col style="width: 15%;">  <!-- Target - narrower -->
+                                <col style="width: 40%;">  <!-- details - much wider column -->
+                                <col style="width: 15%;">  <!-- Actions -->
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="source">Source <span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-column="relationship">Relationship <span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-column="target">Target <span class="sort-icon">↕</span></th>
+                                    <th>Details</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rel in relationships %}
+                                <tr class="relationship-row">
+                                    <td class="entity-cell" data-sort-value="{{ rel.source|stringformat:'s'|lower }}">
+                                        <div class="entity-name">
+                                            {% if rel.source_content_type.model == 'entity' %}
+                                                <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.source_object_id %}">
+                                                    {{ rel.source }}
+                                                </a>
+                                            {% else %}
+                                                {{ rel.source }}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="relationship-cell" data-sort-value="{{ rel.relationship_type.display_name|lower }}">
+                                        <div class="relationship-wrapper">
+                                            <div class="relationship-direction primary">
+                                                {{ rel.relationship_type.display_name }}
+                                            </div>
+                                            {% if rel.relationship_type.is_directional %}
+                                                <div class="relationship-direction inverse">
+                                                    {% if rel.relationship_type.inverse_name %}
+                                                        ← {{ rel.relationship_type.inverse_name }}
+                                                    {% else %}
+                                                        ← {{ rel.relationship_type.display_name }}
+                                                        <span class="inverse-indicator">(inv)</span>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="entity-cell" data-sort-value="{{ rel.target|stringformat:'s'|lower }}">
+                                        <div class="entity-name">
+                                            {% if rel.target_content_type.model == 'entity' %}
+                                                <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.target_object_id %}">
+                                                    {{ rel.target }}
+                                                </a>
+                                            {% else %}
+                                                {{ rel.target }}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="details-cell">
+                                        <div class="details-content">
+                                            {{ rel.details|truncatechars:100|default:"-" }}
+                                        </div>
+                                    </td>
+                                    <td class="actions-cell">
+                                        <div class="action-buttons">
+                                            <a href="{% url 'notekeeper:relationship_edit' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm">Edit</a>
+                                            <a href="{% url 'notekeeper:relationship_delete' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm btn-danger">Delete</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                
-                <div class="filter-actions">
-                    <button type="submit" class="btn btn-primary">Apply Filters</button>
-                    <a href="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="btn btn-outline">Clear Filters</a>
-                </div>
             </div>
-        </form>
+        {% else %}
+            <div class="empty-state">
+                {% if selected_entity_id or selected_relationship_type_id %}
+                    <p>No relationships found matching your filters.</p>
+                    <a href="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="btn">View All Relationships</a>
+                {% elif entity %}
+                    <p>No relationships defined for {{ entity.name }}.</p>
+                {% else %}
+                    <p>No relationships defined in this workspace.</p>
+                {% endif %}
+                <p>Relationships connect entities together in meaningful ways.</p>
+            </div>
+        {% endif %}
     </div>
-    
-    {% if relationships %}
-        <div class="card relationships-list-container">
-            {% if selected_entity_id or selected_relationship_type_id %}
-                <div class="active-filters">
-                    <span>Active Filters:</span>
-                    {% if selected_entity_id %}
-                        <span class="filter-badge">
-                            Entity: {{ selected_entity_name }}
-                            <a href="?{% if selected_relationship_type_id %}relationship_type_id={{ selected_relationship_type_id }}{% endif %}" class="filter-remove" title="Remove filter">×</a>
-                        </span>
-                    {% endif %}
-                    
-                    {% if selected_relationship_type_id %}
-                        <span class="filter-badge">
-                            Type: {{ selected_relationship_type_name }}
-                            <a href="?{% if selected_entity_id %}entity_id={{ selected_entity_id }}{% endif %}" class="filter-remove" title="Remove filter">×</a>
-                        </span>
-                    {% endif %}
-                </div>
-            {% endif %}
-            
-            <div class="relationships-list-wrapper">
-                <div class="relationship-count">
-                    {{ relationships|length }} relationship{{ relationships|length|pluralize }} found
-                </div>
-                
-                <div class="scrollable-table-wrapper">
-                    <table class="table" id="relationships-table">
-                        <colgroup>
-                            <col style="width: 15%;">  <!-- Source - narrower -->
-                            <col style="width: 15%;">  <!-- Relationship -->
-                            <col style="width: 15%;">  <!-- Target - narrower -->
-                            <col style="width: 40%;">  <!-- details - much wider column -->
-                            <col style="width: 15%;">  <!-- Actions -->
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                <th class="sortable" data-column="source">Source <span class="sort-icon">↕</span></th>
-                                <th class="sortable" data-column="relationship">Relationship <span class="sort-icon">↕</span></th>
-                                <th class="sortable" data-column="target">Target <span class="sort-icon">↕</span></th>
-                                <th>Details</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for rel in relationships %}
-                            <tr class="relationship-row">
-                                <td class="entity-cell" data-sort-value="{{ rel.source|stringformat:'s'|lower }}">
-                                    <div class="entity-name">
-                                        {% if rel.source_content_type.model == 'entity' %}
-                                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.source_object_id %}">
-                                                {{ rel.source }}
-                                            </a>
-                                        {% else %}
-                                            {{ rel.source }}
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td class="relationship-cell" data-sort-value="{{ rel.relationship_type.display_name|lower }}">
-                                    <div class="relationship-wrapper">
-                                        <div class="relationship-direction primary">
-                                            {{ rel.relationship_type.display_name }}
-                                        </div>
-                                        {% if rel.relationship_type.is_directional %}
-                                            <div class="relationship-direction inverse">
-                                                {% if rel.relationship_type.inverse_name %}
-                                                    ← {{ rel.relationship_type.inverse_name }}
-                                                {% else %}
-                                                    ← {{ rel.relationship_type.display_name }}
-                                                    <span class="inverse-indicator">(inv)</span>
-                                                {% endif %}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td class="entity-cell" data-sort-value="{{ rel.target|stringformat:'s'|lower }}">
-                                    <div class="entity-name">
-                                        {% if rel.target_content_type.model == 'entity' %}
-                                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=rel.target_object_id %}">
-                                                {{ rel.target }}
-                                            </a>
-                                        {% else %}
-                                            {{ rel.target }}
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td class="details-cell">
-                                    <div class="details-content">
-                                        {{ rel.details|truncatechars:100|default:"-" }}
-                                    </div>
-                                </td>
-                                <td class="actions-cell">
-                                    <div class="action-buttons">
-                                        <a href="{% url 'notekeeper:relationship_edit' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm">Edit</a>
-                                        <a href="{% url 'notekeeper:relationship_delete' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm btn-danger">Delete</a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    {% else %}
-        <div class="empty-state">
-            {% if selected_entity_id or selected_relationship_type_id %}
-                <p>No relationships found matching your filters.</p>
-                <a href="{% url 'notekeeper:relationship_list' workspace_id=workspace.id %}" class="btn">View All Relationships</a>
-            {% elif entity %}
-                <p>No relationships defined for {{ entity.name }}.</p>
-            {% else %}
-                <p>No relationships defined in this workspace.</p>
-            {% endif %}
-            <p>Relationships connect entities together in meaningful ways.</p>
-        </div>
-    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
+    /* Filter controls styling */
+    .filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 15px;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+        padding-left: 15px;
+    }
+    
     /* Template-specific overrides only */
     .entity-name {
         word-break: break-word;

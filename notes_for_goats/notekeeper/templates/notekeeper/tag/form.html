@@ -1,0 +1,75 @@
+{% extends "notekeeper/base.html" %}
+{% load static %}
+
+{% block title %}{% if tag %}Edit Tag{% else %}New Tag{% endif %} - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{% if tag %}Edit Tag{% else %}New Tag{% endif %}</h1>
+    
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="{{ form.name.id_for_label }}">Tag Name:</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <div class="invalid-feedback" style="display: block;">
+                        {% for error in form.name.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">{{ form.name.help_text }}</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.related_entities.id_for_label }}">{{ form.related_entities.label }}:</label>
+                {{ form.related_entities }}
+                {% if form.related_entities.errors %}
+                    <div class="invalid-feedback" style="display: block;">
+                        {% for error in form.related_entities.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">{{ form.related_entities.help_text }}</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.related_notes.id_for_label }}">{{ form.related_notes.label }}:</label>
+                {{ form.related_notes }}
+                {% if form.related_notes.errors %}
+                    <div class="invalid-feedback" style="display: block;">
+                        {% for error in form.related_notes.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">{{ form.related_notes.help_text }}</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn">Save</button>
+                {% if tag %}
+                    <a href="{% url 'notekeeper:tag_detail' workspace_id=workspace.id pk=tag.id %}" class="btn">Cancel</a>
+                {% else %}
+                    <a href="{% url 'notekeeper:tag_list' workspace_id=workspace.id %}" class="btn">Back to Tags</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            width: '100%',
+            placeholder: 'Select items...'
+        });
+    });
+</script>
+{% endblock %} 
