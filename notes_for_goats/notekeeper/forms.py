@@ -169,3 +169,77 @@ class RelationshipInferenceRuleForm(forms.ModelForm):
             "For best results with relationships like 'Teammate' or 'Housemate', create a "
             "non-directional relationship type to represent mutual connections."
         )
+
+class TagForm(forms.ModelForm):
+    """Form for creating and editing Tag objects"""
+    # These are custom form fields, not model fields
+    related_entities = forms.ModelMultipleChoiceField(
+        queryset=Entity.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-control select2',
+        }),
+        label="Related Entities",
+        help_text="Select entities to tag with this tag"
+    )
+    
+    related_notes = forms.ModelMultipleChoiceField(
+        queryset=Note.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-control select2',
+        }),
+        label="Related Notes",
+        help_text="Select notes to tag with this tag"
+    )
+    
+    class Meta:
+        model = Tag
+        fields = ['name']  # Only include actual model fields
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter tag name (without # symbol)'
+            }),
+        }
+        help_texts = {
+            'name': 'Enter the tag name without the # symbol (e.g., "important" not "#important")',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        # Extract workspace but don't pass it to the parent class
+        workspace = kwargs.pop('workspace', None)
+        super().__init__(*args, **kwargs)
+        
+        if workspace:
+            # Filter related entities and notes by workspace
+            self.fields['related_entities'].queryset = Entity.objects.filter(
+                workspace=workspace
+            ).order_by('name')
+            
+            self.fields['related_notes'].queryset = Note.objects.filter(
+                workspace=workspace
+            ).order_by('-timestamp')
+            
+            # If we're editing an existing tag, pre-select the related entities and notes
+            if self.instance and self.instance.pk:
+                self.fields['related_entities'].initial = self.instance.tagged_entities.all()
+                self.fields['related_notes'].initial = self.instance.tagged_notes.all()
+    
+    def save(self, commit=True):
+        tag = super().save(commit=commit)
+        
+        if commit:
+            # Handle the related entities and notes
+            tag.tagged_entities.clear()
+            tag.tagged_notes.clear()
+            
+            # Add the selected entities
+            if self.cleaned_data['related_entities']:
+                tag.tagged_entities.add(*self.cleaned_data['related_entities'])
+            
+            # Add the selected notes
+            if self.cleaned_data['related_notes']:
+                tag.tagged_notes.add(*self.cleaned_data['related_notes'])
+        
+        return tag

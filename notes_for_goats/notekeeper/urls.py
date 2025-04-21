@@ -16,6 +16,7 @@ urlpatterns = [
     path('workspaces/<int:workspace_id>/note/<int:pk>/', views.note_detail, name='note_detail'),
     path('workspaces/<int:workspace_id>/note/new/', views.note_create, name='note_create'),
     path('workspaces/<int:workspace_id>/note/<int:pk>/edit/', views.note_edit, name='note_edit'),
+    path('workspaces/<int:workspace_id>/note/<int:pk>/delete/', views.note_delete, name='note_delete'),
     
     path('workspaces/<int:workspace_id>/entities/', views.entity_list, name='entity_list'),
     path('workspaces/<int:workspace_id>/entities/<int:pk>/', views.entity_detail, name='entity_detail'),
@@ -69,4 +70,11 @@ urlpatterns = [
 
     # Save AI Chat
     path('workspaces/<int:workspace_id>/save-ai-chat/', views.save_ai_chat, name='save_ai_chat'),
+
+    # Tag URLs
+    path('workspaces/<int:workspace_id>/tags/', views.tag_list, name='tag_list'),
+    path('workspaces/<int:workspace_id>/tags/create/', views.tag_create, name='tag_create'),
+    path('workspaces/<int:workspace_id>/tags/<int:pk>/', views.tag_detail, name='tag_detail'),
+    path('workspaces/<int:workspace_id>/tags/<int:pk>/edit/', views.tag_edit, name='tag_edit'),
+    path('workspaces/<int:workspace_id>/tags/<int:pk>/delete/', views.tag_delete, name='tag_delete'),
 ] 

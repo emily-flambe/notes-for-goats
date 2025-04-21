@@ -110,22 +110,16 @@ class Note(models.Model):
             
             # Add new tags
             for hashtag in lower_hashtags:
-                tag, _ = Tag.objects.get_or_create(
+                tag, created = Tag.objects.get_or_create(
                     workspace=self.workspace,
                     name=hashtag
                 )
                 self.tags.add(tag)
         
-        if not lower_hashtags:
-            # No hashtags found, clear references and return early
-            self.referenced_entities.clear()
-            return
-        
         # Clear existing references to rebuild them
         self.referenced_entities.clear()
         
         # Get all entities from this workspace
-        from .models import Entity  # Import here to avoid circular imports
         workspace_entities = Entity.objects.filter(workspace=self.workspace)
         
         # Entities to add to referenced_entities

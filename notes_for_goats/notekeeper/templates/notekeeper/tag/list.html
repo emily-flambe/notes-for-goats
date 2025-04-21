@@ -1,0 +1,268 @@
+{% extends "notekeeper/base.html" %}
+{% load static %}
+
+{% block title %}Tags - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Tags</h1>
+        <div class="header-actions">
+            <a href="{% url 'notekeeper:tag_create' workspace_id=workspace.id %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Tag
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filter section -->
+    <div class="card">
+        <div class="filter-section">
+            <form id="tag-filter-form" method="get" action="{% url 'notekeeper:tag_list' workspace_id=workspace.id %}" class="filter-controls">
+                <div class="filter-group">
+                    <label for="search_filter">Search Tags:</label>
+                    <input type="text" id="search_filter" name="q" value="{{ request.GET.q|default:'' }}" 
+                           placeholder="Search by name...">
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="filter-buttons">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="{% url 'notekeeper:tag_list' workspace_id=workspace.id %}" class="btn">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    {% if tags %}
+        <div class="card relationships-list-container">
+            {% if request.GET.q %}
+                <div class="active-filters">
+                    <span>Active Filters:</span>
+                    <span class="filter-badge">
+                        Search: {{ request.GET.q }}
+                        <a href="{% url 'notekeeper:tag_list' workspace_id=workspace.id %}" class="filter-remove" title="Remove filter">×</a>
+                    </span>
+                </div>
+            {% endif %}
+            
+            <div class="relationships-list-wrapper">
+                <div class="relationship-count">
+                    {{ tags|length }} tag{{ tags|length|pluralize }} found
+                </div>
+                
+                <div class="scrollable-table-wrapper">
+                    <table class="table" id="tags-table">
+                        <colgroup>
+                            <col style="width: 25%;">  <!-- Tag name -->
+                            <col style="width: 15%;">  <!-- Entities -->
+                            <col style="width: 15%;">  <!-- Notes -->
+                            <col style="width: 15%;">  <!-- Created -->
+                            <col style="width: 30%;">  <!-- Actions -->
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-column="name">Tag Name <span class="sort-icon">↕</span></th>
+                                <th class="sortable" data-column="entities">Entities <span class="sort-icon">↕</span></th>
+                                <th class="sortable" data-column="notes">Notes <span class="sort-icon">↕</span></th>
+                                <th class="sortable" data-column="created">Created <span class="sort-icon">↕</span></th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tag in tags %}
+                            <tr class="tag-row">
+                                <td class="tag-name-cell" data-sort-value="{{ tag.name|lower }}">
+                                    <a href="{% url 'notekeeper:tag_detail' workspace_id=workspace.id pk=tag.id %}">
+                                        #{{ tag.name }}
+                                    </a>
+                                </td>
+                                <td class="tag-count-cell" data-sort-value="{{ tag.tagged_entities.count }}">
+                                    <span class="count-badge">{{ tag.tagged_entities.count }}</span>
+                                </td>
+                                <td class="tag-count-cell" data-sort-value="{{ tag.tagged_notes.count }}">
+                                    <span class="count-badge">{{ tag.tagged_notes.count }}</span>
+                                </td>
+                                <td class="tag-date-cell" data-sort-value="{{ tag.created_at|date:'Ymd' }}">
+                                    {{ tag.created_at|date:"Y-m-d" }}
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="action-buttons">
+                                        <a href="{% url 'notekeeper:tag_edit' workspace_id=workspace.id pk=tag.id %}" class="btn btn-sm">Edit</a>
+                                        <a href="{% url 'notekeeper:tag_delete' workspace_id=workspace.id pk=tag.id %}" class="btn btn-sm btn-danger">Delete</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            {% if request.GET.q %}
+                <p>No tags found matching your search.</p>
+                <a href="{% url 'notekeeper:tag_list' workspace_id=workspace.id %}" class="btn">View All Tags</a>
+            {% else %}
+                <p>No tags created in this workspace.</p>
+            {% endif %}
+            <p>Tags help you organize entities and notes with common themes or attributes.</p>
+            <a href="{% url 'notekeeper:tag_create' workspace_id=workspace.id %}" class="btn btn-primary">Create Your First Tag</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Filter controls styling */
+    .filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 15px;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+        padding-left: 15px;
+    }
+
+    /* Tag-specific styling */
+    .tag-name-cell a {
+        font-weight: 500;
+        color: #3182ce;
+    }
+    
+    .tag-count-cell {
+        text-align: center;
+    }
+    
+    .count-badge {
+        display: inline-block;
+        background-color: #edf2f7;
+        border-radius: 30px;
+        padding: 3px 10px;
+        font-size: 0.9em;
+        color: #4a5568;
+        text-align: center;
+        min-width: 32px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Enhanced table sorting with three states
+        const table = document.getElementById('tags-table');
+        if (!table) return;
+        
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        
+        // Save original order of rows
+        const originalRows = Array.from(tbody.querySelectorAll('tr')).map(row => row.cloneNode(true));
+        
+        // Add click handlers to sortable headers
+        const sortableHeaders = table.querySelectorAll('th.sortable');
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                // Determine next sort state (none → asc → desc → none)
+                let nextState = 'asc';
+                if (this.classList.contains('sorted-asc')) {
+                    nextState = 'desc';
+                } else if (this.classList.contains('sorted-desc')) {
+                    nextState = 'none';
+                }
+                
+                // Remove sorting classes from all headers
+                sortableHeaders.forEach(h => {
+                    h.classList.remove('sorted-asc', 'sorted-desc');
+                    const icon = h.querySelector('.sort-icon');
+                    if (icon) icon.textContent = '↕';
+                });
+                
+                // Find column index
+                const headerRow = table.querySelector('thead tr');
+                const headers = Array.from(headerRow.querySelectorAll('th'));
+                const columnIndex = headers.indexOf(this);
+                
+                if (nextState === 'asc') {
+                    // Sort ascending
+                    this.classList.add('sorted-asc');
+                    const sortIcon = this.querySelector('.sort-icon');
+                    if (sortIcon) sortIcon.textContent = '↑';
+                    
+                    sortTableByColumn(table, columnIndex, true);
+                } 
+                else if (nextState === 'desc') {
+                    // Sort descending
+                    this.classList.add('sorted-desc');
+                    const sortIcon = this.querySelector('.sort-icon');
+                    if (sortIcon) sortIcon.textContent = '↓';
+                    
+                    sortTableByColumn(table, columnIndex, false);
+                } 
+                else {
+                    // Restore original order
+                    restoreOriginalOrder();
+                }
+            });
+        });
+        
+        // Sort table by column
+        function sortTableByColumn(table, columnIndex, isAscending) {
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Sort rows
+            rows.sort((a, b) => {
+                const aCell = a.cells[columnIndex];
+                const bCell = b.cells[columnIndex];
+                
+                if (!aCell || !bCell) return 0;
+                
+                // Use data-sort-value if available, otherwise use text content
+                const aValue = aCell.getAttribute('data-sort-value') || 
+                              aCell.textContent.trim().toLowerCase();
+                const bValue = bCell.getAttribute('data-sort-value') || 
+                              bCell.textContent.trim().toLowerCase();
+                
+                // Compare the values
+                if (aValue < bValue) return isAscending ? -1 : 1;
+                if (aValue > bValue) return isAscending ? 1 : -1;
+                return 0;
+            });
+            
+            // Remove all existing rows
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+            
+            // Add sorted rows
+            rows.forEach(row => {
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Restore original table order
+        function restoreOriginalOrder() {
+            // Clear current rows
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+            
+            // Add original rows back
+            originalRows.forEach(originalRow => {
+                tbody.appendChild(originalRow.cloneNode(true));
+            });
+        }
+    });
+</script>
+{% endblock %} 

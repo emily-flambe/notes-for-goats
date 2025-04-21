@@ -252,6 +252,7 @@
                         <a href="{% url 'notekeeper:note_list' workspace_id=current_workspace.id %}">Notes</a>
                         <a href="{% url 'notekeeper:entity_list' workspace_id=current_workspace.id %}">Entities</a>
                         <a href="{% url 'notekeeper:relationship_list' workspace_id=current_workspace.id %}">Relationships</a>
+                        <a href="{% url 'notekeeper:tag_list' workspace_id=current_workspace.id %}">Tags</a>
                         <a href="{% url 'notekeeper:ask_ai' workspace_id=current_workspace.id %}">Ask AI</a>
                     {% endif %}
                 {% endif %}

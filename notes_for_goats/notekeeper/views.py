@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Workspace, Entity, Note, Relationship, RelationshipType, RelationshipInferenceRule, UserPreference
-from .forms import WorkspaceForm, NoteForm, EntityForm, RelationshipTypeForm, RelationshipForm, RelationshipInferenceRuleForm
+from .models import Workspace, Entity, Note, Relationship, RelationshipType, RelationshipInferenceRule, UserPreference, Tag
+from .forms import WorkspaceForm, NoteForm, EntityForm, RelationshipTypeForm, RelationshipForm, RelationshipInferenceRuleForm, TagForm
 import os
 import tempfile
 from django.http import HttpResponse, JsonResponse, FileResponse
@@ -51,8 +51,9 @@ def note_list(request, workspace_id):
     # Get all entity types from the model
     entity_types = Entity.ENTITY_TYPES
     
-    # Get entities for the dropdown, include the type field
+    # Get entities and tags for the dropdowns
     entities = Entity.objects.filter(workspace=workspace).order_by('name')
+    tags = Tag.objects.filter(workspace=workspace).order_by('name')
     
     # Count total notes before filtering
     total_notes_count = Note.objects.filter(workspace=workspace).count()
@@ -63,6 +64,7 @@ def note_list(request, workspace_id):
     # Handle filtering
     entity_filter = request.GET.get('entity')
     entity_type_filter = request.GET.get('entity_type')
+    tag_filter = request.GET.get('tag')
     search_query = request.GET.get('q')
     
     if entity_filter:
@@ -77,6 +79,10 @@ def note_list(request, workspace_id):
         # Filter notes that reference entities of the selected type
         notes = notes.filter(referenced_entities__type=entity_type_filter).distinct()
     
+    if tag_filter:
+        # Filter notes by selected tag
+        notes = notes.filter(tags__id=tag_filter)
+    
     if search_query:
         notes = notes.filter(
             Q(title__icontains=search_query) | 
@@ -85,8 +91,9 @@ def note_list(request, workspace_id):
     
     return render(request, 'notekeeper/note/list.html', {
         'workspace': workspace,
-        'notes': notes,
+        'notes': notes.distinct(),
         'entities': entities,
+        'tags': tags,
         'entity_types': entity_types,
         'total_notes_count': total_notes_count,
     })
@@ -151,6 +158,13 @@ def note_edit(request, workspace_id, pk):
         'entry': entry,
         'hashtags': hashtags
     })
+
+def note_delete(request, workspace_id, pk):
+    """View to delete a note entry"""
+    note = get_object_or_404(Note, pk=pk, workspace_id=workspace_id)
+    note.delete()
+    messages.success(request, "Note deleted successfully.")
+    return redirect('notekeeper:note_list', workspace_id=workspace_id)
 
 def entity_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
@@ -1317,4 +1331,95 @@ def save_ai_chat(request, workspace_id):
         return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=note.id)
     
     # Redirect back to ask_ai on non-POST requests
-    return redirect('notekeeper:ask_ai', workspace_id=workspace_id) 
+    return redirect('notekeeper:ask_ai', workspace_id=workspace_id)
+
+# Tag views
+def tag_list(request, workspace_id):
+    """Display all tags for a workspace with optional search"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    # Start with all tags for this workspace
+    tags_queryset = Tag.objects.filter(workspace=workspace)
+    
+    # Apply search filter if provided
+    search_query = request.GET.get('q', '')
+    if search_query:
+        tags_queryset = tags_queryset.filter(name__icontains=search_query)
+    
+    # Order by name by default
+    tags = tags_queryset.order_by('name')
+    
+    return render(request, 'notekeeper/tag/list.html', {
+        'workspace': workspace,
+        'tags': tags,
+    })
+
+def tag_detail(request, workspace_id, pk):
+    """Display details for a specific tag"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    tag = get_object_or_404(Tag, pk=pk, workspace=workspace)
+    
+    return render(request, 'notekeeper/tag/detail.html', {
+        'workspace': workspace,
+        'tag': tag,
+    })
+
+def tag_create(request, workspace_id):
+    """Create a new tag"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    if request.method == 'POST':
+        form = TagForm(request.POST, workspace=workspace)
+        if form.is_valid():
+            tag = form.save(commit=False)
+            tag.workspace = workspace
+            tag.save()
+            
+            # Save many-to-many relationships
+            form.save_m2m()
+            
+            messages.success(request, f'Tag "{tag.name}" created successfully.')
+            return redirect('notekeeper:tag_detail', workspace_id=workspace.id, pk=tag.id)
+    else:
+        form = TagForm(workspace=workspace)
+    
+    return render(request, 'notekeeper/tag/form.html', {
+        'workspace': workspace,
+        'form': form,
+    })
+
+def tag_edit(request, workspace_id, pk):
+    """Edit an existing tag"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    tag = get_object_or_404(Tag, pk=pk, workspace=workspace)
+    
+    if request.method == 'POST':
+        form = TagForm(request.POST, instance=tag, workspace=workspace)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Tag "{tag.name}" updated successfully.')
+            return redirect('notekeeper:tag_detail', workspace_id=workspace.id, pk=tag.id)
+    else:
+        form = TagForm(instance=tag, workspace=workspace)
+    
+    return render(request, 'notekeeper/tag/form.html', {
+        'workspace': workspace,
+        'tag': tag,
+        'form': form,
+    })
+
+def tag_delete(request, workspace_id, pk):
+    """Delete a tag"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    tag = get_object_or_404(Tag, pk=pk, workspace=workspace)
+    
+    if request.method == 'POST':
+        tag_name = tag.name
+        tag.delete()
+        messages.success(request, f'Tag "{tag_name}" deleted successfully.')
+        return redirect('notekeeper:tag_list', workspace_id=workspace.id)
+    
+    return render(request, 'notekeeper/tag/delete.html', {
+        'workspace': workspace,
+        'tag': tag,
+    }) 
