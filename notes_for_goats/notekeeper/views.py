@@ -93,15 +93,15 @@ def note_list(request, workspace_id):
 
 def note_detail(request, workspace_id, pk):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    entry = get_object_or_404(Note, pk=pk, workspace=workspace)
+    note = get_object_or_404(Note, pk=pk, workspace=workspace)
     
     # Extract hashtags from content for display
-    hashtags = re.findall(r'#(\w+)', entry.content)
+    hashtags = [tag.name for tag in note.tags.all()]
     
     return render(request, 'notekeeper/note/detail.html', {
         'workspace': workspace,
-        'entry': entry,
-        'hashtags': hashtags
+        'entry': note,
+        'hashtags': hashtags,
     })
 
 def note_create(request, workspace_id):
@@ -1258,8 +1258,9 @@ def get_database_context(workspace):
         context += f"- {entity.name} (Type: {entity.type})\n"
         if entity.details:
             context += f"  Details: {entity.details}\n"
-        if entity.tags:
-            context += f"  Tags: {entity.tags}\n"
+        if entity.tags.exists():
+            tag_list = ", ".join([tag.name for tag in entity.tags.all()])
+            context += f"  Tags: {tag_list}\n"
     
     context += "\nNOTES:\n"
     for note in notes:

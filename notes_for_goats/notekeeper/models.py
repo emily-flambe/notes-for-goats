@@ -6,6 +6,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User
 
+
 class Workspace(models.Model):
     """
     Top-level container for a set of related notes and entities.
@@ -22,6 +23,23 @@ class Workspace(models.Model):
     
     class Meta:
         ordering = ['name']
+        
+class Tag(models.Model):
+    """
+    Represents a hashtag that can be used across notes and entities
+    """
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='hashtags')
+    name = models.CharField(max_length=50)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('workspace', 'name')  # Tags are unique within a workspace
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"#{self.name}"
+
 
 class Entity(models.Model):
     """
@@ -39,7 +57,7 @@ class Entity(models.Model):
     details = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    tags = models.CharField(max_length=255, blank=True, default="")
+    tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_entities')
     
     def __str__(self):
         return self.name
@@ -49,29 +67,8 @@ class Entity(models.Model):
         return dict(self.ENTITY_TYPES).get(self.type, self.type)
     
     def get_tag_list(self):
-        """Return tags as a list, regardless of how they're stored"""
-        if not self.tags:
-            return []
-            
-        # If tags is already a list
-        if isinstance(self.tags, list):
-            return self.tags
-            
-        # If tags is a string
-        if isinstance(self.tags, str):
-            # Check if it looks like JSON
-            if self.tags.startswith('[') and self.tags.endswith(']'):
-                try:
-                    import json
-                    return json.loads(self.tags)
-                except json.JSONDecodeError:
-                    pass
-                    
-            # Otherwise split by comma
-            return [tag.strip() for tag in self.tags.split(',') if tag.strip()]
-            
-        # Default fallback
-        return []
+        """Return tags as a list from tags relationship"""
+        return [tag.name for tag in self.tags.all()]
     
     class Meta:
         verbose_name_plural = "Entities"
@@ -88,6 +85,7 @@ class Note(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='note_notes')
+    tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_notes')
     
     def __str__(self):
         return f"{self.timestamp.strftime('%Y-%m-%d')}: {self.title}"
@@ -104,6 +102,19 @@ class Note(models.Model):
         hashtags = re.findall(r'#(\w+)', self.content)
         # Convert to lowercase for case-insensitive matching
         lower_hashtags = [tag.lower() for tag in hashtags]
+        
+        # Create or get Tag objects for each hashtag
+        if lower_hashtags:
+            # Clear existing tags
+            self.tags.clear()
+            
+            # Add new tags
+            for hashtag in lower_hashtags:
+                tag, _ = Tag.objects.get_or_create(
+                    workspace=self.workspace,
+                    name=hashtag
+                )
+                self.tags.add(tag)
         
         if not lower_hashtags:
             # No hashtags found, clear references and return early
@@ -127,13 +138,10 @@ class Note(models.Model):
                 continue
             
             # Check if any entity tag matches any hashtag
-            entity_tags = entity.get_tag_list()
-            
-            # Convert tags to lowercase for case-insensitive matching
-            entity_tags_lower = [tag.lower() for tag in entity_tags]
+            entity_tags = [tag.name.lower() for tag in entity.tags.all()]
             
             # If any tag matches a hashtag, add the entity
-            if any(tag in lower_hashtags for tag in entity_tags_lower):
+            if any(tag in lower_hashtags for tag in entity_tags):
                 entities_to_add.append(entity)
         
         # Add all matching entities to referenced_entities

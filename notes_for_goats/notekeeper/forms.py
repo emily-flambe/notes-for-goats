@@ -1,5 +1,5 @@
 from django import forms
-from .models import Workspace, Note, Entity, RelationshipType, Relationship, RelationshipInferenceRule
+from .models import Workspace, Note, Entity, RelationshipType, Relationship, RelationshipInferenceRule, Tag
 
 class WorkspaceForm(forms.ModelForm):
     class Meta:
@@ -13,14 +13,36 @@ class WorkspaceForm(forms.ModelForm):
 class NoteForm(forms.ModelForm):
     class Meta:
         model = Note
-        fields = ['title', 'content', 'timestamp']
+        fields = ['title', 'content', 'timestamp', 'tags', 'referenced_entities']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 15}),
-            'timestamp': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
+            'timestamp': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'tags': forms.SelectMultiple(attrs={'class': 'form-control select2-tags'}),
+            'referenced_entities': forms.SelectMultiple(attrs={'class': 'form-control select2'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        workspace = kwargs.pop('workspace', None)
+        super().__init__(*args, **kwargs)
+        
+        if workspace:
+            # Filter tags by workspace
+            self.fields['tags'].queryset = Tag.objects.filter(workspace=workspace).order_by('name')
+            # Filter entities by workspace
+            self.fields['referenced_entities'].queryset = Entity.objects.filter(workspace=workspace).order_by('name')
 
 class EntityForm(forms.ModelForm):
+    # Define a char field for backwards compatibility with the template
+    tags_text = forms.CharField(
+        required=False, 
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter tags separated by commas (e.g., me, myself, I)'
+        }),
+        help_text='Enter tags separated by commas (e.g., me, myself, I)'
+    )
+    
     class Meta:
         model = Entity
         fields = ['name', 'type', 'details', 'tags']
@@ -28,14 +50,40 @@ class EntityForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'type': forms.Select(attrs={'class': 'form-control'}),
             'details': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
-            'tags': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter tags separated by commas (e.g., me, myself, I)'
-            })
+            'tags': forms.SelectMultiple(attrs={'class': 'form-control select2-tags'}),
         }
-        help_texts = {
-            'tags': 'Enter tags separated by commas (e.g., me, myself, I)'
-        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # If this is for an existing workspace, limit the tags choices
+        if self.instance and self.instance.pk and hasattr(self.instance, 'workspace'):
+            self.fields['tags'].queryset = Tag.objects.filter(
+                workspace=self.instance.workspace
+            ).order_by('name')
+    
+    def save(self, commit=True):
+        entity = super().save(commit=False)
+        
+        if commit:
+            entity.save()
+            self.save_m2m()  # Save the tags M2M relationship
+            
+            # Convert tags_text to Tag objects
+            tags_text = self.cleaned_data.get('tags_text', '')
+            if tags_text:
+                workspace = entity.workspace
+                tag_names = [t.strip().lower() for t in tags_text.split(',') if t.strip()]
+                
+                # Find or create Tag objects for each tag name
+                for tag_name in tag_names:
+                    tag, _ = Tag.objects.get_or_create(
+                        workspace=workspace,
+                        name=tag_name
+                    )
+                    entity.tags.add(tag)
+        
+        return entity
 
 class RelationshipTypeForm(forms.ModelForm):
     class Meta:
