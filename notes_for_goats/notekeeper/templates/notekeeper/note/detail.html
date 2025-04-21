@@ -28,12 +28,12 @@
             </div>
         {% endif %}
         
-        {% if hashtags %}
+        {% if entry.tags.exists %}
             <div class="hashtags">
                 <br>
-                <strong>Hashtags:</strong>
-                {% for tag in hashtags %}
-                    <span class="tag-badge">#{{ tag }}</span>
+                <strong>Tags:</strong>
+                {% for tag in entry.tags.all %}
+                    <span class="tag-badge">#{{ tag.name }}</span>
                 {% endfor %}
             </div>
         {% endif %}

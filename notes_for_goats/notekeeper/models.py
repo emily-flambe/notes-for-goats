@@ -84,7 +84,7 @@ class Note(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='note_notes')
-    note_tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_notes')
+    tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_notes')
     
     def __str__(self):
         return f"{self.timestamp.strftime('%Y-%m-%d')}: {self.title}"
@@ -105,7 +105,7 @@ class Note(models.Model):
         # Create or get Tag objects for each hashtag
         if lower_hashtags:
             # Clear existing tags
-            self.note_tags.clear()
+            self.tags.clear()
             
             # Add new tags
             for hashtag in lower_hashtags:
@@ -113,7 +113,7 @@ class Note(models.Model):
                     workspace=self.workspace,
                     name=hashtag
                 )
-                self.note_tags.add(tag)
+                self.tags.add(tag)
         
         if not lower_hashtags:
             # No hashtags found, clear references and return early
@@ -137,7 +137,6 @@ class Note(models.Model):
                 continue
             
             # Check if any entity tag matches any hashtag
-            # Using the renamed field 'tags' instead of 'entity_tags'
             entity_tags = [tag.name.lower() for tag in entity.tags.all()]
             
             # If any tag matches a hashtag, add the entity

@@ -13,12 +13,24 @@ class WorkspaceForm(forms.ModelForm):
 class NoteForm(forms.ModelForm):
     class Meta:
         model = Note
-        fields = ['title', 'content', 'timestamp']
+        fields = ['title', 'content', 'timestamp', 'tags', 'referenced_entities']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 15}),
-            'timestamp': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
+            'timestamp': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'tags': forms.SelectMultiple(attrs={'class': 'form-control select2-tags'}),
+            'referenced_entities': forms.SelectMultiple(attrs={'class': 'form-control select2'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        workspace = kwargs.pop('workspace', None)
+        super().__init__(*args, **kwargs)
+        
+        if workspace:
+            # Filter tags by workspace
+            self.fields['tags'].queryset = Tag.objects.filter(workspace=workspace).order_by('name')
+            # Filter entities by workspace
+            self.fields['referenced_entities'].queryset = Entity.objects.filter(workspace=workspace).order_by('name')
 
 class EntityForm(forms.ModelForm):
     # Define a char field for backwards compatibility with the template

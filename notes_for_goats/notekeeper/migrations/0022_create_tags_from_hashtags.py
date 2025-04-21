@@ -82,7 +82,8 @@ def create_tags_from_hashtags(apps, schema_editor):
                 # Get corresponding Tag objects
                 for tag_name in [tag.lower() for tag in found_tags]:
                     if tag_name in workspace_tags:
-                        note.note_tags.add(workspace_tags[tag_name])
+                        # Change note_tags to tags when applying this to new projects
+                        note.tags.add(workspace_tags[tag_name])
         
         # Associate entities with their tags
         for entity in Entity.objects.filter(workspace=workspace):

@@ -144,11 +144,11 @@ class NoteAdmin(admin.ModelAdmin):
     list_display = ('title', 'workspace', 'timestamp', 'get_tags', 'get_entities')
     list_filter = ('workspace', 'created_at')
     search_fields = ('title', 'content')
-    filter_horizontal = ('note_tags', 'referenced_entities')  # Nice widget for both M2M fields
+    filter_horizontal = ('tags', 'referenced_entities')  # Updated field name
     
     def get_tags(self, obj):
         """Get all tags for this note"""
-        return ", ".join([tag.name for tag in obj.note_tags.all()]) or "-"
+        return ", ".join([tag.name for tag in obj.tags.all()]) or "-"
     get_tags.short_description = "Tags"
     
     def get_entities(self, obj):
