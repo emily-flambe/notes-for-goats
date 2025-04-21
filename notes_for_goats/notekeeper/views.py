@@ -265,6 +265,23 @@ def entity_edit(request, workspace_id, pk):
         'entity': entity  # Pass the entity to the template
     })
 
+def entity_delete(request, workspace_id, pk):
+    """View to delete an entity"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    entity = get_object_or_404(Entity, pk=pk, workspace=workspace)
+    
+    if request.method == "POST":
+        entity_name = entity.name
+        entity.delete()
+        messages.success(request, f"Entity '{entity_name}' deleted successfully.")
+        return redirect('notekeeper:entity_list', workspace_id=workspace_id)
+    
+    # For GET requests, show a confirmation page
+    return render(request, 'notekeeper/entity/delete.html', {
+        'workspace': workspace,
+        'entity': entity,
+    })
+
 def workspace_list(request):
     workspaces = Workspace.objects.all()
     return render(request, 'notekeeper/workspace/list.html', {'workspaces': workspaces})

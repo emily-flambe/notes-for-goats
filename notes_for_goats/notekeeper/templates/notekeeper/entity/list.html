@@ -4,111 +4,175 @@
 
 {% block content %}
 <div class="container">
-    <h1>Entities</h1>
-    
-    <div class="actions">
-        <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}" class="btn">New Entity</a>
-        <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">Back to Workspace</a>
+    <div class="page-header">
+        <h1>Entities</h1>
+        <div class="header-actions">
+            <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}" class="btn btn-primary">New Entity</a>
+            <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn">Back to Workspace</a>
+        </div>
     </div>
     
-    {% if people.exists or projects.exists or teams.exists %}
-        <div class="entity-sections">
+    <div class="subtitle">
+        Manage people, projects, and teams that you reference in your notes.
+    </div>
+    
+    <!-- Filter card for entities -->
+    <div class="card">
+        <div class="filter-section">
+            <form method="get" class="filter-controls">
+                <!-- Entity Type filter -->
+                <div class="filter-group">
+                    <label for="entity_type_filter">Entity Type:</label>
+                    <select id="entity_type_filter" name="type">
+                        <option value="">All</option>
+                        {% for type, label in entity_types %}
+                            <option value="{{ type }}" {% if type == request.GET.type %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Search input -->
+                <div class="filter-group">
+                    <label for="search">Search:</label>
+                    <input type="text" id="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search entities...">
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="filter-buttons">
+                    <button type="submit" class="btn">Apply Filters</button>
+                    <a href="{% url 'notekeeper:entity_list' workspace_id=workspace.id %}" class="btn">Clear</a>
+                </div>
+            </form>
+        </div>
+        
+        {% if people.exists or projects.exists or teams.exists %}
             <!-- People Section -->
             {% if people.exists %}
-                <section class="entity-section">
+                <div class="entity-section">
                     <h2 class="section-title">People</h2>
-                    <div class="entity-container">
+                    <div class="entity-list">
                         {% for entity in people|dictsort:"name" %}
-                            <div class="entity-card">
-                                <h3 class="entity-name">
-                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
-                                        {{ entity.name }}
-                                    </a>
-                                </h3>
-                                {% if entity.details %}
-                                    <p class="entity-notes">{{ entity.details|truncatechars:100 }}</p>
-                                {% endif %}
-                                {% if entity.tags %}
-                                    <div class="entity-tags">
-                                        {% for tag in entity.get_tag_list %}
-                                            <span class="tag-badge">#{{ tag }}</span>
-                                        {% endfor %}
+                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}" class="entity-item-link">
+                                <div class="entity-item">
+                                    <div class="entity-header">
+                                        <div>
+                                            <h3 class="entity-title">{{ entity.name }}</h3>
+                                        </div>
+                                        <div class="actions">
+                                            <button class="btn btn-sm edit-button" data-url="{% url 'notekeeper:entity_edit' workspace_id=workspace.id pk=entity.pk %}">Edit</button>
+                                            <button class="btn btn-sm btn-danger delete-button" data-url="{% url 'notekeeper:entity_delete' workspace_id=workspace.id pk=entity.pk %}">Delete</button>
+                                        </div>
                                     </div>
-                                {% endif %}
-                            </div>
+                                    
+                                    {% if entity.details %}
+                                        <div class="entity-content">
+                                            {{ entity.details|truncatechars:100 }}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if entity.tags.all %}
+                                        <div class="entity-tags">
+                                            {% for tag in entity.tags.all %}
+                                                <span class="tag-badge">#{{ tag.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </a>
                         {% endfor %}
                     </div>
-                    <div class="section-actions">
-                        <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}?type=PERSON" class="btn btn-sm">Add Person</a>
-                    </div>
-                </section>
+                </div>
             {% endif %}
             
             <!-- Projects Section -->
             {% if projects.exists %}
-                <section class="entity-section">
+                <div class="entity-section">
                     <h2 class="section-title">Projects</h2>
-                    <div class="entity-container">
+                    <div class="entity-list">
                         {% for entity in projects|dictsort:"name" %}
-                            <div class="entity-card">
-                                <h3 class="entity-name">
-                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
-                                        {{ entity.name }}
-                                    </a>
-                                </h3>
-                                {% if entity.details %}
-                                    <p class="entity-notes">{{ entity.details|truncatechars:100 }}</p>
-                                {% endif %}
-                                {% if entity.tags %}
-                                    <div class="entity-tags">
-                                        {% for tag in entity.get_tag_list %}
-                                            <span class="tag-badge">#{{ tag }}</span>
-                                        {% endfor %}
+                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}" class="entity-item-link">
+                                <div class="entity-item">
+                                    <div class="entity-header">
+                                        <div>
+                                            <h3 class="entity-title">{{ entity.name }}</h3>
+                                        </div>
+                                        <div class="actions">
+                                            <button class="btn btn-sm edit-button" data-url="{% url 'notekeeper:entity_edit' workspace_id=workspace.id pk=entity.pk %}">Edit</button>
+                                            <button class="btn btn-sm btn-danger delete-button" data-url="{% url 'notekeeper:entity_delete' workspace_id=workspace.id pk=entity.pk %}">Delete</button>
+                                        </div>
                                     </div>
-                                {% endif %}
-                            </div>
+                                    
+                                    {% if entity.details %}
+                                        <div class="entity-content">
+                                            {{ entity.details|truncatechars:100 }}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if entity.tags.all %}
+                                        <div class="entity-tags">
+                                            {% for tag in entity.tags.all %}
+                                                <span class="tag-badge">#{{ tag.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </a>
                         {% endfor %}
                     </div>
-                    <div class="section-actions">
-                        <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}?type=PROJECT" class="btn btn-sm">Add Project</a>
-                    </div>
-                </section>
+                </div>
             {% endif %}
             
             <!-- Teams Section -->
             {% if teams.exists %}
-                <section class="entity-section">
+                <div class="entity-section">
                     <h2 class="section-title">Teams</h2>
-                    <div class="entity-container">
+                    <div class="entity-list">
                         {% for entity in teams|dictsort:"name" %}
-                            <div class="entity-card">
-                                <h3 class="entity-name">
-                                    <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}">
-                                        {{ entity.name }}
-                                    </a>
-                                </h3>
-                                {% if entity.details %}
-                                    <p class="entity-notes">{{ entity.details|truncatechars:100 }}</p>
-                                {% endif %}
-                                {% if entity.tags %}
-                                    <div class="entity-tags">
-                                        {% for tag in entity.get_tag_list %}
-                                            <span class="tag-badge">#{{ tag }}</span>
-                                        {% endfor %}
+                            <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}" class="entity-item-link">
+                                <div class="entity-item">
+                                    <div class="entity-header">
+                                        <div>
+                                            <h3 class="entity-title">{{ entity.name }}</h3>
+                                        </div>
+                                        <div class="actions">
+                                            <button class="btn btn-sm edit-button" data-url="{% url 'notekeeper:entity_edit' workspace_id=workspace.id pk=entity.pk %}">Edit</button>
+                                            <button class="btn btn-sm btn-danger delete-button" data-url="{% url 'notekeeper:entity_delete' workspace_id=workspace.id pk=entity.pk %}">Delete</button>
+                                        </div>
                                     </div>
-                                {% endif %}
-                            </div>
+                                    
+                                    {% if entity.details %}
+                                        <div class="entity-content">
+                                            {{ entity.details|truncatechars:100 }}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if entity.tags.all %}
+                                        <div class="entity-tags">
+                                            {% for tag in entity.tags.all %}
+                                                <span class="tag-badge">#{{ tag.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </a>
                         {% endfor %}
                     </div>
-                    <div class="section-actions">
-                        <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}?type=TEAM" class="btn btn-sm">Add Team</a>
-                    </div>
-                </section>
+                </div>
             {% endif %}
-        </div>
-    {% else %}
+        {% else %}
+            <div class="no-results-message">
+                <p>No entities have been created in this workspace yet.</p>
+                <p>Create your first entity to get started.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Only show empty state if truly no entities -->
+    {% if not people.exists and not projects.exists and not teams.exists %}
         <div class="empty-state">
-            <p>No entities created yet.</p>
+            <p>No entities yet.</p>
             <p>Entities represent people, projects, and teams that you can reference in your notes.</p>
             <a href="{% url 'notekeeper:entity_create' workspace_id=workspace.id %}" class="btn btn-primary">Create Your First Entity</a>
         </div>
@@ -118,88 +182,138 @@
 
 {% block extra_css %}
 <style>
-    /* Global Entity List Styles */
-    .entity-sections {
-        display: flex;
-        flex-direction: column;
-        gap: 30px;
-        margin-top: 20px;
-    }
-    
-    .entity-section {
-        background-color: #ffffff;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-    }
-    
-    .section-title {
-        margin-top: 0;
-        padding-bottom: 15px;
-        margin-bottom: 20px;
-        border-bottom: 1px solid #e2e8f0;
-        color: #2d3748;
-        font-size: 1.5rem;
-    }
-    
-    .entity-container {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-    
-    .entity-card {
-        padding: 15px;
-        background-color: #f8fafc;
-        border-radius: 6px;
-        border-left: 4px solid #4299e1;
-    }
-    
-    .entity-name {
-        margin-top: 0;
-        margin-bottom: 10px;
-        font-size: 1.1rem;
-    }
-    
-    .entity-name a {
-        color: #2c5282;
-        text-decoration: none;
-    }
-    
-    .entity-name a:hover {
-        color: #2b6cb0;
-        text-decoration: underline;
-    }
-    
-    .entity-notes {
-        margin: 0 0 10px 0;
-        color: #4a5568;
-        line-height: 1.5;
-    }
-    
-    .entity-tags {
+    /* Filter controls styling (matching notes page) */
+    .filter-controls {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 8px;
+        align-items: flex-end;
+        gap: 15px;
     }
     
-    .tag-badge {
-        display: inline-block;
-        padding: 3px 8px;
-        background-color: #e2e8f0;
-        border-radius: 12px;
-        font-size: 0.8em;
-        color: #4a5568;
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
     }
     
-    .section-actions {
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+        padding-left: 15px;
+    }
+    
+    /* Entity section styling */
+    .entity-section {
         margin-top: 20px;
-        text-align: right;
         padding-top: 15px;
         border-top: 1px solid #edf2f7;
     }
     
+    .section-title {
+        font-size: 1.25rem;
+        color: #4a5568;
+        margin: 0 0 15px 10px;
+    }
+    
+    /* Entity list styling (matching journal-notes) */
+    .entity-list {
+        padding: 0 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    /* Entity item styling (matching journal-entry) */
+    .entity-item {
+        padding: 16px 14px;
+        margin: 0;
+        border-radius: 6px;
+        background-color: #f8fafc;
+        border: 1px solid #edf2f7;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        transition: all 0.2s ease;
+    }
+    
+    .entity-item-link {
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    /* Hover effect */
+    .entity-item:hover {
+        background-color: #c7e0ef;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    
+    /* Entity header */
+    .entity-header {
+        padding-bottom: 1px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    
+    /* Entity title */
+    .entity-title {
+        margin-top: 0;
+        margin-bottom: 1px;
+        font-size: 1.15rem;
+        color: #2d3748;
+    }
+    
+    /* Entity content */
+    .entity-content {
+        padding: -10px 0 4px;
+        line-height: 1.2;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-height: calc(1.5em * 3);
+        color: #4a5568;
+        position: relative;
+    }
+    
+    /* Tags styling */
+    .entity-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 3px;
+    }
+    
+    .tag-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        margin: 1px 4px 1px 0;
+        background-color: #edf2f7;
+        border-radius: 12px;
+        font-size: 0.85em;
+        color: #4a5568;
+        text-decoration: none;
+    }
+    
+    /* Section add button */
+    .section-add {
+        text-align: right;
+        padding: 10px 10px 0 0;
+    }
+    
+    /* No results message styling */
+    .no-results-message {
+        padding: 30px 20px;
+        text-align: center;
+        color: #4a5568;
+        background-color: #f9fafb;
+        border-radius: 6px;
+        margin: 20px 15px;
+    }
+    
+    .no-results-message p {
+        margin-bottom: 10px;
+    }
+    
+    /* Empty state styling */
     .empty-state {
         text-align: center;
         padding: 40px 20px;
@@ -212,5 +326,64 @@
         color: #4a5568;
         margin-bottom: 15px;
     }
+    
+    /* Page header */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .header-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    /* Subtitle */
+    .subtitle {
+        margin-bottom: 20px;
+        color: #718096;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add event listener for edit buttons
+        const editButtons = document.querySelectorAll('.edit-button');
+        editButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                const editUrl = this.getAttribute('data-url');
+                window.location.href = editUrl;
+            });
+        });
+        
+        // Add event listener for delete buttons
+        const deleteButtons = document.querySelectorAll('.delete-button');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                const deleteUrl = this.getAttribute('data-url');
+                const confirmDelete = confirm("Are you sure you want to delete this entity?");
+                if (confirmDelete) {
+                    window.location.href = deleteUrl;
+                }
+            });
+        });
+        
+        // Entity type filter if needed
+        const entityTypeFilter = document.getElementById('entity_type_filter');
+        if (entityTypeFilter) {
+            entityTypeFilter.addEventListener('change', function() {
+                // Auto-submit the form when type changes
+                this.form.submit();
+            });
+        }
+    });
+</script>
 {% endblock %} 
