@@ -22,6 +22,7 @@ urlpatterns = [
     path('workspaces/<int:workspace_id>/entities/<int:pk>/', views.entity_detail, name='entity_detail'),
     path('workspaces/<int:workspace_id>/entities/new/', views.entity_create, name='entity_create'),
     path('workspaces/<int:workspace_id>/entities/<int:pk>/edit/', views.entity_edit, name='entity_edit'),
+    path('workspaces/<int:workspace_id>/entities/<int:pk>/delete/', views.entity_delete, name='entity_delete'),
     
     # Export/Import
     path('workspaces/<int:pk>/export/', views.export_workspace, name='export_workspace'),

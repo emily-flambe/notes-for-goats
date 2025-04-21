@@ -1,0 +1,88 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Delete {{ entity.name }} - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Delete Entity</h1>
+    
+    <div class="card">
+        <div class="alert alert-warning">
+            <h4>Confirm Deletion</h4>
+            <p>Are you sure you want to delete the entity "{{ entity.name }}"?</p>
+            <p>This action cannot be undone.</p>
+        </div>
+        
+        <div class="entity-info">
+            <p><strong>Type:</strong> {{ entity.get_type_display }}</p>
+            <p><strong>Created:</strong> {{ entity.created_at|date:"F j, Y" }}</p>
+            
+            {% if entity.tags.exists %}
+                <p><strong>Tags:</strong> 
+                {% for tag in entity.tags.all %}
+                    <span class="tag-badge">#{{ tag.name }}</span>
+                {% endfor %}
+                </p>
+            {% endif %}
+            
+            {% if entity.note_notes.exists %}
+                <div class="related-warning">
+                    <p class="warning-text">Warning: This entity is referenced in {{ entity.note_notes.count }} note(s). Deleting this entity will remove these references.</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <form method="post" class="delete-form">
+            {% csrf_token %}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">Delete</button>
+                <a href="{% url 'notekeeper:entity_list' workspace_id=workspace.id %}" class="btn">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .entity-info {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #f8fafc;
+        border-radius: 6px;
+    }
+    
+    .tag-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: #edf2f7;
+        border-radius: 12px;
+        font-size: 0.85em;
+        color: #4a5568;
+        margin-right: 5px;
+    }
+    
+    .related-warning {
+        margin-top: 15px;
+        padding: 10px 15px;
+        background-color: #fff8e6;
+        border-left: 4px solid #f6ad55;
+        border-radius: 4px;
+    }
+    
+    .warning-text {
+        color: #c05621;
+        margin: 0;
+    }
+    
+    .delete-form {
+        margin-top: 20px;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-start;
+    }
+</style>
+{% endblock %} 
