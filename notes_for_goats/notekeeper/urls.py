@@ -16,6 +16,7 @@ urlpatterns = [
     path('workspaces/<int:workspace_id>/note/<int:pk>/', views.note_detail, name='note_detail'),
     path('workspaces/<int:workspace_id>/note/new/', views.note_create, name='note_create'),
     path('workspaces/<int:workspace_id>/note/<int:pk>/edit/', views.note_edit, name='note_edit'),
+    path('workspaces/<int:workspace_id>/note/<int:pk>/delete/', views.note_delete, name='note_delete'),
     
     path('workspaces/<int:workspace_id>/entities/', views.entity_list, name='entity_list'),
     path('workspaces/<int:workspace_id>/entities/<int:pk>/', views.entity_detail, name='entity_detail'),

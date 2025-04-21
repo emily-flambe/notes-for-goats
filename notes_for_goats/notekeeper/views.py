@@ -51,8 +51,9 @@ def note_list(request, workspace_id):
     # Get all entity types from the model
     entity_types = Entity.ENTITY_TYPES
     
-    # Get entities for the dropdown, include the type field
+    # Get entities and tags for the dropdowns
     entities = Entity.objects.filter(workspace=workspace).order_by('name')
+    tags = Tag.objects.filter(workspace=workspace).order_by('name')
     
     # Count total notes before filtering
     total_notes_count = Note.objects.filter(workspace=workspace).count()
@@ -63,6 +64,7 @@ def note_list(request, workspace_id):
     # Handle filtering
     entity_filter = request.GET.get('entity')
     entity_type_filter = request.GET.get('entity_type')
+    tag_filter = request.GET.get('tag')
     search_query = request.GET.get('q')
     
     if entity_filter:
@@ -77,6 +79,10 @@ def note_list(request, workspace_id):
         # Filter notes that reference entities of the selected type
         notes = notes.filter(referenced_entities__type=entity_type_filter).distinct()
     
+    if tag_filter:
+        # Filter notes by selected tag
+        notes = notes.filter(tags__id=tag_filter)
+    
     if search_query:
         notes = notes.filter(
             Q(title__icontains=search_query) | 
@@ -85,8 +91,9 @@ def note_list(request, workspace_id):
     
     return render(request, 'notekeeper/note/list.html', {
         'workspace': workspace,
-        'notes': notes,
+        'notes': notes.distinct(),
         'entities': entities,
+        'tags': tags,
         'entity_types': entity_types,
         'total_notes_count': total_notes_count,
     })
@@ -151,6 +158,13 @@ def note_edit(request, workspace_id, pk):
         'entry': entry,
         'hashtags': hashtags
     })
+
+def note_delete(request, workspace_id, pk):
+    """View to delete a note entry"""
+    note = get_object_or_404(Note, pk=pk, workspace_id=workspace_id)
+    note.delete()
+    messages.success(request, "Note deleted successfully.")
+    return redirect('notekeeper:note_list', workspace_id=workspace_id)
 
 def entity_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)

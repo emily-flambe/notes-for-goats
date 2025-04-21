@@ -48,6 +48,19 @@
                         {% endfor %}
                     </select>
                 </div>
+
+                <!-- Tags filter -->
+                <div class="filter-group">
+                    <label for="tag_filter">Tag:</label>
+                    <select id="tag_filter" name="tag">
+                        <option value="">All</option>
+                        {% for tag in tags %}
+                            <option value="{{ tag.id }}" {% if tag.id|stringformat:"s" == request.GET.tag %}selected{% endif %}>
+                                {{ tag.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
                 
                 <!-- Search input -->
                 <div class="filter-group">
@@ -77,6 +90,7 @@
                                 </div>
                                 <div class="actions">
                                     <button class="btn btn-sm edit-button" data-url="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.id %}">Edit</button>
+                                    <button class="btn btn-sm btn-danger delete-button" data-url="{% url 'notekeeper:note_delete' workspace_id=workspace.id pk=entry.id %}">Delete</button>
                                 </div>
                             </div>
                             
@@ -336,6 +350,19 @@
             if (actualHeight <= maxHeight) {
                 content.classList.add('fits-content');
             }
+        });
+
+        // Add event listener for delete buttons
+        const deleteButtons = document.querySelectorAll('.delete-button');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                const deleteUrl = this.getAttribute('data-url');
+                const confirmDelete = confirm("Are you sure you want to delete this note?");
+                if (confirmDelete) {
+                    window.location.href = deleteUrl;
+                }
+            });
         });
     });
 </script>
