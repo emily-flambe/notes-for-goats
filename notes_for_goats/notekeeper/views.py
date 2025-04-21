@@ -1203,16 +1203,41 @@ def ask_ai(request, workspace_id):
                 # Get context data
                 context_data = get_database_context(workspace)
                 
-                # Create prompts
-                system_prompt = "You are a helpful assistant that analyzes personal notes and provides insights."
-                user_prompt = f"""
-                I have a personal note-taking app with data from my "{workspace.name}" workspace:
-                
-                {context_data}
-                
-                Based on this information, please answer the following question:
-                {user_query}
-                """
+                # Create different prompts based on whether using local or not
+                if use_local:  # For Llama3
+                    system_prompt = """You are an analytical assistant that examines data and answers questions directly. 
+                    When referencing entities from the database in your answers, always use hashtag notation (e.g., #Alice, #ProjectX).
+                    Don't comment on the nature of the application or data structure."""
+                    
+                    user_prompt = f"""
+                    CONTEXT DATA:
+                    Workspace: {workspace.name}
+                    
+                    {context_data}
+                    
+                    INSTRUCTION: When referencing any entity, person, project, or tag in your response, use hashtag notation (e.g., #Alice, #ProjectX).
+                    
+                    QUESTION: {user_query}
+                    
+                    Answer the question directly based only on the context data provided. Don't mention the note-taking app itself.
+                    Remember to use hashtag notation (#EntityName) when referring to any entity, person, project, or tag in your response.
+                    """
+                else:  # For OpenAI
+                    system_prompt = """You are a helpful assistant that analyzes personal notes and provides insights.
+                    When referencing entities from the database in your answers, always use hashtag notation (e.g., #Alice, #ProjectX)."""
+                    
+                    user_prompt = f"""
+                    I have a personal note-taking app with data from my "{workspace.name}" workspace:
+                    
+                    {context_data}
+                    
+                    IMPORTANT: When referencing any entity, person, project, or tag in your response, use hashtag notation (e.g., #Alice, #ProjectX).
+                    
+                    Based on this information, please answer the following question:
+                    {user_query}
+                    
+                    Remember to use hashtag notation (#EntityName) when referring to any entity, person, project, or tag in your response.
+                    """
                 
                 # Generate response
                 ai_response = llm_service.generate_response(
