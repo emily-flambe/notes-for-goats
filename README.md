@@ -3,7 +3,7 @@
 A personal note-taking application designed for professionals to organize structured notes about people, projects, and daily events.
 
 <details>
-<summary>📸 Behold, screenshots! (click to expand)</summary>
+<summary>📸 Screenshots (click to expand)</summary>
 
 ![Home Screen](screenshots/home.png)
 ![Notes](screenshots/notes.png)
@@ -18,8 +18,6 @@ A personal note-taking application designed for professionals to organize struct
 
 ### Option 1: Using Docker (Recommended)
 
-The easiest way to get started is with Docker:
-
 1. **Prerequisites**
    - [Docker](https://www.docker.com/get-started)
    - [Docker Compose](https://docs.docker.com/compose/install/) (usually included with Docker Desktop)
@@ -31,7 +29,7 @@ The easiest way to get started is with Docker:
    git clone https://github.com/yourusername/notes-for-goats.git
    cd notes-for-goats
    
-   # Set up environment variables (including OpenAI API key)
+   # Set up environment variables
    make env
    
    # Build and start the application
@@ -41,19 +39,11 @@ The easiest way to get started is with Docker:
    docker-compose exec web python notes_for_goats/manage.py createsuperuser
    ```
 
-3. **Access the application**
+3. **Access**
    - Main app: http://localhost:8000/
    - Admin interface: http://localhost:8000/admin/
 
-4. **Stop the application**
-   
-   ```bash
-   docker-compose down
-   ```
-
 ### Option 2: Standard Installation
-
-If you prefer to run directly on your machine:
 
 1. **Prerequisites**
    - Python 3.8+
@@ -65,7 +55,7 @@ If you prefer to run directly on your machine:
    git clone https://github.com/yourusername/notes-for-goats.git
    cd notes-for-goats
    
-   # Set up environment variables (including OpenAI API key)
+   # Set up environment variables
    make env
    
    # Create and activate a virtual environment
@@ -83,136 +73,153 @@ If you prefer to run directly on your machine:
    python manage.py runserver
    ```
 
-3. **Access the application**
-   - Main app: http://127.0.0.1:8000/
-   - Admin interface: http://127.0.0.1:8000/admin/
+## Setting Up AI Features
 
-### Setting Up Environment Variables
+Notes for Goats supports two AI backends: local models via Ollama (recommended for privacy and no costs) or OpenAI (faster but requires API key).
 
-Notes for Goats uses a `.env` file to store configuration settings. Use our convenient setup script to create this file:
+### Option 1: Local AI with Ollama (Recommended)
 
-1. **Run the setup command**
+Run AI features locally with complete privacy and no usage costs:
+
+1. **Install Ollama**
    
    ```bash
-   make env
+   # macOS
+   brew install ollama
+   
+   # Linux
+   curl -fsSL https://ollama.com/install.sh | sh
+   
+   # Windows: Download from ollama.com/download/windows
    ```
 
-2. **Follow the prompts**
-   - For each variable, you'll see the default value
-   - Press Enter to accept the default or type a new value
-   - For the SECRET_KEY, a secure random key will be generated automatically
-   - **When prompted for OPENAI_API_KEY**, enter your OpenAI API key
-     (Get one at https://platform.openai.com/api-keys if you don't have one)
+2. **Download a model**
+   
+   ```bash
+   # Download Llama 3 (recommended)
+   ollama pull llama3
+   ```
 
-3. **The script creates a `.env` file** containing all your settings
+3. **Configure Notes for Goats**
+   
+   When running `make env`, set these values:
+   ```
+   USE_LOCAL_LLM=True
+   LOCAL_LLM_URL=http://localhost:11434
+   LOCAL_LLM_MODEL=llama3
+   ```
 
-Your OpenAI API key is required for the Ask AI feature. If you don't have one yet, you can still run the application, but the AI features won't work.
+### Option 2: OpenAI API (Alternative)
+
+For faster responses with OpenAI's powerful models:
+
+1. **Get an API key** from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+
+2. **Configure Notes for Goats**
+   
+   When running `make env`, enter your OpenAI API key when prompted.
+
+3. **Toggle in the UI**
+   
+   You can switch between local and OpenAI models directly in the Ask AI interface.
 
 ## How to Use Notes for Goats
 
 ### Workspaces
 
-Workspaces are like separate notebooks that help you organize different areas of your life:
+Organize your notes into separate contexts:
 
-- Create separate workspaces for different jobs, projects, or contexts
+- Create workspaces for different projects, roles, or areas of focus
 - Each workspace has its own entities, notes, and relationships
-- Switch between workspaces using the dropdown in the navigation bar
+- Switch between workspaces via the navigation bar
 
 ### Entities
 
-Entities are the core building blocks in Notes for Goats:
+The building blocks of your knowledge base:
 
-1. **What are Entities?**
-   - People (colleagues, clients, team members)
-   - Projects (initiatives, products, assignments)
-   - Teams (departments, working groups, committees)
-
-2. **Creating Entities**
-   - Navigate to "Entities" and click "New Entity"
-   - Select a type (Person, Project, or Team)
-   - Enter a name and optional details
-   - Add tags to make entities easier to find
-
-3. **Using Entities**
-   - View all entities from the Entities page
-   - Click on any entity to see its details and related notes
-   - Filter entities by type or search by name/tags
+- **Types**: People, Projects, and Teams
+- **Creation**: Navigate to "Entities" → "New Entity" → select type
+- **Usage**: View all entities, search by name/tags, or filter by type
 
 ### Notes
 
-Notes let you capture information while automatically connecting to relevant entities:
+Record information while automatically linking to entities:
 
-1. **Creating Notes**
-   - Navigate to "Notes" and click "New Note"
-   - Give your note a title and content
-   - Use #hashtags to reference entities (e.g., "Meeting with #Alice about #ProjectX")
-
-2. **Entity References**
-   - Any entity name preceded by # will be detected as a reference
-   - Referenced entities appear at the bottom of the note
-   - Click on a referenced entity to view its details
-
-3. **Viewing Notes**
-   - Browse all notes from the Notes page
-   - Filter notes by date or search by content
-   - View notes related to specific entities from their detail pages
+- **Create**: Add new notes with title and content
+- **Link**: Use #hashtags to reference entities (e.g., "Meeting with #Alice about #ProjectX")
+- **Browse**: Filter notes by date, search content, or view by related entity
 
 ### Relationships
 
-Relationships help you track connections between entities:
+Track connections between entities:
 
-1. **Relationship Types**
-   - Define custom relationship types (e.g., "Reports To", "Works On")
-   - Set whether relationships are directional (one-way) or bidirectional
-   - Configure inverse names for directional relationships (e.g., "Reports To" ↔ "Manages")
-
-2. **Creating Relationships**
-   - From an entity's detail page, click "Add Relationship"
-   - Select the relationship type and the related entity
-   - Add optional details about the relationship
-
-3. **Relationship Inference**
-   - Set up rules to automatically create relationships based on patterns
-   - Example: When two people work on the same project, create a "Collaborator" relationship
-   - Automatically maintain your organizational structure with minimal effort
+- Create relationship types (e.g., "Reports To", "Works On")
+- Add relationships from entity detail pages
+- Set up inference rules for automatic relationship creation
 
 ### Ask AI
 
-The Ask AI feature lets you interact with your notes using natural language:
+Interact with your notes using natural language:
 
-1. **Accessing Ask AI**
-   - From any workspace, click on the "Ask AI" button
-   - You'll see a form where you can enter your question
+1. Click "Ask AI" from any workspace
+2. Type your question
+3. Choose between local LLM or OpenAI
+4. Get answers based on your notes, entities, and relationships
 
-2. **How It Works**
-   - The AI analyzes your notes, entities, and relationships within the current workspace
-   - It uses this context to provide informed answers to your questions
-   - The AI response is generated using OpenAI's language models
+**Example Questions:**
+- "Summarize what I know about Project X"
+- "What were the key points from my meeting with Alice last week?"
+- "What connections exist between the Marketing and Sales teams?"
 
-3. **Example Questions**
-   - "Summarize what I know about Project X"
-   - "What were the key points from my meeting with Alice last week?"
-   - "What relationships exist between the Marketing team and the Sales team?"
-   - "Find all notes mentioning budget concerns"
-
-4. **Limitations**
-   - Responses are based only on the information in your notes
-   - The AI cannot access external information or your personal knowledge
-   - Quality of responses depends on the detail and organization of your notes
-
-Note: The Ask AI feature requires a valid OpenAI API key to be configured in your `.env` file.
+**Privacy Note**: Local LLM queries never leave your computer, while OpenAI queries are processed in the cloud.
 
 ## Data Backup and Migration
 
 Keep your valuable notes safe:
 
-### Backup Options
+1. **Export Workspaces**
+   - Workspace Settings → Export Workspace → Save JSON file
 
-1. **Export Workspaces (Recommended)**
-   - From the Workspace Settings page, click "Export Workspace"
-   - Saves all workspace data as a JSON file that can be imported later
-
-2. **Direct Database Backup**
-   - For standard installations: Copy the `db.sqlite3` file to a secure location
-   - For Docker installations:
+2. **Database Backup**
+   - Standard installation: Copy `db.sqlite3`
+   - Docker: 
+     ```bash
+     docker-compose exec web bash -c "cd notes_for_goats && python manage.py export_data"
      ```
+
+## Troubleshooting AI Features
+
+### Local LLM Issues
+
+If Ollama isn't working:
+
+- Verify it's running: `ollama list`
+- Test API directly:
+  ```bash
+  curl -X POST http://localhost:11434/api/generate \
+    -H "Content-Type: application/json" \
+    -d '{"model":"llama3","prompt":"Hello","stream":false}'
+  ```
+- Check `LOCAL_LLM_URL` doesn't include `/api` at the end
+- For best performance: 16GB+ RAM, GPU or Apple Silicon recommended
+
+### OpenAI Issues
+
+- Verify your API key is valid
+- Check for rate limiting or quota issues
+- Ensure your OpenAI account has billing set up
+
+## Planned Features
+
+- RAG-based AI for more efficient querying of large note collections
+- Google Calendar integration
+- Note templates
+- Visual relationship graphs
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+*Notes for Goats: Because you're worth it* 🐐📝
