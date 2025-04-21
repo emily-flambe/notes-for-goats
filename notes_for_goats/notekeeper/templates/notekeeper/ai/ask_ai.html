@@ -11,18 +11,74 @@
         </a>
     </div>
     
-    <p class="text-muted">Ask questions about your notes and get AI-powered answers based on the data in your {{ workspace.name }} workspace.</p>
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">AI Settings</h5>
+                <span class="text-muted">Choose your AI provider</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="POST" id="toggle-form">
+                {% csrf_token %}
+                <input type="hidden" name="toggle_llm" value="1">
+                
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="useLocalLLM" name="use_local_llm" {% if use_local_llm %}checked{% endif %} onchange="document.getElementById('toggle-form').submit();">
+                    <label class="form-check-label" for="useLocalLLM">
+                        Use local LLM (Ollama)
+                    </label>
+                </div>
+                
+                <div class="mt-2">
+                    {% if use_local_llm %}
+                        <div class="text-success">
+                            <i class="bi bi-hdd-fill me-1"></i>
+                            Using local model: {{ local_llm_model }}
+                        </div>
+                        <small class="text-muted">Your data stays on your computer</small>
+                    {% else %}
+                        <div class="text-primary">
+                            <i class="bi bi-cloud-fill me-1"></i>
+                            Using OpenAI API: {{ openai_model }}
+                        </div>
+                        <small class="text-muted">Using OpenAI's cloud service</small>
+                        {% if not has_openai_key %}
+                            <div class="alert alert-warning mt-2">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                OpenAI API key not configured. Please add one in your environment settings.
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
     
     <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Ask a Question</h5>
+        </div>
         <div class="card-body">
             <form method="POST" id="ai-form">
                 {% csrf_token %}
                 <div class="form-group">
                     <label for="user_query">Your Question:</label>
                     <textarea name="user_query" id="user_query" class="form-control" rows="3" 
-                        placeholder="E.g., Summarize my notes about ProjectX or What did I discuss with Alice last week?" required></textarea>
+                        placeholder="E.g., Summarize my notes about Project X or What did I discuss with Alice last week?" required></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary mt-3" id="submit-btn">Ask AI</button>
+                <button type="submit" class="btn btn-primary mt-3" id="submit-btn">
+                    <i class="bi bi-robot me-1"></i> Ask AI
+                </button>
+                <div class="mt-2 text-muted">
+                    <small>
+                        {% if use_local_llm %}
+                            Using local Ollama model - responses may take longer but your data remains private
+                        {% else %}
+                            Using OpenAI API - faster responses with advanced capabilities
+                        {% endif %}
+                    </small>
+                </div>
             </form>
         </div>
     </div>
@@ -31,26 +87,53 @@
         <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading...</span>
         </div>
-        <p class="mt-2">Thinking...</p>
+        <p class="mt-2">
+            {% if use_local_llm %}
+                Processing with local model (this may take longer)...
+            {% else %}
+                Asking OpenAI...
+            {% endif %}
+        </p>
     </div>
     
     {% if ai_response %}
-    <div class="card shadow-sm">
+    <div class="card shadow-sm" id="response-card">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h5 class="mb-0">AI Response</h5>
+            <span class="badge {% if use_local_llm %}bg-success{% else %}bg-primary{% endif %}">
+                {% if use_local_llm %}Local LLM{% else %}OpenAI{% endif %}
+            </span>
         </div>
         <div class="card-body">
             <div class="ai-response">{{ ai_response|linebreaks }}</div>
+        </div>
+        <div class="card-footer bg-light">
+            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard()">
+                <i class="bi bi-clipboard"></i> Copy Response
+            </button>
         </div>
     </div>
     {% endif %}
 </div>
 
 <script>
+    // Show loading indicator when form is submitted
     document.getElementById('ai-form').addEventListener('submit', function() {
         document.getElementById('loading').style.display = 'block';
         document.getElementById('submit-btn').disabled = true;
-        document.getElementById('submit-btn').innerHTML = 'Processing...';
+        document.getElementById('submit-btn').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
     });
+    
+    // Function to copy response to clipboard
+    function copyToClipboard() {
+        const responseEl = document.querySelector('.ai-response');
+        const text = responseEl.innerText;
+        
+        navigator.clipboard.writeText(text).then(function() {
+            alert('Response copied to clipboard!');
+        }, function(err) {
+            console.error('Could not copy text: ', err);
+        });
+    }
 </script>
 {% endblock %}

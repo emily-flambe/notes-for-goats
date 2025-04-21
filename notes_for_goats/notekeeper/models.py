@@ -4,6 +4,7 @@ import re
 import uuid
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import User
 
 class Workspace(models.Model):
     """
@@ -229,3 +230,11 @@ class RelationshipInferenceRule(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.workspace.name})"
+
+class UserPreference(models.Model):
+    """Stores user preferences"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='preferences')
+    use_local_llm = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"Preferences for {self.user.username}"

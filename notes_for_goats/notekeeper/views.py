@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Workspace, Entity, Note, Relationship, RelationshipType, RelationshipInferenceRule
+from .models import Workspace, Entity, Note, Relationship, RelationshipType, RelationshipInferenceRule, UserPreference
 from .forms import WorkspaceForm, NoteForm, EntityForm, RelationshipTypeForm, RelationshipForm, RelationshipInferenceRuleForm
 import os
 import tempfile
@@ -20,6 +20,7 @@ import glob
 import datetime
 import openai
 import json
+from .llm_service import LLMService
 
 def home(request):
     """
@@ -1146,22 +1147,50 @@ def show_message(request):
 
 def ask_ai(request, workspace_id):
     """
-    View for the Ask AI page with workspace context
+    View for the Ask AI page with LLM provider toggle
     """
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     ai_response = None
+    models = []
     
-    if request.method == 'POST':
+    # Get or create user preferences
+    if request.user.is_authenticated:
+        user_pref, created = UserPreference.objects.get_or_create(user=request.user)
+    else:
+        # For anonymous users, use session
+        user_pref = None
+    
+    # Handle toggle changes
+    if request.method == 'POST' and 'toggle_llm' in request.POST:
+        use_local = request.POST.get('use_local_llm') == 'on'
+        
+        if user_pref:
+            user_pref.use_local_llm = use_local
+            user_pref.save()
+        else:
+            request.session['use_local_llm'] = use_local
+            
+        # Redirect to avoid form resubmission
+        return redirect('notekeeper:ask_ai', workspace_id=workspace_id)
+    
+    # Handle AI queries
+    if request.method == 'POST' and 'user_query' in request.POST:
         user_query = request.POST.get('user_query', '')
         
-        # If we have a valid API key and a query
-        if settings.OPENAI_API_KEY and user_query:
+        if user_query:
             try:
-                # Fetch context data from database for this workspace
+                # Determine which LLM to use
+                use_local = user_pref.use_local_llm if user_pref else request.session.get('use_local_llm', settings.USE_LOCAL_LLM)
+                
+                # Initialize LLM service with user preference
+                llm_service = LLMService(use_local=use_local)
+                
+                # Get context data
                 context_data = get_database_context(workspace)
                 
-                # Create the prompt with context and user query
-                prompt = f"""
+                # Create prompts
+                system_prompt = "You are a helpful assistant that analyzes personal notes and provides insights."
+                user_prompt = f"""
                 I have a personal note-taking app with data from my "{workspace.name}" workspace:
                 
                 {context_data}
@@ -1170,34 +1199,40 @@ def ask_ai(request, workspace_id):
                 {user_query}
                 """
                 
-                # Set up OpenAI client
-                client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-                
-                # Call the OpenAI API
-                response = client.chat.completions.create(
-                    model=settings.OPENAI_MODEL,
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant that analyzes personal notes and provides insights."},
-                        {"role": "user", "content": prompt}
-                    ],
+                # Generate response
+                ai_response = llm_service.generate_response(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
                     max_tokens=1000,
-                    temperature=0.7,
+                    temperature=0.7
                 )
                 
-                # Extract the response text
-                ai_response = response.choices[0].message.content
+                # If using local, get available models for the dropdown
+                if use_local:
+                    models = llm_service.get_available_models()
                 
             except Exception as e:
                 ai_response = f"Error: {str(e)}"
         else:
-            if not settings.OPENAI_API_KEY:
-                ai_response = "Error: OpenAI API key is not configured. Please add OPENAI_API_KEY in your settings."
-            else:
-                ai_response = "Error: No question provided."
+            ai_response = "Error: No question provided."
+    
+    # Determine current LLM setting for the template
+    if user_pref:
+        use_local_llm = user_pref.use_local_llm
+    else:
+        use_local_llm = request.session.get('use_local_llm', settings.USE_LOCAL_LLM)
+    
+    # Check if we have API keys configured
+    has_openai_key = bool(settings.OPENAI_API_KEY)
     
     return render(request, 'notekeeper/ai/ask_ai.html', {
         'workspace': workspace,
         'ai_response': ai_response,
+        'use_local_llm': use_local_llm,
+        'has_openai_key': has_openai_key,
+        'openai_model': settings.OPENAI_MODEL,
+        'local_llm_model': settings.LOCAL_LLM_MODEL,
+        'available_models': models,
     })
 
 def get_database_context(workspace):

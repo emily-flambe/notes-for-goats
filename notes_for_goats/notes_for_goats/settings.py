@@ -133,3 +133,8 @@ MAX_BACKUP_FILES = 50
 # OpenAI API Settings
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo')
+
+# Add settings for local LLM
+USE_LOCAL_LLM = os.environ.get('USE_LOCAL_LLM', 'True') == 'True'
+LOCAL_LLM_URL = os.environ.get('LOCAL_LLM_URL', 'http://localhost:11434')
+LOCAL_LLM_MODEL = os.environ.get('LOCAL_LLM_MODEL', 'llama3')
