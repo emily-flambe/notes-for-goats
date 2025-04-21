@@ -56,9 +56,8 @@ class Entity(models.Model):
     details = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    tags = models.CharField(max_length=255, blank=True, default="")
     
-    # Add this new field with a different name
+    # Use only the M2M relationship for tags
     entity_tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_entities')
     
     def __str__(self):
@@ -69,29 +68,8 @@ class Entity(models.Model):
         return dict(self.ENTITY_TYPES).get(self.type, self.type)
     
     def get_tag_list(self):
-        """Return tags as a list, regardless of how they're stored"""
-        if not self.tags:
-            return []
-            
-        # If tags is already a list
-        if isinstance(self.tags, list):
-            return self.tags
-            
-        # If tags is a string
-        if isinstance(self.tags, str):
-            # Check if it looks like JSON
-            if self.tags.startswith('[') and self.tags.endswith(']'):
-                try:
-                    import json
-                    return json.loads(self.tags)
-                except json.JSONDecodeError:
-                    pass
-                    
-            # Otherwise split by comma
-            return [tag.strip() for tag in self.tags.split(',') if tag.strip()]
-            
-        # Default fallback
-        return []
+        """Return tags as a list from entity_tags"""
+        return [tag.name for tag in self.entity_tags.all()]
     
     class Meta:
         verbose_name_plural = "Entities"

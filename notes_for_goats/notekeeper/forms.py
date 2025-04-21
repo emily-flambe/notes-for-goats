@@ -1,5 +1,5 @@
 from django import forms
-from .models import Workspace, Note, Entity, RelationshipType, Relationship, RelationshipInferenceRule
+from .models import Workspace, Note, Entity, RelationshipType, Relationship, RelationshipInferenceRule, Tag
 
 class WorkspaceForm(forms.ModelForm):
     class Meta:
@@ -21,21 +21,64 @@ class NoteForm(forms.ModelForm):
         }
 
 class EntityForm(forms.ModelForm):
+    # Define a char field for backwards compatibility with the template
+    tags_text = forms.CharField(
+        required=False, 
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter tags separated by commas (e.g., me, myself, I)'
+        }),
+        help_text='Enter tags separated by commas (e.g., me, myself, I)'
+    )
+    
     class Meta:
         model = Entity
-        fields = ['name', 'type', 'details', 'tags']
+        fields = ['name', 'type', 'details', 'entity_tags']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'type': forms.Select(attrs={'class': 'form-control'}),
             'details': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
-            'tags': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter tags separated by commas (e.g., me, myself, I)'
-            })
+            'entity_tags': forms.SelectMultiple(attrs={'class': 'form-control select2-tags'}),
         }
-        help_texts = {
-            'tags': 'Enter tags separated by commas (e.g., me, myself, I)'
-        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # If we have an instance, populate the tags_text field from the tags field
+        if self.instance and self.instance.pk and self.instance.tags:
+            self.fields['tags_text'].initial = self.instance.tags
+        
+        # If this is for an existing workspace, limit the entity_tags choices
+        if self.instance and self.instance.pk and hasattr(self.instance, 'workspace'):
+            self.fields['entity_tags'].queryset = Tag.objects.filter(
+                workspace=self.instance.workspace
+            ).order_by('name')
+    
+    def save(self, commit=True):
+        entity = super().save(commit=False)
+        
+        # Save the tags text to maintain backwards compatibility
+        tags_text = self.cleaned_data.get('tags_text', '')
+        entity.tags = tags_text
+        
+        if commit:
+            entity.save()
+            self.save_m2m()  # Save the entity_tags M2M relationship
+            
+            # Also update entity_tags based on the tags_text field for compatibility
+            if tags_text:
+                workspace = entity.workspace
+                tag_names = [t.strip().lower() for t in tags_text.split(',') if t.strip()]
+                
+                # Find or create Tag objects for each tag name
+                for tag_name in tag_names:
+                    tag, _ = Tag.objects.get_or_create(
+                        workspace=workspace,
+                        name=tag_name
+                    )
+                    entity.entity_tags.add(tag)
+        
+        return entity
 
 class RelationshipTypeForm(forms.ModelForm):
     class Meta:

@@ -1,10 +1,11 @@
 from django.contrib import admin
 from .models import Workspace, Entity, Note, RelationshipType, Relationship, Tag
+from django.utils.safestring import mark_safe
 
 # Simple admin registrations with minimal customization
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name', 'workspace', 'created_at', 'get_usage_count')
+    list_display = ('name', 'workspace', 'created_at', 'get_usage_count', 'get_related_entities', 'get_related_notes')
     list_filter = ('workspace',)
     search_fields = ('name',)
     
@@ -14,10 +15,88 @@ class TagAdmin(admin.ModelAdmin):
         note_count = obj.tagged_notes.count()
         return f"Entities: {entity_count}, Notes: {note_count}"
     get_usage_count.short_description = "Usage"
+    
+    def get_related_entities(self, obj):
+        """Show a list of entities that use this tag"""
+        entities = obj.tagged_entities.all()
+        if not entities:
+            return "-"
+        
+        # Limit to first 5 entities to avoid overwhelming the admin list
+        entity_list = entities[:5]
+        entity_names = [f"{e.name} ({e.get_type_display()})" for e in entity_list]
+        
+        # Add a "more..." indicator if there are more entities
+        if entities.count() > 5:
+            entity_names.append(f"... and {entities.count() - 5} more")
+            
+        return ", ".join(entity_names)
+    get_related_entities.short_description = "Related Entities"
+    
+    def get_related_notes(self, obj):
+        """Show a list of notes that use this tag"""
+        notes = obj.tagged_notes.all()
+        if not notes:
+            return "-"
+        
+        # Limit to first 3 notes to avoid overwhelming the admin list
+        note_list = notes[:3]
+        note_titles = [f"{n.title}" for n in note_list]
+        
+        # Add a "more..." indicator if there are more notes
+        if notes.count() > 3:
+            note_titles.append(f"... and {notes.count() - 3} more")
+            
+        return ", ".join(note_titles)
+    get_related_notes.short_description = "Related Notes"
+    
+    # Add a detailed view for the tag page
+    readonly_fields = ('get_detailed_entities', 'get_detailed_notes')
+    
+    def get_detailed_entities(self, obj):
+        """Show a detailed list of entities with links for the detail page"""
+        entities = obj.tagged_entities.all()
+        if not entities:
+            return "No related entities"
+        
+        html = "<ul>"
+        for entity in entities:
+            url = f"/admin/notekeeper/entity/{entity.id}/change/"
+            html += f'<li><a href="{url}">{entity.name}</a> ({entity.get_type_display()})</li>'
+        html += "</ul>"
+        
+        return mark_safe(html)  # mark_safe is needed to render HTML
+    get_detailed_entities.short_description = "Related Entities"
+    
+    def get_detailed_notes(self, obj):
+        """Show a detailed list of notes with links for the detail page"""
+        notes = obj.tagged_notes.all()
+        if not notes:
+            return "No related notes"
+        
+        html = "<ul>"
+        for note in notes:
+            url = f"/admin/notekeeper/note/{note.id}/change/"
+            html += f'<li><a href="{url}">{note.title}</a> ({note.timestamp.strftime("%Y-%m-%d")})</li>'
+        html += "</ul>"
+        
+        return mark_safe(html)  # mark_safe is needed to render HTML
+    get_detailed_notes.short_description = "Related Notes"
+    
+    # Define custom fieldsets to organize the admin detail view
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'workspace', 'created_at', 'updated_at')
+        }),
+        ('Related Content', {
+            'fields': ('get_detailed_entities', 'get_detailed_notes'),
+            'classes': ('collapse',),
+        }),
+    )
 
 @admin.register(Entity)
 class EntityAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'workspace', 'get_relationships', 'get_tags')
+    list_display = ('name', 'type', 'workspace', 'get_relationships', 'get_entity_tags')
     list_filter = ('workspace', 'type')
     search_fields = ('name',)
     filter_horizontal = ('entity_tags',)  # Adds a nice widget for managing M2M relationships
@@ -32,12 +111,15 @@ class EntityAdmin(admin.ModelAdmin):
         return ", ".join(relationships) if relationships else "-"
     get_relationships.short_description = "Relationships"
     
-    def get_tags(self, obj):
-        """Show both text-based tags and tag objects"""
-        text_tags = obj.tags or "-"
-        tag_objects = ", ".join([tag.name for tag in obj.entity_tags.all()]) or "-"
-        return f"Text: {text_tags} | Objects: {tag_objects}"
-    get_tags.short_description = "Tags"
+    def get_entity_tags(self, obj):
+        """Show entity tags - only using the M2M relationship"""
+        tag_objects = obj.entity_tags.all()
+        if not tag_objects.exists():
+            return "-"
+        
+        tag_list = ", ".join([f"#{tag.name}" for tag in tag_objects])
+        return tag_list
+    get_entity_tags.short_description = "Tags"
 
 @admin.register(RelationshipType)
 class RelationshipTypeAdmin(admin.ModelAdmin):
