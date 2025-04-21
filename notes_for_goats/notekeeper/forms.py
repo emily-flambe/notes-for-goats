@@ -33,39 +33,32 @@ class EntityForm(forms.ModelForm):
     
     class Meta:
         model = Entity
-        fields = ['name', 'type', 'details', 'entity_tags']
+        fields = ['name', 'type', 'details', 'tags']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'type': forms.Select(attrs={'class': 'form-control'}),
             'details': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
-            'entity_tags': forms.SelectMultiple(attrs={'class': 'form-control select2-tags'}),
+            'tags': forms.SelectMultiple(attrs={'class': 'form-control select2-tags'}),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # If we have an instance, populate the tags_text field from the tags field
-        if self.instance and self.instance.pk and self.instance.tags:
-            self.fields['tags_text'].initial = self.instance.tags
-        
-        # If this is for an existing workspace, limit the entity_tags choices
+        # If this is for an existing workspace, limit the tags choices
         if self.instance and self.instance.pk and hasattr(self.instance, 'workspace'):
-            self.fields['entity_tags'].queryset = Tag.objects.filter(
+            self.fields['tags'].queryset = Tag.objects.filter(
                 workspace=self.instance.workspace
             ).order_by('name')
     
     def save(self, commit=True):
         entity = super().save(commit=False)
         
-        # Save the tags text to maintain backwards compatibility
-        tags_text = self.cleaned_data.get('tags_text', '')
-        entity.tags = tags_text
-        
         if commit:
             entity.save()
-            self.save_m2m()  # Save the entity_tags M2M relationship
+            self.save_m2m()  # Save the tags M2M relationship
             
-            # Also update entity_tags based on the tags_text field for compatibility
+            # Convert tags_text to Tag objects
+            tags_text = self.cleaned_data.get('tags_text', '')
             if tags_text:
                 workspace = entity.workspace
                 tag_names = [t.strip().lower() for t in tags_text.split(',') if t.strip()]
@@ -76,7 +69,7 @@ class EntityForm(forms.ModelForm):
                         workspace=workspace,
                         name=tag_name
                     )
-                    entity.entity_tags.add(tag)
+                    entity.tags.add(tag)
         
         return entity
 

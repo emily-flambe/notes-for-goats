@@ -96,10 +96,10 @@ class TagAdmin(admin.ModelAdmin):
 
 @admin.register(Entity)
 class EntityAdmin(admin.ModelAdmin):
-    list_display = ('name', 'type', 'workspace', 'get_relationships', 'get_entity_tags')
+    list_display = ('name', 'type', 'workspace', 'get_relationships', 'get_tags')
     list_filter = ('workspace', 'type')
     search_fields = ('name',)
-    filter_horizontal = ('entity_tags',)  # Adds a nice widget for managing M2M relationships
+    filter_horizontal = ('tags',)  # Adds a nice widget for managing M2M relationships
 
     def get_relationships(self, obj):
         relationships = []
@@ -111,15 +111,15 @@ class EntityAdmin(admin.ModelAdmin):
         return ", ".join(relationships) if relationships else "-"
     get_relationships.short_description = "Relationships"
     
-    def get_entity_tags(self, obj):
-        """Show entity tags - only using the M2M relationship"""
-        tag_objects = obj.entity_tags.all()
+    def get_tags(self, obj):
+        """Show entity tags"""
+        tag_objects = obj.tags.all()
         if not tag_objects.exists():
             return "-"
         
         tag_list = ", ".join([f"#{tag.name}" for tag in tag_objects])
         return tag_list
-    get_entity_tags.short_description = "Tags"
+    get_tags.short_description = "Tags"
 
 @admin.register(RelationshipType)
 class RelationshipTypeAdmin(admin.ModelAdmin):

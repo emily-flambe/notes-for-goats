@@ -1221,8 +1221,8 @@ def get_database_context(workspace):
         context += f"- {entity.name} (Type: {entity.type})\n"
         if entity.details:
             context += f"  Details: {entity.details}\n"
-        if entity.entity_tags.exists():
-            tag_list = ", ".join([tag.name for tag in entity.entity_tags.all()])
+        if entity.tags.exists():
+            tag_list = ", ".join([tag.name for tag in entity.tags.all()])
             context += f"  Tags: {tag_list}\n"
     
     context += "\nNOTES:\n"

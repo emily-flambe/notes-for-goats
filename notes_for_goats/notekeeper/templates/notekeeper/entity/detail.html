@@ -94,11 +94,11 @@
         </div>
     </div>
 
-    {% if entity.entity_tags.exists %}
+    {% if entity.tags.exists %}
         <div class="entity-tags-section card">
             <h3>Tags</h3>
             <div class="entity-tags">
-                {% for tag in entity.entity_tags.all %}
+                {% for tag in entity.tags.all %}
                     <span class="tag-badge">#{{ tag.name }}</span>
                 {% endfor %}
             </div>

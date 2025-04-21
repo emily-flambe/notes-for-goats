@@ -56,9 +56,7 @@ class Entity(models.Model):
     details = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
-    # Use only the M2M relationship for tags
-    entity_tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_entities')
+    tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_entities')
     
     def __str__(self):
         return self.name
@@ -68,8 +66,8 @@ class Entity(models.Model):
         return dict(self.ENTITY_TYPES).get(self.type, self.type)
     
     def get_tag_list(self):
-        """Return tags as a list from entity_tags"""
-        return [tag.name for tag in self.entity_tags.all()]
+        """Return tags as a list from tags relationship"""
+        return [tag.name for tag in self.tags.all()]
     
     class Meta:
         verbose_name_plural = "Entities"
@@ -86,8 +84,6 @@ class Note(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='note_notes')
-    
-    # Add this new field
     note_tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_notes')
     
     def __str__(self):
@@ -105,6 +101,19 @@ class Note(models.Model):
         hashtags = re.findall(r'#(\w+)', self.content)
         # Convert to lowercase for case-insensitive matching
         lower_hashtags = [tag.lower() for tag in hashtags]
+        
+        # Create or get Tag objects for each hashtag
+        if lower_hashtags:
+            # Clear existing tags
+            self.note_tags.clear()
+            
+            # Add new tags
+            for hashtag in lower_hashtags:
+                tag, _ = Tag.objects.get_or_create(
+                    workspace=self.workspace,
+                    name=hashtag
+                )
+                self.note_tags.add(tag)
         
         if not lower_hashtags:
             # No hashtags found, clear references and return early
@@ -128,13 +137,11 @@ class Note(models.Model):
                 continue
             
             # Check if any entity tag matches any hashtag
-            entity_tags = entity.get_tag_list()
-            
-            # Convert tags to lowercase for case-insensitive matching
-            entity_tags_lower = [tag.lower() for tag in entity_tags]
+            # Using the renamed field 'tags' instead of 'entity_tags'
+            entity_tags = [tag.name.lower() for tag in entity.tags.all()]
             
             # If any tag matches a hashtag, add the entity
-            if any(tag in lower_hashtags for tag in entity_tags_lower):
+            if any(tag in lower_hashtags for tag in entity_tags):
                 entities_to_add.append(entity)
         
         # Add all matching entities to referenced_entities
