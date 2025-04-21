@@ -5,6 +5,7 @@ import uuid
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 
+
 class Workspace(models.Model):
     """
     Top-level container for a set of related notes and entities.
@@ -21,6 +22,23 @@ class Workspace(models.Model):
     
     class Meta:
         ordering = ['name']
+        
+class Tag(models.Model):
+    """
+    Represents a hashtag that can be used across notes and entities
+    """
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='hashtags')
+    name = models.CharField(max_length=50)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('workspace', 'name')  # Tags are unique within a workspace
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"#{self.name}"
+
 
 class Entity(models.Model):
     """
@@ -39,6 +57,9 @@ class Entity(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.CharField(max_length=255, blank=True, default="")
+    
+    # Add this new field with a different name
+    entity_tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_entities')
     
     def __str__(self):
         return self.name
@@ -87,6 +108,9 @@ class Note(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='note_notes')
+    
+    # Add this new field
+    note_tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_notes')
     
     def __str__(self):
         return f"{self.timestamp.strftime('%Y-%m-%d')}: {self.title}"
