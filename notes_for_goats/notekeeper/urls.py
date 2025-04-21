@@ -66,4 +66,7 @@ urlpatterns = [
 
     # Ask AI
     path('workspaces/<int:workspace_id>/ask-ai/', views.ask_ai, name='ask_ai'),
+
+    # Save AI Chat
+    path('workspaces/<int:workspace_id>/save-ai-chat/', views.save_ai_chat, name='save_ai_chat'),
 ] 

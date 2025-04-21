@@ -29,7 +29,7 @@
                                style="margin-right: 8px;" 
                                {% if use_local_llm %}checked{% endif %} 
                                onchange="document.getElementById('toggle-form').submit();">
-                        <span style="white-space: nowrap;">Use local LLM (private, no cost)</span>
+                        <span style="white-space: nowrap;">Use local LLM</span>
                     </label>
                     
                     <div style="margin-left: 24px; margin-top: 4px;">
@@ -75,7 +75,7 @@
         </div>
         <p class="mt-2">
             {% if use_local_llm %}
-                Processing with local model (this may take longer)...
+                Processing with local model (this may take longer, please be patient)...
             {% else %}
                 Asking OpenAI...
             {% endif %}
@@ -91,12 +91,33 @@
             </span>
         </div>
         <div class="card-body">
+            <!-- User's prompt displayed in bold -->
+            <div class="user-prompt mb-3">
+                <strong>Your question:</strong>
+                <div class="prompt-text p-2 border-start border-4 border-primary bg-light">
+                    {{ user_query }}
+                </div>
+            </div>
+            
+            <div class="ai-model-info mb-2">
+                <strong>Model used:</strong> 
+                <span class="model-name">{% if use_local_llm %}{{ local_llm_model }}{% else %}{{ openai_model }}{% endif %}</span>
+            </div>
+            
             <div class="ai-response">{{ ai_response|linebreaks }}</div>
         </div>
-        <div class="card-footer bg-light">
+        <div class="card-footer bg-light d-flex justify-content-between">
             <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard()">
                 <i class="bi bi-clipboard"></i> Copy Response
             </button>
+            <form method="POST" action="{% url 'notekeeper:save_ai_chat' workspace_id=workspace.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="title" value="{{ user_query|truncatechars:50|striptags|safe }}" />
+                <input type="hidden" name="content" id="note-content" />
+                <button type="submit" class="btn btn-sm btn-primary" onclick="prepareContent()">
+                    <i class="bi bi-journal-plus"></i> Save as Note
+                </button>
+            </form>
         </div>
     </div>
     {% endif %}
@@ -107,9 +128,28 @@
 #toggle-form {
     width: 100%;
 }
+
+/* Styling for the prompt display */
+.prompt-text {
+    font-weight: 500;
+    margin-top: 5px;
+    border-radius: 0.25rem;
+}
 </style>
 
 <script>
+    // Add function to prepare content for saving as a note
+    function prepareContent() {
+        const formattedContent = `**Question:** ${document.querySelector('.prompt-text').innerText.trim()}
+
+**Model:** ${document.querySelector('.model-name').innerText.trim()}
+
+**Response:**
+${document.querySelector('.ai-response').innerText.trim()}`;
+        
+        document.getElementById('note-content').value = formattedContent;
+    }
+    
     // Show loading indicator when form is submitted
     document.getElementById('ai-form').addEventListener('submit', function() {
         document.getElementById('loading').style.display = 'block';

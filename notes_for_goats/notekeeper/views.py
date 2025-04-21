@@ -1152,6 +1152,7 @@ def ask_ai(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     ai_response = None
     models = []
+    user_query = ""  # Initialize user_query to empty string
     
     # Get or create user preferences
     if request.user.is_authenticated:
@@ -1175,7 +1176,7 @@ def ask_ai(request, workspace_id):
     
     # Handle AI queries
     if request.method == 'POST' and 'user_query' in request.POST:
-        user_query = request.POST.get('user_query', '')
+        user_query = request.POST.get('user_query', '').strip()  # Capture and strip user query
         
         if user_query:
             try:
@@ -1228,6 +1229,7 @@ def ask_ai(request, workspace_id):
     return render(request, 'notekeeper/ai/ask_ai.html', {
         'workspace': workspace,
         'ai_response': ai_response,
+        'user_query': user_query,
         'use_local_llm': use_local_llm,
         'has_openai_key': has_openai_key,
         'openai_model': settings.OPENAI_MODEL,
@@ -1273,4 +1275,45 @@ def get_database_context(workspace):
         if rel.details:
             context += f"  Details: {rel.details}\n"
     
-    return context 
+    return context
+
+def save_ai_chat(request, workspace_id):
+    """Save an AI chat as a note"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    if request.method == 'POST':
+        # Get current timestamp for title prefix
+        timestamp = timezone.now().strftime('%Y-%m-%d %H:%M')
+        
+        # Get title and content from form
+        title_suffix = request.POST.get('title', '').strip()
+        # Replace any newlines in the title with spaces
+        title_suffix = title_suffix.replace('\n', ' ').replace('\r', '')
+        
+        # Create the title with timestamp prefix
+        title = f"{timestamp} - {title_suffix}"
+        
+        # Truncate title if it's too long (Django typically has a 255 char limit)
+        if len(title) > 250:
+            title = title[:247] + "..."
+            
+        content = request.POST.get('content', '')
+        
+        # Add the #AskAI hashtag to the content
+        content += "\n\n#AskAI"
+        
+        # Create the note
+        note = Note.objects.create(
+            workspace=workspace,
+            title=title,
+            content=content,
+            timestamp=timezone.now()
+        )
+        
+        # Process the note for entity detection (happens in the save method)
+        
+        messages.success(request, "AI conversation saved as a note.")
+        return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=note.id)
+    
+    # Redirect back to ask_ai on non-POST requests
+    return redirect('notekeeper:ask_ai', workspace_id=workspace_id) 
