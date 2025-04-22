@@ -132,6 +132,47 @@
             grid-template-columns: 1fr;
         }
     }
+    
+    /* Tags section styles */
+    .tags-container {
+        padding: 20px;
+        background-color: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .tags-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .tag-link {
+        text-decoration: none;
+    }
+    
+    .note-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        margin: 1px 4px 1px 0;
+        background-color: #edf2f7;
+        border-radius: 12px;
+        font-size: 0.85em;
+        color: #4a5568;
+        text-decoration: none;
+    }
+    
+    .note-tag:hover {
+        background-color: #e2e8f0;
+        color: #2d3748;
+    }
+    
+    .empty-message {
+        color: #718096;
+        font-style: italic;
+        text-align: center;
+        padding: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -230,6 +271,31 @@ workspace.id: {{ current_workspace.id }}
                 {% endfor %}
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Add this before the relationships-summary div -->
+<div class="tags-overview">
+    <div class="section-header">
+        <h2>Tags</h2>
+        <div class="action-buttons">
+            <a href="{% url 'notekeeper:tag_list' workspace_id=current_workspace.id %}" class="btn">View All</a>
+            <a href="{% url 'notekeeper:tag_create' workspace_id=current_workspace.id %}" class="btn">+</a>
+        </div>
+    </div>
+    
+    <div class="card tags-container">
+        {% if workspace_tags %}
+            <div class="tags-list">
+                {% for tag in workspace_tags %}
+                    <a href="{% url 'notekeeper:tag_detail' workspace_id=current_workspace.id pk=tag.id %}" class="tag-link">
+                        <span class="note-tag">#{{ tag.name }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-message">No tags created yet.</p>
+        {% endif %}
     </div>
 </div>
 

@@ -8,6 +8,26 @@
 <div class="container">
     <h1>{{ entity.name }} <small class="subtitle">({{ entity.get_type_display }})</small></h1>
 
+    <div class="entity-metadata card">
+        <div class="metadata-section">
+            <p><strong>Created:</strong> {{ entity.created_at|date:"F j, Y" }}</p>
+            <p><strong>Updated:</strong> {{ entity.updated_at|date:"F j, Y" }}</p>
+            
+            {% if entity.tags.exists %}
+                <div class="entity-tags-top">
+                    <p><strong>Tags:</strong></p>
+                    <div class="tags-list">
+                        {% for tag in entity.tags.all %}
+                            <a href="{% url 'notekeeper:tag_detail' workspace_id=workspace.id pk=tag.id %}" class="tag-link">
+                                <span class="tag-badge">#{{ tag.name }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
     <div class="card">
         <h2>Details</h2>
         {% if entity.details %}
@@ -94,17 +114,6 @@
         </div>
     </div>
 
-    {% if entity.tags.exists %}
-        <div class="entity-tags-section card">
-            <h3>Tags</h3>
-            <div class="entity-tags">
-                {% for tag in entity.tags.all %}
-                    <span class="tag-badge">#{{ tag.name }}</span>
-                {% endfor %}
-            </div>
-        </div>
-    {% endif %}
-
     <div class="actions">
         <a href="{% url 'notekeeper:entity_edit' workspace_id=workspace.id pk=entity.pk %}" class="btn">Edit</a>
         <a href="{% url 'notekeeper:entity_list' workspace_id=workspace.id %}" class="btn">Back to Entities</a>
@@ -118,6 +127,42 @@
 
 {% block extra_css %}
 <style>
+    .entity-metadata {
+        margin-bottom: 20px;
+    }
+    
+    .metadata-section p {
+        margin-bottom: 8px;
+    }
+    
+    .entity-tags-top {
+        margin-top: 15px;
+    }
+    
+    .tags-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 5px;
+    }
+    
+    .tag-link {
+        text-decoration: none;
+    }
+    
+    .tag-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        background-color: #e2e8f0;
+        border-radius: 16px;
+        font-size: 0.9em;
+        color: #4a5568;
+    }
+    
+    .tag-badge:hover {
+        background-color: #cbd5e0;
+    }
+    
     .relationships-section {
         margin-top: 20px;
     }
@@ -152,26 +197,6 @@
     
     td.actions {
         white-space: nowrap;
-    }
-    
-    .entity-tags-section {
-        margin-top: 20px;
-    }
-    
-    .entity-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 10px;
-    }
-    
-    .tag-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        background-color: #e2e8f0;
-        border-radius: 16px;
-        font-size: 0.9em;
-        color: #4a5568;
     }
 </style>
 {% endblock %} 
