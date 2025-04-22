@@ -243,3 +243,17 @@ class TagForm(forms.ModelForm):
                 tag.tagged_notes.add(*self.cleaned_data['related_notes'])
         
         return tag
+
+class UrlImportForm(forms.Form):
+    """Form for importing content from a URL"""
+    url = forms.URLField(
+        widget=forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://example.com/article'}),
+        help_text="Enter the URL of the page you want to import"
+    )
+    
+    def clean_url(self):
+        url = self.cleaned_data['url']
+        # Add http:// if missing
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        return url

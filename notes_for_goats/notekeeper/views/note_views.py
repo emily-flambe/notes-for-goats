@@ -4,6 +4,8 @@ from django.utils import timezone
 from django.contrib import messages
 import re
 from ..models import Workspace, Note, Entity, Tag
+from ..forms import NoteForm, UrlImportForm
+from ..utils import fetch_url_content
 
 def note_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
@@ -135,6 +137,48 @@ def note_delete(request, workspace_id, pk):
     note.delete()
     messages.success(request, "Note deleted successfully.")
     return redirect('notekeeper:note_list', workspace_id=workspace_id)
+
+def note_import_from_url(request, workspace_id):
+    """Import content from a URL as a new note"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    if request.method == "POST":
+        form = UrlImportForm(request.POST)
+        if form.is_valid():
+            url = form.cleaned_data['url']
+            
+            # Fetch content from URL
+            title, content, error = fetch_url_content(url)
+            
+            if error:
+                messages.error(request, error)
+                return render(request, 'notekeeper/note/import_url.html', {
+                    'workspace': workspace,
+                    'form': form
+                })
+            
+            # Create a new note with the fetched content
+            note = Note.objects.create(
+                workspace=workspace,
+                title=title,
+                content=content,
+                timestamp=timezone.now()
+            )
+            
+            messages.success(request, f"Successfully imported content from {url}")
+            return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=note.id)
+    else:
+        form = UrlImportForm()
+        
+        # Pre-fill URL from query parameter if provided
+        initial_url = request.GET.get('url', '')
+        if initial_url:
+            form = UrlImportForm(initial={'url': initial_url})
+    
+    return render(request, 'notekeeper/note/import_url.html', {
+        'workspace': workspace,
+        'form': form
+    })
 
 # Import at the top
 from ..forms import NoteForm 
