@@ -39,6 +39,27 @@ class Tag(models.Model):
     
     def __str__(self):
         return f"#{self.name}"
+    
+    def save(self, *args, **kwargs):
+        # Save the tag first
+        super().save(*args, **kwargs)
+        
+        # After saving, if this is an existing tag, update relationships
+        if self.pk:
+            self.update_relationships()
+    
+    def update_relationships(self):
+        """Update relationships between entities and notes that share this tag"""
+        # Get all notes with this tag
+        notes = self.tagged_notes.all()
+        
+        # Get all entities with this tag
+        entities = self.tagged_entities.all()
+        
+        # For each entity, ensure it's linked to all notes with this tag
+        for entity in entities:
+            # Add all notes with this tag to the entity's referenced_notes
+            entity.note_notes.add(*notes)
 
 
 class Entity(models.Model):
@@ -70,6 +91,25 @@ class Entity(models.Model):
         """Return tags as a list from tags relationship"""
         return [tag.name for tag in self.tags.all()]
     
+    def save(self, *args, **kwargs):
+        # First save the entity 
+        super().save(*args, **kwargs)
+        
+        # If we have tags, update relationships
+        if hasattr(self, 'tags') and self.pk:
+            self.update_relationships_from_tags()
+    
+    def update_relationships_from_tags(self):
+        """Update relationships with notes based on shared tags"""
+        # For each tag, find notes that also have this tag
+        for tag in self.tags.all():
+            # Get notes with this tag
+            related_notes = tag.tagged_notes.all()
+            
+            # Add these notes to this entity's referenced_notes
+            if related_notes.exists():
+                self.note_notes.add(*related_notes)
+    
     class Meta:
         verbose_name_plural = "Entities"
         ordering = ['name']
@@ -95,34 +135,27 @@ class Note(models.Model):
         Override save to extract entity references from content.
         Looks for #HashTags in the content and matches with entity tags or names.
         """
-        # First save the entry normally to ensure it exists in the database
+        # First save the note normally to ensure it exists in the database
         super().save(*args, **kwargs)
         
         # Extract hashtags from content (words prefixed with #)
         hashtags = re.findall(r'#(\w+)', self.content)
+        
         # Convert to lowercase for case-insensitive matching
         lower_hashtags = [tag.lower() for tag in hashtags]
         
+        # ONLY ADD tags, never remove them
         # Create or get Tag objects for each hashtag
-        if lower_hashtags:
-            # Clear existing tags
-            self.tags.clear()
-            
-            # Add new tags
-            for hashtag in lower_hashtags:
-                tag, created = Tag.objects.get_or_create(
-                    workspace=self.workspace,
-                    name=hashtag
-                )
-                self.tags.add(tag)
+        for hashtag in lower_hashtags:
+            tag, created = Tag.objects.get_or_create(
+                workspace=self.workspace,
+                name=hashtag
+            )
+            # Add the tag without clearing or removing any existing tags
+            self.tags.add(tag)
         
-        # Clear existing references to rebuild them
-        self.referenced_entities.clear()
-        
-        # Get all entities from this workspace
+        # Handle entity references
         workspace_entities = Entity.objects.filter(workspace=self.workspace)
-        
-        # Entities to add to referenced_entities
         entities_to_add = []
         
         for entity in workspace_entities:
@@ -138,9 +171,15 @@ class Note(models.Model):
             if any(tag in lower_hashtags for tag in entity_tags):
                 entities_to_add.append(entity)
         
-        # Add all matching entities to referenced_entities
+        # Update referenced_entities
         if entities_to_add:
-            self.referenced_entities.add(*entities_to_add)
+            self.referenced_entities.set(entities_to_add)
+        else:
+            self.referenced_entities.clear()
+        
+        # Trigger tag relationship update for shared connections
+        for tag in self.tags.all():
+            tag.update_relationships()
     
     class Meta:
         verbose_name_plural = "Notes"

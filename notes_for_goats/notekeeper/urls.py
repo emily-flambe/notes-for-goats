@@ -78,4 +78,7 @@ urlpatterns = [
     path('workspaces/<int:workspace_id>/tags/<int:pk>/', views.tag_detail, name='tag_detail'),
     path('workspaces/<int:workspace_id>/tags/<int:pk>/edit/', views.tag_edit, name='tag_edit'),
     path('workspaces/<int:workspace_id>/tags/<int:pk>/delete/', views.tag_delete, name='tag_delete'),
+
+    # Update Relationships
+    path('workspaces/<int:workspace_id>/update-relationships/', views.update_tag_relationships, name='update_tag_relationships'),
 ] 
