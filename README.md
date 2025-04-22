@@ -186,6 +186,47 @@ Keep your valuable notes safe:
      docker-compose exec web bash -c "cd notes_for_goats && python manage.py export_data"
      ```
 
+## Advanced AI Features
+
+Notes for Goats includes advanced AI capabilities to help you get more out of your personal knowledge base.
+
+### Retrieval Augmented Generation (RAG)
+
+When using OpenAI's models, Notes for Goats implements RAG to provide more accurate and relevant answers:
+
+#### How RAG Works in Notes for Goats
+
+1. **Vector Embeddings**: Each note and entity is processed into a vector embedding that captures its semantic meaning.
+
+2. **Query Processing**: When you ask a question, the system:
+   - Converts your query into a similar vector embedding
+   - Compares it against all notes and entities in your workspace
+   - Identifies the most relevant content based on semantic similarity
+   - Sends only the most relevant information to the AI model
+
+3. **Context-Aware Responses**: Instead of processing your entire database (which could exceed token limits), the AI receives only the most relevant information to your specific question.
+
+4. **Privacy & Efficiency**: This approach:
+   - Reduces token usage (and thus API costs)
+   - Improves response quality by focusing on relevant information
+   - Maintains workspace isolation (data from other workspaces is never included)
+
+#### RAG Availability
+
+- **OpenAI Mode**: RAG is automatically enabled when using OpenAI models
+- **Local LLM Mode**: Currently uses full context (no RAG) due to embedding requirements
+- **Token Usage**: When using RAG, you'll see a "RAG Active" indicator showing reduced token usage
+
+#### Example
+
+When you ask "What did Alice think about the marketing proposal?", instead of sending all notes and entities:
+
+1. The system identifies notes mentioning both Alice and marketing proposals
+2. Only sends those specific notes as context to the AI
+3. Generates a focused response based on just the relevant information
+
+This approach provides more accurate answers while keeping token usage reasonable, even in large workspaces.
+
 ## Troubleshooting AI Features
 
 ### Local LLM Issues

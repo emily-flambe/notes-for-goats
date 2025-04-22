@@ -3,7 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings
-from ..models import Workspace, Note, Entity, Tag, UserPreference, NoteEmbedding
+from ..models import Workspace, Note, Entity, UserPreference, NoteEmbedding
 from ..llm_service import LLMService
 from ..utils.embedding import generate_embeddings, similarity_search
 import numpy as np
