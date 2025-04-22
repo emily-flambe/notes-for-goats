@@ -1,0 +1,36 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Import from URL - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Import from URL</h1>
+    <p class="subtitle">Import content from a webpage into a new note</p>
+    
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="{{ form.url.id_for_label }}">URL:</label>
+                {{ form.url }}
+                <small class="form-text text-muted">{{ form.url.help_text }}</small>
+                {% if form.url.errors %}
+                    <div class="error">{{ form.url.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Import Content</button>
+                <a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="info-box mt-4">
+        <h3>How it works</h3>
+        <p>This tool attempts to extract the main content from the specified URL. The quality of extraction depends on the structure of the target website.</p>
+        <p>After importing, you can edit the note to clean up or reorganize the content as needed.</p>
+    </div>
+</div>
+{% endblock %}
