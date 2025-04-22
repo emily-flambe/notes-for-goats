@@ -17,43 +17,39 @@
         <div class="tag-metadata">
             <p><strong>Created:</strong> {{ tag.created_at|date:"F j, Y" }}</p>
             <p><strong>Updated:</strong> {{ tag.updated_at|date:"F j, Y" }}</p>
-        </div>
-    </div>
-    
-    <div class="related-content">
-        <div class="related-entities card">
-            <h2>Related Entities ({{ tag.tagged_entities.count }})</h2>
+            
             {% if tag.tagged_entities.exists %}
-                <div class="entity-list">
+                <p><strong>Related Entities:</strong></p>
+                <ul class="entity-simple-list">
                     {% for entity in tag.tagged_entities.all %}
-                        <div class="entity-item">
+                        <li>
                             <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.id %}">
                                 {{ entity.name }} ({{ entity.get_type_display }})
                             </a>
-                        </div>
+                        </li>
                     {% endfor %}
-                </div>
+                </ul>
             {% else %}
-                <p class="empty-message">No related entities.</p>
+                <p><strong>Related Entities:</strong> None</p>
             {% endif %}
         </div>
-        
-        <div class="related-notes card">
-            <h2>Related Notes ({{ tag.tagged_notes.count }})</h2>
-            {% if tag.tagged_notes.exists %}
-                <div class="note-list">
-                    {% for note in tag.tagged_notes.all %}
-                        <div class="note-item">
-                            <a href="{% url 'notekeeper:note_detail' workspace_id=workspace.id pk=note.id %}">
-                                {{ note.title }} ({{ note.timestamp|date:"Y-m-d" }})
-                            </a>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p class="empty-message">No related notes.</p>
-            {% endif %}
-        </div>
+    </div>
+    
+    <div class="related-notes-full card">
+        <h2>Related Notes ({{ tag.tagged_notes.count }})</h2>
+        {% if tag.tagged_notes.exists %}
+            <div class="note-list">
+                {% for note in tag.tagged_notes.all %}
+                    <div class="note-item">
+                        <a href="{% url 'notekeeper:note_detail' workspace_id=workspace.id pk=note.id %}">
+                            {{ note.title }} ({{ note.timestamp|date:"Y-m-d" }})
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-message">No related notes.</p>
+        {% endif %}
     </div>
     
     <div class="actions">
@@ -61,4 +57,48 @@
         <a href="{% url 'notekeeper:tag_delete' workspace_id=workspace.id pk=tag.id %}" class="btn btn-danger">Delete</a>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .entity-simple-list {
+        margin-top: 0;
+        padding-left: 20px;
+    }
+    
+    .entity-simple-list li {
+        margin-bottom: 5px;
+    }
+    
+    .related-notes-full {
+        margin-top: 20px;
+        width: 100%;
+    }
+    
+    .note-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .note-item {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .note-item:last-child {
+        border-bottom: none;
+    }
+    
+    .empty-message {
+        color: #718096;
+        font-style: italic;
+        padding: 15px 0;
+    }
+    
+    .actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+    }
+</style>
 {% endblock %} 

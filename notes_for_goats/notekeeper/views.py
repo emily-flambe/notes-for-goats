@@ -315,6 +315,7 @@ def workspace_detail(request, pk):
         'entities_by_type': entities_by_type,
         'recent_relationships': workspace.relationships.select_related('relationship_type').order_by('-created_at')[:5],
         'relationship_types': workspace.relationship_types.all(),
+        'workspace_tags': Tag.objects.filter(workspace=workspace).order_by('name'),
     }
     return render(request, 'notekeeper/workspace/detail.html', context)
 
