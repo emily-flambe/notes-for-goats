@@ -1177,9 +1177,7 @@ def show_message(request):
     return redirect(redirect_url)
 
 def ask_ai(request, workspace_id):
-    """
-    View for the Ask AI page with LLM provider toggle
-    """
+    """View for the Ask AI page with LLM provider toggle"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     ai_response = None
     models = []
@@ -1192,7 +1190,7 @@ def ask_ai(request, workspace_id):
         # For anonymous users, use session
         user_pref = None
     
-    # Handle toggle changes
+    # Handle LLM toggle changes
     if request.method == 'POST' and 'toggle_llm' in request.POST:
         use_local = request.POST.get('use_local_llm') == 'on'
         
@@ -1201,6 +1199,19 @@ def ask_ai(request, workspace_id):
             user_pref.save()
         else:
             request.session['use_local_llm'] = use_local
+            
+        # Redirect to avoid form resubmission
+        return redirect('notekeeper:ask_ai', workspace_id=workspace_id)
+    
+    # Handle direct prompt toggle changes
+    if request.method == 'POST' and 'toggle_direct_prompt' in request.POST:
+        use_direct_prompt = request.POST.get('use_direct_prompt') == 'on'
+        
+        if user_pref:
+            user_pref.use_direct_prompt = use_direct_prompt
+            user_pref.save()
+        else:
+            request.session['use_direct_prompt'] = use_direct_prompt
             
         # Redirect to avoid form resubmission
         return redirect('notekeeper:ask_ai', workspace_id=workspace_id)
@@ -1214,47 +1225,55 @@ def ask_ai(request, workspace_id):
                 # Determine which LLM to use
                 use_local = user_pref.use_local_llm if user_pref else request.session.get('use_local_llm', settings.USE_LOCAL_LLM)
                 
+                # Determine if using direct prompt
+                use_direct_prompt = user_pref.use_direct_prompt if user_pref else request.session.get('use_direct_prompt', False)
+                
                 # Initialize LLM service with user preference
                 llm_service = LLMService(use_local=use_local)
                 
-                # Get context data
-                context_data = get_database_context(workspace)
-                
-                # Create different prompts based on whether using local or not
-                if use_local:  # For Llama3
-                    system_prompt = """You are an analytical assistant that examines data and answers questions directly. 
-                    When referencing entities from the database in your answers, always use hashtag notation (e.g., #Alice, #ProjectX).
-                    Don't comment on the nature of the application or data structure."""
+                if use_direct_prompt:
+                    # Direct prompt mode - no context or special instructions
+                    system_prompt = "You are a helpful assistant."
+                    user_prompt = user_query
+                else:
+                    # Get context data for enhanced mode
+                    context_data = get_database_context(workspace)
                     
-                    user_prompt = f"""
-                    CONTEXT DATA:
-                    Workspace: {workspace.name}
-                    
-                    {context_data}
-                    
-                    INSTRUCTION: When referencing any entity, person, project, or tag in your response, use hashtag notation (e.g., #Alice, #ProjectX).
-                    
-                    QUESTION: {user_query}
-                    
-                    Answer the question directly based only on the context data provided. Don't mention the note-taking app itself.
-                    Remember to use hashtag notation (#EntityName) when referring to any entity, person, project, or tag in your response.
-                    """
-                else:  # For OpenAI
-                    system_prompt = """You are a helpful assistant that analyzes personal notes and provides insights.
-                    When referencing entities from the database in your answers, always use hashtag notation (e.g., #Alice, #ProjectX)."""
-                    
-                    user_prompt = f"""
-                    I have a personal note-taking app with data from my "{workspace.name}" workspace:
-                    
-                    {context_data}
-                    
-                    IMPORTANT: When referencing any entity, person, project, or tag in your response, use hashtag notation (e.g., #Alice, #ProjectX).
-                    
-                    Based on this information, please answer the following question:
-                    {user_query}
-                    
-                    Remember to use hashtag notation (#EntityName) when referring to any entity, person, project, or tag in your response.
-                    """
+                    # Create different prompts based on whether using local or not
+                    if use_local:  # For Llama3
+                        system_prompt = """You are an analytical assistant that examines data and answers questions directly. 
+                        When referencing entities from the database in your answers, always use hashtag notation (e.g., #Alice, #ProjectX).
+                        Don't comment on the nature of the application or data structure."""
+                        
+                        user_prompt = f"""
+                        CONTEXT DATA:
+                        Workspace: {workspace.name}
+                        
+                        {context_data}
+                        
+                        INSTRUCTION: When referencing any entity, person, project, or tag in your response, use hashtag notation (e.g., #Alice, #ProjectX).
+                        
+                        QUESTION: {user_query}
+                        
+                        Answer the question directly based only on the context data provided. Don't mention the note-taking app itself.
+                        Remember to use hashtag notation (#EntityName) when referring to any entity, person, project, or tag in your response.
+                        """
+                    else:  # For OpenAI
+                        system_prompt = """You are a helpful assistant that analyzes personal notes and provides insights.
+                        When referencing entities from the database in your answers, always use hashtag notation (e.g., #Alice, #ProjectX)."""
+                        
+                        user_prompt = f"""
+                        I have a personal note-taking app with data from my "{workspace.name}" workspace:
+                        
+                        {context_data}
+                        
+                        IMPORTANT: When referencing any entity, person, project, or tag in your response, use hashtag notation (e.g., #Alice, #ProjectX).
+                        
+                        Based on this information, please answer the following question:
+                        {user_query}
+                        
+                        Remember to use hashtag notation (#EntityName) when referring to any entity, person, project, or tag in your response.
+                        """
                 
                 # Generate response
                 ai_response = llm_service.generate_response(
@@ -1276,8 +1295,10 @@ def ask_ai(request, workspace_id):
     # Determine current LLM setting for the template
     if user_pref:
         use_local_llm = user_pref.use_local_llm
+        use_direct_prompt = getattr(user_pref, 'use_direct_prompt', False)
     else:
         use_local_llm = request.session.get('use_local_llm', settings.USE_LOCAL_LLM)
+        use_direct_prompt = request.session.get('use_direct_prompt', False)
     
     # Check if we have API keys configured
     has_openai_key = bool(settings.OPENAI_API_KEY)
@@ -1287,6 +1308,7 @@ def ask_ai(request, workspace_id):
         'ai_response': ai_response,
         'user_query': user_query,
         'use_local_llm': use_local_llm,
+        'use_direct_prompt': use_direct_prompt,
         'has_openai_key': has_openai_key,
         'openai_model': settings.OPENAI_MODEL,
         'local_llm_model': settings.LOCAL_LLM_MODEL,
