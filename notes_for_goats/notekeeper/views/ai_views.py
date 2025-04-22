@@ -17,6 +17,7 @@ def ask_ai(request, workspace_id):
     ai_response = None
     models = []
     user_query = ""  # Initialize user_query to empty string
+    token_info = None  # Initialize token_info as None for GET requests
     
     # Get or create user preferences
     if request.user.is_authenticated:
@@ -73,6 +74,9 @@ def ask_ai(request, workspace_id):
         
         if user_query:
             try:
+                # Determine if using direct prompt
+                use_direct_prompt = user_pref.use_direct_prompt if user_pref else request.session.get('use_direct_prompt', False)
+                
                 # Initialize LLM service with user preference
                 llm_service = LLMService(use_local=use_local_llm)
                 
@@ -80,6 +84,10 @@ def ask_ai(request, workspace_id):
                     # Direct prompt mode - no context or special instructions
                     system_prompt = "You are a helpful assistant."
                     user_prompt = user_query
+                    
+                    # Estimate tokens for direct prompt
+                    prompt_tokens = estimate_tokens(system_prompt) + estimate_tokens(user_prompt)
+                    
                 else:
                     # Get context data for enhanced mode
                     context_data = get_database_context(workspace, query=user_query, use_local_llm=use_local_llm)
@@ -119,6 +127,24 @@ def ask_ai(request, workspace_id):
                         
                         Remember to use hashtag notation (#EntityName) when referring to any entity, person, project, or tag in your response.
                         """
+                    
+                    # Estimate tokens for the full prompt
+                    system_tokens = estimate_tokens(system_prompt)
+                    user_tokens = estimate_tokens(user_prompt)
+                    context_tokens = estimate_tokens(context_data)
+                    query_tokens = estimate_tokens(user_query)
+                    prompt_tokens = system_tokens + user_tokens
+                    
+                    # Create token info to display to user
+                    token_info = {
+                        'system': system_tokens,
+                        'context': context_tokens,
+                        'query': query_tokens,
+                        'total': prompt_tokens,
+                        'limit': 16384 if not use_local_llm and "gpt-4" in settings.OPENAI_MODEL.lower() else 4096,
+                        'use_rag': not use_local_llm and context_tokens > 0,
+                        'limit_threshold': 0.75 * (16384 if not use_local_llm and "gpt-4" in settings.OPENAI_MODEL.lower() else 4096)
+                    }
                 
                 # Generate response
                 ai_response = llm_service.generate_response(
@@ -154,6 +180,7 @@ def ask_ai(request, workspace_id):
         'openai_model': settings.OPENAI_MODEL,
         'local_llm_model': settings.LOCAL_LLM_MODEL,
         'available_models': models,
+        'token_info': token_info,
     })
 
 def get_database_context(workspace, query=None, use_local_llm=False):
@@ -349,4 +376,15 @@ def save_ai_chat(request, workspace_id):
         return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=note.id)
     
     # Redirect back to ask_ai on non-POST requests
-    return redirect('notekeeper:ask_ai', workspace_id=workspace_id) 
+    return redirect('notekeeper:ask_ai', workspace_id=workspace_id)
+
+def estimate_tokens(text):
+    """Estimate the number of tokens in a string"""
+    try:
+        import tiktoken
+        encoding = tiktoken.encoding_for_model(settings.OPENAI_MODEL)
+        return len(encoding.encode(text))
+    except (ImportError, Exception):
+        # Fallback to simple approximation if tiktoken isn't available
+        # GPT models average ~1.3 tokens per word
+        return len(text.split()) * 1.3 
