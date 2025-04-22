@@ -92,10 +92,20 @@ class Entity(models.Model):
         return [tag.name for tag in self.tags.all()]
     
     def save(self, *args, **kwargs):
-        # First save the entity 
+        """Override save to ensure the entity has a tag matching its name"""
+        # First save the entity itself
         super().save(*args, **kwargs)
         
-        # If we have tags, update relationships
+        # Ensure a tag exists with the same name as the entity (lowercase for consistency)
+        entity_name_tag, created = Tag.objects.get_or_create(
+            workspace=self.workspace,
+            name=self.name.lower()
+        )
+        
+        # Link this tag to the entity if not already linked
+        self.tags.add(entity_name_tag)
+        
+        # Now handle the regular tag relationships
         if hasattr(self, 'tags') and self.pk:
             self.update_relationships_from_tags()
     
