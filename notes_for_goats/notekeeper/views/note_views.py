@@ -5,7 +5,10 @@ from django.contrib import messages
 import re
 from ..models import Workspace, Note, Entity, Tag
 from ..forms import NoteForm, UrlImportForm
-from ..url_import_utils import fetch_url_content
+from ..utils.url_import import fetch_url_content
+import logging
+from django.conf import settings
+import time
 
 def note_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
@@ -141,6 +144,7 @@ def note_delete(request, workspace_id, pk):
 def note_import_from_url(request, workspace_id):
     """Import content from a URL as a new note"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
+    logger = logging.getLogger(__name__)
     
     if request.method == "POST":
         form = UrlImportForm(request.POST)
@@ -157,13 +161,49 @@ def note_import_from_url(request, workspace_id):
                     'form': form
                 })
             
-            # Create a new note with the fetched content
-            note = Note.objects.create(
+            # CRITICAL CHANGE: Use two-step save to ensure signals fire properly
+            note = Note(
                 workspace=workspace,
                 title=title,
                 content=content,
                 timestamp=timezone.now()
             )
+            logger.info(f"Saving note from URL import: {title[:30]}...")
+            note.save()
+            
+            # Double-check the embedding was created, and if not, create it manually
+            from ..utils.embedding import generate_embeddings
+            from ..models import NoteEmbedding
+            
+            # Wait a tiny bit to allow signals to process
+            time.sleep(0.5)
+            
+            try:
+                # Check if embedding exists
+                embedding_exists = NoteEmbedding.objects.filter(note=note).exists()
+                
+                if not embedding_exists and settings.OPENAI_API_KEY:
+                    logger.warning(f"No embedding found for note {note.id} - creating manually")
+                    
+                    # Combine title and content
+                    text_to_embed = f"{note.title}\n\n{note.content}"
+                    
+                    # Generate embedding
+                    embedding_vector = generate_embeddings(text_to_embed)
+                    
+                    # Save embedding
+                    NoteEmbedding.objects.create(
+                        note=note,
+                        embedding=embedding_vector
+                    )
+                    
+                    logger.info(f"Manually created embedding for URL-imported note {note.id}")
+                elif embedding_exists:
+                    logger.info(f"Embedding already exists for note {note.id} - no manual creation needed")
+                else:
+                    logger.warning(f"No OpenAI API key configured - skipping embedding creation")
+            except Exception as e:
+                logger.error(f"Error in manual embedding creation for note {note.id}: {str(e)}", exc_info=True)
             
             messages.success(request, f"Successfully imported content from {url}")
             return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=note.id)

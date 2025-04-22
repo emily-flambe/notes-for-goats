@@ -6,5 +6,5 @@ class NotekeeperConfig(AppConfig):
     name = "notekeeper"
 
     def ready(self):
-        # Import signal handlers
+        """Import signals when the app is ready"""
         import notekeeper.signals
