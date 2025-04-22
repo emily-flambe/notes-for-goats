@@ -237,6 +237,7 @@ class UserPreference(models.Model):
     """Stores user preferences"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='preferences')
     use_local_llm = models.BooleanField(default=False)
+    use_direct_prompt = models.BooleanField(default=False)
     
     def __str__(self):
         return f"Preferences for {self.user.username}"

@@ -6,15 +6,10 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Ask AI</h1>
-        <a href="{% url 'notekeeper:workspace_detail' pk=workspace.id %}" class="btn btn-outline-secondary">
-            Back to {{ workspace.name }}
-        </a>
+        <p>Ask the AI to answer questions and (optionally) save the response as a note.</p>
     </div>
     
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">Ask a Question</h5>
-        </div>
         <div class="card-body">
             <!-- LLM Toggle with fixed width and no-wrap -->
             <form method="POST" id="toggle-form" class="mb-3">
@@ -54,13 +49,45 @@
                 </div>
             </form>
             
+            <!-- Add this right after the LLM toggle form -->
+            <form method="POST" id="direct-prompt-form" class="mb-3">
+                {% csrf_token %}
+                <input type="hidden" name="toggle_direct_prompt" value="1">
+                
+                <div style="margin-bottom: 12px; width: 100%;">
+                    <label style="display: inline-flex; align-items: center; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" 
+                               id="useDirectPrompt" 
+                               name="use_direct_prompt" 
+                               style="margin-right: 8px;" 
+                               {% if use_direct_prompt %}checked{% endif %} 
+                               onchange="document.getElementById('direct-prompt-form').submit();">
+                        <span style="white-space: nowrap;">Direct prompt (no context)</span>
+                    </label>
+                    
+                    <div style="margin-left: 24px; margin-top: 4px;">
+                        {% if use_direct_prompt %}
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                Using direct prompt mode: No app context or special instructions will be added.
+                            </small>
+                        {% else %}
+                            <small class="text-info">
+                                <i class="bi bi-info-circle-fill me-1"></i>
+                                Using enhanced mode: App context and instructions will be added.
+                            </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+            
             <!-- AI Question Form -->
             <form method="POST" id="ai-form">
                 {% csrf_token %}
                 <div class="form-group">
                     <label for="user_query">Your Question:</label>
                     <textarea name="user_query" id="user_query" class="form-control" rows="3" 
-                        placeholder="E.g., Summarize my notes about Project X or What did I discuss with Alice last week?" required></textarea>
+                        placeholder="{% if use_direct_prompt %}Enter your prompt exactly as you want to send it to the AI...{% else %}E.g., Summarize my notes about Project X or What did I discuss with Alice last week?{% endif %}" required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary mt-3" id="submit-btn">
                     <i class="bi bi-robot me-1"></i> Ask AI
@@ -86,9 +113,14 @@
     <div class="card shadow-sm" id="response-card">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h5 class="mb-0">AI Response</h5>
-            <span class="badge {% if use_local_llm %}bg-success{% else %}bg-primary{% endif %}">
-                {% if use_local_llm %}Local LLM{% else %}OpenAI{% endif %}
-            </span>
+            <div>
+                <span class="badge {% if use_direct_prompt %}bg-warning{% else %}bg-info{% endif %} me-2">
+                    {% if use_direct_prompt %}Direct Prompt{% else %}Enhanced Mode{% endif %}
+                </span>
+                <span class="badge {% if use_local_llm %}bg-success{% else %}bg-primary{% endif %}">
+                    {% if use_local_llm %}Local LLM{% else %}OpenAI{% endif %}
+                </span>
+            </div>
         </div>
         <div class="card-body">
             <!-- User's prompt displayed in bold -->
