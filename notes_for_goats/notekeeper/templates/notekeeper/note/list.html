@@ -98,12 +98,12 @@
                                 {{ entry.content|linebreaks }}
                             </div>
                             
-                            {% if entry.referenced_entities.all %}
-                                <div class="journal-entities">
-                                    <div class="entity-list">
-                                        {% for entity in entry.referenced_entities.all %}
-                                            <span class="entity-reference">
-                                                {{ entity.name }}
+                            {% if entry.tags.all %}
+                                <div class="journal-tags">
+                                    <div class="note-list">
+                                        {% for tag in entry.tags.all %}
+                                            <span class="note-tag">
+                                                #{{ tag.name }}
                                             </span>
                                         {% endfor %}
                                     </div>
@@ -173,14 +173,14 @@
         color: #4a5568;
     }
     
-    .entity-list {
+    .note-list {
         display: flex;
         flex-wrap: wrap;
         gap: 6px; /* Reduced from 8px */
         margin-top: 3px; /* Reduced from 5px */
     }
     
-    .entity-reference {
+    .note-tag {
         display: inline-block;
         padding: 2px 8px;
         margin: 1px 4px 1px 0; /* Slightly reduced margins */
@@ -191,7 +191,7 @@
         text-decoration: none;
     }
     
-    .entity-reference:hover {
+    .note-tag:hover {
         background-color: #e2e8f0;
         color: #2d3748;
         text-decoration: none;
@@ -294,6 +294,14 @@
     
     .no-results-message a:hover {
         text-decoration: underline;
+    }
+    
+    .journal-tags {
+        font-size: 0.9em;
+        color: #4a5568;
+        margin-top: 0rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #e2e8f0;
     }
 </style>
 {% endblock %}
