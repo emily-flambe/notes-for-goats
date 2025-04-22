@@ -104,7 +104,6 @@ Run AI features locally with complete privacy and no usage costs:
    
    When running `make env`, set these values:
    ```
-   USE_LOCAL_LLM=True
    LOCAL_LLM_URL=http://localhost:11434
    LOCAL_LLM_MODEL=llama3
    ```

@@ -290,3 +290,21 @@ class UserPreference(models.Model):
     
     def __str__(self):
         return f"Preferences for {self.user.username}"
+
+class NoteEmbedding(models.Model):
+    """Stores embeddings for notes to enable semantic search"""
+    note = models.OneToOneField(Note, on_delete=models.CASCADE, related_name='embedding')
+    embedding = models.JSONField()  # Store the embedding vector as JSON
+    generated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Embedding for {self.note}"
+
+class EntityEmbedding(models.Model):
+    """Stores embeddings for entities to enable semantic search"""
+    entity = models.OneToOneField(Entity, on_delete=models.CASCADE, related_name='embedding')
+    embedding = models.JSONField()  # Store the embedding vector as JSON
+    generated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Embedding for {self.entity}"

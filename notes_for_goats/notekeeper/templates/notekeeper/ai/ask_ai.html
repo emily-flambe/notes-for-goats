@@ -122,6 +122,36 @@
                 </span>
             </div>
         </div>
+        
+        <!-- Only display token info if it exists -->
+        {% if token_info %}
+        <div class="token-info-alert alert {% if token_info.total > token_info.limit_threshold %}alert-warning{% else %}alert-info{% endif %} m-3 mb-0">
+            <div class="d-flex align-items-center">
+                <i class="bi {% if token_info.total > token_info.limit_threshold %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %} me-2"></i>
+                <div>
+                    <strong>Token Usage:</strong> {{ token_info.total|floatformat:0 }} / {{ token_info.limit }} tokens
+                    ({% widthratio token_info.total token_info.limit 100 %}%)
+                    
+                    {% if token_info.use_rag %}
+                    <br>
+                    <small>
+                        <span class="badge bg-success">RAG Active</span>
+                        Using semantic search to find relevant content ({{ token_info.context|floatformat:0 }} tokens)
+                    </small>
+                    {% endif %}
+                    
+                    {% if token_info.total > token_info.limit_threshold %}
+                    <br>
+                    <small class="text-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        Approaching token limit - consider using more specific questions or direct prompt mode.
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
         <div class="card-body">
             <!-- User's prompt displayed in bold -->
             <div class="user-prompt mb-3">
@@ -166,6 +196,12 @@
     font-weight: 500;
     margin-top: 5px;
     border-radius: 0.25rem;
+}
+
+/* Token info styling */
+.token-info-alert {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
 }
 </style>
 
