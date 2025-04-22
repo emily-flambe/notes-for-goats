@@ -5,7 +5,7 @@ from django.contrib import messages
 import re
 from ..models import Workspace, Note, Entity, Tag
 from ..forms import NoteForm, UrlImportForm
-from ..utils import fetch_url_content
+from ..url_import_utils import fetch_url_content
 
 def note_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
