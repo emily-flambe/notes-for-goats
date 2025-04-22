@@ -144,7 +144,17 @@ def note_edit(request, workspace_id, pk):
     if request.method == "POST":
         form = NoteForm(request.POST, instance=entry)
         if form.is_valid():
-            entry = form.save()  # This will trigger the save method to find hashtags
+            # Get existing tags before form.save() clears them
+            existing_tags = list(entry.tags.all())
+            
+            # Save the form but don't commit m2m relationships yet
+            note = form.save(commit=False)
+            note.save()  # This triggers our save() method that adds tags from content
+            
+            # Re-add the existing tags
+            for tag in existing_tags:
+                note.tags.add(tag)
+                
             return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=entry.pk)
     else:
         form = NoteForm(instance=entry)
@@ -1486,4 +1496,30 @@ def tag_delete(request, workspace_id, pk):
     return render(request, 'notekeeper/tag/delete.html', {
         'workspace': workspace,
         'tag': tag,
-    }) 
+    })
+
+def update_tag_relationships(request, workspace_id):
+    """Admin function to update all tag-based relationships"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    # Only allow for staff/admin users
+    if not request.user.is_staff:
+        messages.error(request, "You don't have permission to perform this action.")
+        return redirect('notekeeper:workspace_detail', pk=workspace_id)
+    
+    # Get all tags in this workspace
+    tags = Tag.objects.filter(workspace=workspace)
+    
+    # For each tag, update relationships
+    for tag in tags:
+        tag.update_relationships()
+    
+    # Get all entities in this workspace
+    entities = Entity.objects.filter(workspace=workspace)
+    
+    # For each entity, update relationships
+    for entity in entities:
+        entity.update_relationships_from_tags()
+    
+    messages.success(request, f"Updated relationships for {tags.count()} tags and {entities.count()} entities.")
+    return redirect('notekeeper:workspace_detail', pk=workspace_id) 
