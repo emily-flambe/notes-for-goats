@@ -239,11 +239,12 @@ def get_database_context(workspace, query=None, use_local_llm=False):
         
         # Add to results if we found a match
         if best_embedding:
-            note_similarities.append((best_embedding.note_id, max_similarity))
+            note_similarities.append((best_embedding.note_id, max_similarity, best_embedding))
     
     # Sort by similarity and get top 5
     note_similarities.sort(key=lambda x: x[1], reverse=True)
-    relevant_note_ids = [note_id for note_id, _ in note_similarities[:5]]
+    top_5_similarities = note_similarities[:5]
+    relevant_note_ids = [note_id for note_id, _, _ in top_5_similarities]
     
     # Get entity embeddings for this workspace
     relevant_entity_ids = []
@@ -275,30 +276,107 @@ def get_database_context(workspace, query=None, use_local_llm=False):
     if workspace.description:
         context += f"Description: {workspace.description}\n\n"
     
-    # Add relevant entities
-    if relevant_entity_ids:
-        context += "RELEVANT ENTITIES:\n"
+    # Track total tokens to avoid exceeding limits
+    MAX_CONTEXT_TOKENS = 6000  # Reserve ~2000 tokens for the prompt and response
+    estimated_tokens = estimate_tokens(context)
+    
+    # Add relevant entities (typically small)
+    if relevant_entity_ids and estimated_tokens < MAX_CONTEXT_TOKENS:
+        entities_context = "RELEVANT ENTITIES:\n"
         for entity in Entity.objects.filter(id__in=relevant_entity_ids):
-            context += f"- {entity.name} (Type: {entity.get_type_display()})\n"
+            entity_text = f"- {entity.name} (Type: {entity.get_type_display()})\n"
             if entity.details:
-                context += f"  Details: {entity.details}\n"
+                entity_text += f"  Details: {entity.details}\n"
             if hasattr(entity, 'tags') and entity.tags.exists():
                 tag_list = ", ".join([tag.name for tag in entity.tags.all()])
-                context += f"  Tags: {tag_list}\n"
+                entity_text += f"  Tags: {tag_list}\n"
+            
+            # Check if adding this entity would exceed the token limit
+            if estimated_tokens + estimate_tokens(entity_text) < MAX_CONTEXT_TOKENS:
+                entities_context += entity_text
+                estimated_tokens += estimate_tokens(entity_text)
+            else:
+                break
+                
+        context += entities_context
     
-    # Add relevant notes
-    if relevant_note_ids:
-        context += "\nRELEVANT NOTES:\n"
-        for note in Note.objects.filter(id__in=relevant_note_ids):
-            context += f"- {note.title} (Date: {note.timestamp.strftime('%Y-%m-%d')})\n"
-            context += f"  Content: {note.content}\n"
-            if note.referenced_entities.exists():
-                entities_list = ", ".join([e.name for e in note.referenced_entities.all()])
-                context += f"  References: {entities_list}\n"
+    # Add relevant notes with intelligent truncation
+    if relevant_note_ids and estimated_tokens < MAX_CONTEXT_TOKENS:
+        notes_context = "\nRELEVANT NOTES:\n"
+        
+        # Prepare to allocate tokens intelligently based on note relevance
+        notes_data = []
+        for note_id, similarity, best_embedding in top_5_similarities:
+            try:
+                note = Note.objects.get(id=note_id)
+                # If we have a best_embedding with section_text, prefer using that specific section
+                if best_embedding and best_embedding.section_text:
+                    content = best_embedding.section_text
+                    preview = f"[Section {best_embedding.section_index+1}]: {content}"
+                else:
+                    content = note.content
+                    preview = content
+                
+                # Truncate preview for very long content (still need reasonable length for summary)
+                if len(preview) > 1000:
+                    preview = preview[:997] + "..."
+                    
+                notes_data.append({
+                    'note': note,
+                    'content': content,
+                    'preview': preview,
+                    'similarity': similarity,
+                    'token_estimate': estimate_tokens(
+                        f"- {note.title} (Date: {note.timestamp.strftime('%Y-%m-%d')})\n"
+                        f"  Content: {preview}\n"
+                    )
+                })
+            except Note.DoesNotExist:
+                continue
+                
+        # Sort by similarity to allocate tokens to most relevant notes first
+        notes_data.sort(key=lambda x: x['similarity'], reverse=True)
+        
+        # Add notes to context based on token budget
+        for note_data in notes_data:
+            # Check if adding this note would exceed the token limit
+            if estimated_tokens + note_data['token_estimate'] < MAX_CONTEXT_TOKENS:
+                note_text = (
+                    f"- {note_data['note'].title} "
+                    f"(Date: {note_data['note'].timestamp.strftime('%Y-%m-%d')})\n"
+                    f"  Content: {note_data['preview']}\n"
+                )
+                
+                # Add references if they exist and we have space
+                if note_data['note'].referenced_entities.exists():
+                    ref_text = f"  References: {', '.join([e.name for e in note_data['note'].referenced_entities.all()])}\n"
+                    if estimated_tokens + note_data['token_estimate'] + estimate_tokens(ref_text) < MAX_CONTEXT_TOKENS:
+                        note_text += ref_text
+                
+                notes_context += note_text
+                estimated_tokens += note_data['token_estimate']
+            else:
+                # Add a truncated version if possible
+                if estimated_tokens + 200 < MAX_CONTEXT_TOKENS:  # 200 tokens for a short summary
+                    brief_preview = note_data['preview'][:200] + "... [content truncated]"
+                    brief_text = (
+                        f"- {note_data['note'].title} "
+                        f"(Date: {note_data['note'].timestamp.strftime('%Y-%m-%d')})\n"
+                        f"  Content: {brief_preview}\n"
+                    )
+                    notes_context += brief_text
+                    estimated_tokens += estimate_tokens(brief_text)
+                break  # Stop adding notes if we're reaching the limit
+                
+        context += notes_context
     
-    # If we didn't find any relevant content, return the full context
+    # If we didn't find any relevant content, return a limited full context
     if not relevant_note_ids and not relevant_entity_ids:
         return get_full_database_context(workspace, limit=True)
+    
+    # Add a note about possible truncation if we had to limit content
+    if estimated_tokens >= MAX_CONTEXT_TOKENS:
+        context += "\n[Note: Some content was truncated to fit within token limits.]\n"
     
     return context
 
