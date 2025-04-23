@@ -195,10 +195,6 @@ def get_database_context(workspace, query=None, use_local_llm=False):
     - use_local_llm: Whether the user is using a local LLM (from user preferences)
     """
     # Decide whether to use RAG or full context
-    # Only use RAG when:
-    # 1. We have a query
-    # 2. We have an OpenAI API key for embeddings
-    # 3. We're NOT using a local LLM (based on user preference)
     use_rag = query and settings.OPENAI_API_KEY and not use_local_llm
     
     if not use_rag:
@@ -208,38 +204,59 @@ def get_database_context(workspace, query=None, use_local_llm=False):
     # Generate embedding for the query
     query_embedding = generate_embeddings(query)
     
-    # Get embeddings for notes in this workspace
+    # Get all note embeddings in this workspace
     note_embeddings = NoteEmbedding.objects.filter(
         note__workspace=workspace
     ).select_related('note')
     
-    # Find most relevant notes
-    relevant_note_ids = []
-    if note_embeddings.exists():
-        embeddings_list = [np.array(ne.embedding) for ne in note_embeddings]
-        note_objects = [ne.note for ne in note_embeddings]
-        
-        # Get top 5 most similar notes
-        similar_notes = similarity_search(
-            query_embedding, 
-            embeddings_list,
-            top_k=min(5, len(embeddings_list))
-        )
-        
-        relevant_note_ids = [note_objects[idx].id for idx, _ in similar_notes]
+    # Group embeddings by note
+    note_embedding_map = {}
+    for ne in note_embeddings:
+        if ne.note_id not in note_embedding_map:
+            note_embedding_map[ne.note_id] = []
+        note_embedding_map[ne.note_id].append(ne)
     
-    # Get entity embeddings for this workspace (if we've implemented EntityEmbedding)
-    entity_embeddings = []
+    # Find most relevant notes by comparing with all embeddings
+    # and keeping the highest similarity score for each note
+    note_similarities = []
+    for note_id, embeddings in note_embedding_map.items():
+        # Find the highest similarity for any chunk of this note
+        max_similarity = 0
+        best_embedding = None
+        
+        for ne in embeddings:
+            embedding_array = np.array(ne.embedding)
+            query_array = np.array(query_embedding)
+            
+            # Calculate cosine similarity
+            similarity = np.dot(query_array, embedding_array) / (
+                np.linalg.norm(query_array) * np.linalg.norm(embedding_array)
+            )
+            
+            if similarity > max_similarity:
+                max_similarity = similarity
+                best_embedding = ne
+        
+        # Add to results if we found a match
+        if best_embedding:
+            note_similarities.append((best_embedding.note_id, max_similarity))
+    
+    # Sort by similarity and get top 5
+    note_similarities.sort(key=lambda x: x[1], reverse=True)
+    relevant_note_ids = [note_id for note_id, _ in note_similarities[:5]]
+    
+    # Get entity embeddings for this workspace
     relevant_entity_ids = []
     try:
         from ..models import EntityEmbedding
-        entity_embeddings = EntityEmbedding.objects.filter(
+        
+        entity_embeddings_objs = EntityEmbedding.objects.filter(
             entity__workspace=workspace
         ).select_related('entity')
         
-        if entity_embeddings.exists():
-            entity_embeddings_list = [np.array(ee.embedding) for ee in entity_embeddings]
-            entity_objects = [ee.entity for ee in entity_embeddings]
+        if entity_embeddings_objs.exists():
+            entity_embeddings_list = [np.array(ee.embedding) for ee in entity_embeddings_objs]
+            entity_objects = [ee.entity for ee in entity_embeddings_objs]
             
             # Get top 5 most similar entities
             similar_entities = similarity_search(
