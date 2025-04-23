@@ -4,7 +4,7 @@ from django.utils import timezone
 import time
 from .models import Workspace, Entity, Note, RelationshipType, Relationship
 from .views import create_backup
-from .utils.embedding import generate_embeddings
+from .utils.embedding import generate_embeddings, count_tokens, generate_chunked_embeddings
 from .models import NoteEmbedding, EntityEmbedding
 from django.conf import settings
 import logging
@@ -56,22 +56,50 @@ def generate_note_embedding(sender, instance, **kwargs):
         # Combine title and content for better semantic representation
         text_to_embed = f"{instance.title}\n\n{instance.content}"
         
-        # Generate embedding
-        start_time = time.time()
-        embedding_vector = generate_embeddings(text_to_embed)
-        elapsed = time.time() - start_time
+        # First, delete any existing embeddings for this note
+        NoteEmbedding.objects.filter(note=instance).delete()
         
-        # Save or update the embedding
-        embedding, created = NoteEmbedding.objects.update_or_create(
-            note=instance,
-            defaults={'embedding': embedding_vector}
-        )
+        # Check if text exceeds token limit
+        estimated_tokens = count_tokens(text_to_embed)
+        logger.info(f"Note {instance.id} estimated token count: {estimated_tokens}")
         
-        logger.info(f"{'Created' if created else 'Updated'} embedding for note {instance.id} in {elapsed:.2f}s")
+        if estimated_tokens <= 8000:
+            # Standard approach for smaller texts
+            start_time = time.time()
+            embedding_vector = generate_embeddings(text_to_embed)
+            elapsed = time.time() - start_time
+            
+            # Create the embedding
+            NoteEmbedding.objects.create(
+                note=instance,
+                embedding=embedding_vector,
+                section_index=0,
+                section_text=text_to_embed[:1000] if len(text_to_embed) > 1000 else text_to_embed
+            )
+            
+            logger.info(f"Created single embedding for note {instance.id} in {elapsed:.2f}s")
+        else:
+            # For large texts, use chunking
+            logger.info(f"Note {instance.id} exceeds token limit, using chunking")
+            
+            # Generate embeddings for chunks
+            start_time = time.time()
+            chunk_results = generate_chunked_embeddings(text_to_embed)
+            elapsed = time.time() - start_time
+            
+            # Save each chunk embedding
+            for i, (chunk_text, embedding) in enumerate(chunk_results):
+                NoteEmbedding.objects.create(
+                    note=instance,
+                    embedding=embedding,
+                    section_index=i,
+                    section_text=chunk_text[:1000] if len(chunk_text) > 1000 else chunk_text
+                )
+            
+            logger.info(f"Created {len(chunk_results)} chunk embeddings for note {instance.id} in {elapsed:.2f}s")
+    
     except Exception as e:
-        logger.error(f"Error generating embedding for note {instance.id}: {e}", exc_info=True)
-        # Re-raise the exception to ensure it's visible
-        raise
+        logger.error(f"Error generating embeddings for note {instance.id}: {str(e)}", exc_info=True)
 
 @receiver(post_save, sender=Entity)
 def generate_entity_embedding(sender, instance, **kwargs):

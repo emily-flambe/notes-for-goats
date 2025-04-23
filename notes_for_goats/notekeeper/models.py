@@ -293,17 +293,19 @@ class UserPreference(models.Model):
 
 class NoteEmbedding(models.Model):
     """Stores embeddings for notes to enable semantic search"""
-    note = models.OneToOneField(Note, on_delete=models.CASCADE, related_name='embedding')
-    embedding = models.JSONField()  # Store the embedding vector as JSON
+    note = models.ForeignKey(Note, on_delete=models.CASCADE, related_name='embeddings')
+    embedding = models.JSONField()
     generated_at = models.DateTimeField(auto_now=True)
+    section_index = models.IntegerField(default=0)
+    section_text = models.TextField(blank=True, null=True)
     
     def __str__(self):
-        return f"Embedding for {self.note}"
+        return f"Embedding for {self.note} (section {self.section_index})"
 
 class EntityEmbedding(models.Model):
     """Stores embeddings for entities to enable semantic search"""
     entity = models.OneToOneField(Entity, on_delete=models.CASCADE, related_name='embedding')
-    embedding = models.JSONField()  # Store the embedding vector as JSON
+    embedding = models.JSONField()
     generated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):

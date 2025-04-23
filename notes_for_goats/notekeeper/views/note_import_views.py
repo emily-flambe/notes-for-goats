@@ -5,7 +5,7 @@ from ..models import Workspace, Note, NoteEmbedding
 from ..forms import UrlImportForm, HtmlImportForm
 from ..utils.url_import import fetch_url_content
 from ..utils.content_extraction import extract_content_from_html
-from ..utils.embedding import generate_embeddings
+from ..utils.embedding import generate_embeddings, count_tokens, generate_chunked_embeddings
 import logging
 import time
 from django.conf import settings
@@ -128,16 +128,41 @@ def _ensure_embedding_created(note):
             # Combine title and content
             text_to_embed = f"{note.title}\n\n{note.content}"
             
-            # Generate embedding
-            embedding_vector = generate_embeddings(text_to_embed)
+            # Check if text exceeds token limit
+            estimated_tokens = count_tokens(text_to_embed)
+            logger.info(f"Note {note.id} estimated token count: {estimated_tokens}")
             
-            # Save embedding
-            NoteEmbedding.objects.create(
-                note=note,
-                embedding=embedding_vector
-            )
-            
-            logger.info(f"Manually created embedding for imported note {note.id}")
+            if estimated_tokens <= 8000:
+                # Standard approach for smaller texts
+                embedding_vector = generate_embeddings(text_to_embed)
+                
+                # Create the embedding
+                NoteEmbedding.objects.create(
+                    note=note,
+                    embedding=embedding_vector,
+                    section_index=0,
+                    section_text=text_to_embed[:1000] if len(text_to_embed) > 1000 else text_to_embed
+                )
+                
+                logger.info(f"Manually created embedding for imported note {note.id}")
+            else:
+                # For large texts, use chunking
+                logger.info(f"Note {note.id} exceeds token limit, using chunking")
+                
+                # Generate embeddings for chunks
+                chunk_results = generate_chunked_embeddings(text_to_embed)
+                
+                # Save each chunk embedding
+                for i, (chunk_text, embedding) in enumerate(chunk_results):
+                    NoteEmbedding.objects.create(
+                        note=note,
+                        embedding=embedding,
+                        section_index=i,
+                        section_text=chunk_text[:1000] if len(chunk_text) > 1000 else chunk_text
+                    )
+                
+                logger.info(f"Created {len(chunk_results)} chunk embeddings for note {note.id}")
+                
         elif embedding_exists:
             logger.info(f"Embedding already exists for note {note.id} - no manual creation needed")
         else:
