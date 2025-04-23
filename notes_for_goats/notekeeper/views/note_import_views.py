@@ -2,10 +2,11 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 from django.contrib import messages
 from ..models import Workspace, Note, NoteEmbedding
-from ..forms import UrlImportForm, HtmlImportForm
+from ..forms import UrlImportForm, HtmlImportForm, PdfImportForm
 from ..utils.url_import import fetch_url_content
 from ..utils.content_extraction import extract_content_from_html
 from ..utils.embedding import generate_embeddings, count_tokens, generate_chunked_embeddings
+from ..utils.pdf_extraction import extract_text_from_pdf
 import logging
 import time
 from django.conf import settings
@@ -109,6 +110,62 @@ def note_import_from_html(request, workspace_id):
         form = HtmlImportForm()
     
     return render(request, 'notekeeper/note/import_html.html', {
+        'workspace': workspace,
+        'form': form
+    })
+
+def note_import_from_pdf(request, workspace_id):
+    """Import content from a PDF file"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    
+    if request.method == "POST":
+        form = PdfImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            pdf_file = form.cleaned_data['pdf_file']
+            user_title = form.cleaned_data.get('title')
+            
+            # Extract text from PDF
+            extracted_text, error = extract_text_from_pdf(pdf_file)
+            
+            if error:
+                messages.error(request, error)
+                return render(request, 'notekeeper/note/import_pdf.html', {
+                    'workspace': workspace,
+                    'form': form
+                })
+            
+            # Determine title - use user-provided title, or first line from PDF, or filename
+            if user_title:
+                title = user_title
+            else:
+                # Use first line from extracted text, or filename if no text
+                if extracted_text.strip():
+                    # Get first non-empty line that's not too long
+                    lines = [line.strip() for line in extracted_text.split('\n') if line.strip()]
+                    title_candidate = next((line for line in lines if len(line) < 100), None)
+                    title = title_candidate if title_candidate else pdf_file.name
+                else:
+                    title = pdf_file.name
+            
+            # Create the note
+            note = Note(
+                workspace=workspace,
+                title=title,
+                content=extracted_text,
+                timestamp=timezone.now()
+            )
+            logger.info(f"Saving note from PDF import: {title[:30]}...")
+            note.save()
+            
+            # Double-check the embedding was created
+            _ensure_embedding_created(note)
+            
+            messages.success(request, f"Successfully imported content from PDF")
+            return redirect('notekeeper:note_detail', workspace_id=workspace_id, pk=note.id)
+    else:
+        form = PdfImportForm()
+    
+    return render(request, 'notekeeper/note/import_pdf.html', {
         'workspace': workspace,
         'form': form
     })
