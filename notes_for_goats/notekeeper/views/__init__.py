@@ -1,6 +1,7 @@
 # Import all views to maintain the same import structure for other files
 from .base_views import *
 from .note_views import *
+from .note_import_views import *
 from .entity_views import *
 from .workspace_views import *
 from .relationship_views import *

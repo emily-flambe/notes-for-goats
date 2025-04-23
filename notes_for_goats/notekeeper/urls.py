@@ -82,6 +82,7 @@ urlpatterns = [
     # Update Relationships
     path('workspaces/<int:workspace_id>/update-relationships/', views.update_tag_relationships, name='update_tag_relationships'),
 
-    # Note Import from URL
+    # Note Import from web content
     path('workspaces/<int:workspace_id>/note/import-url/', views.note_import_from_url, name='note_import_from_url'),
+    path('workspaces/<int:workspace_id>/note/import-html/', views.note_import_from_html, name='note_import_from_html'),
 ] 
