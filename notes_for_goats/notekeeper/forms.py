@@ -1,5 +1,6 @@
 from django import forms
 from .models import Workspace, Note, Entity, RelationshipType, Relationship, RelationshipInferenceRule, Tag
+from django.core.validators import FileExtensionValidator
 
 class WorkspaceForm(forms.ModelForm):
     class Meta:
@@ -281,3 +282,14 @@ class HtmlImportForm(forms.Form):
             )
         
         return cleaned_data
+
+class PdfImportForm(forms.Form):
+    """Form for importing content from a PDF file"""
+    title = forms.CharField(max_length=200, required=False, 
+                           help_text="Leave blank to use the first line of the PDF as title")
+    pdf_file = forms.FileField(
+        help_text="Upload a PDF file to import as a note",
+        validators=[
+            FileExtensionValidator(allowed_extensions=['pdf']),
+        ]
+    )
