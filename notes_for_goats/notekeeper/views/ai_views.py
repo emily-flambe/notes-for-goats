@@ -18,6 +18,8 @@ def ask_ai(request, workspace_id):
     models = []
     user_query = ""  # Initialize user_query to empty string
     token_info = None  # Initialize token_info as None for GET requests
+    focused_note_id = None  # Initialize focused_note_id
+    is_rag_fallback = False  # Initialize is_rag_fallback to False
     
     # Get or create user preferences
     if request.user.is_authenticated:
@@ -68,9 +70,21 @@ def ask_ai(request, workspace_id):
         # Redirect to avoid form resubmission
         return redirect('notekeeper:ask_ai', workspace_id=workspace_id)
     
+    # Handle direct links (GET requests with focused_note_id)
+    focused_note_id = request.GET.get('focused_note_id', None)
+    if request.method == 'GET' and focused_note_id:
+        try:
+            # Verify the note exists and belongs to this workspace
+            focused_note = Note.objects.get(id=focused_note_id, workspace=workspace)
+            # The template will handle showing the focused note selector
+        except Note.DoesNotExist:
+            focused_note_id = None
+    
     # Handle AI queries
     if request.method == 'POST' and 'user_query' in request.POST:
         user_query = request.POST.get('user_query', '').strip()  # Capture and strip user query
+        context_mode = request.POST.get('context_mode', 'auto')
+        focused_note_id = request.POST.get('focused_note_id', '')
         
         if user_query:
             try:
@@ -89,8 +103,39 @@ def ask_ai(request, workspace_id):
                     prompt_tokens = estimate_tokens(system_prompt) + estimate_tokens(user_prompt)
                     
                 else:
-                    # Get context data for enhanced mode
-                    context_data = get_database_context(workspace, query=user_query, use_local_llm=use_local_llm)
+                    # Determine context data based on mode
+                    if context_mode == 'focused' and focused_note_id:
+                        try:
+                            focused_note = Note.objects.get(id=focused_note_id, workspace=workspace)
+                            
+                            # Get the full context for the focused note
+                            context_data = get_focused_note_context(focused_note)
+                            
+                            # Check token count for the focused note
+                            note_tokens = estimate_tokens(context_data)
+                            max_tokens = 6000  # Same value as MAX_CONTEXT_TOKENS in get_database_context
+                            
+                            # If the focused note is too large, use smart RAG fallback
+                            if note_tokens > max_tokens:
+                                logger.info(f"Focused note {focused_note.id} is too large ({note_tokens} tokens). Using smart RAG fallback.")
+                                context_data = get_smart_rag_context(workspace, query=user_query, focused_note=focused_note, use_local_llm=use_local_llm)
+                                context_source = f"Note: {focused_note.title} (partial content with RAG)"
+                                is_rag_fallback = True
+                            else:
+                                context_source = f"Note: {focused_note.title}"
+                                is_rag_fallback = False
+                                
+                        except Note.DoesNotExist:
+                            # Fall back to RAG if note doesn't exist
+                            context_data = get_database_context(workspace, query=user_query, use_local_llm=use_local_llm)
+                            context_source = "Workspace"
+                            focused_note_id = None  # Reset focused_note_id
+                            is_rag_fallback = False
+                    else:
+                        # Use standard RAG
+                        context_data = get_database_context(workspace, query=user_query, use_local_llm=use_local_llm)
+                        context_source = "Workspace"
+                        is_rag_fallback = False
                     
                     # Create different prompts based on whether using local or not
                     if use_local_llm:  # For Llama3
@@ -100,7 +145,7 @@ def ask_ai(request, workspace_id):
                         
                         user_prompt = f"""
                         CONTEXT DATA:
-                        Workspace: {workspace.name}
+                        {context_source}: {workspace.name}
                         
                         {context_data}
                         
@@ -142,7 +187,10 @@ def ask_ai(request, workspace_id):
                         'query': query_tokens,
                         'total': prompt_tokens,
                         'limit': 16384 if not use_local_llm and "gpt-4" in settings.OPENAI_MODEL.lower() else 4096,
-                        'use_rag': not use_local_llm and context_tokens > 0,
+                        'use_rag': context_mode == 'auto' and not use_local_llm and context_tokens > 0,
+                        'use_focused': context_mode == 'focused' and focused_note_id,
+                        'focused_title': focused_note.title if context_mode == 'focused' and focused_note_id else None,
+                        'is_rag_fallback': is_rag_fallback,
                         'limit_threshold': 0.75 * (16384 if not use_local_llm and "gpt-4" in settings.OPENAI_MODEL.lower() else 4096)
                     }
                 
@@ -164,6 +212,9 @@ def ask_ai(request, workspace_id):
         else:
             ai_response = "Error: No question provided."
     
+    # Get all notes for the note selector
+    notes = Note.objects.filter(workspace=workspace).order_by('-timestamp')[:50]  # Limit to 50 most recent notes
+    
     # Check if we have API keys configured
     has_openai_key = bool(settings.OPENAI_API_KEY)
     
@@ -181,6 +232,9 @@ def ask_ai(request, workspace_id):
         'local_llm_model': settings.LOCAL_LLM_MODEL,
         'available_models': models,
         'token_info': token_info,
+        'notes': notes,
+        'focused_note_id': focused_note_id,
+        'is_rag_fallback': is_rag_fallback,
     })
 
 def get_database_context(workspace, query=None, use_local_llm=False):
@@ -483,3 +537,346 @@ def estimate_tokens(text):
         # Fallback to simple approximation if tiktoken isn't available
         # GPT models average ~1.3 tokens per word
         return len(text.split()) * 1.3 
+
+def get_focused_note_context(note):
+    """
+    Retrieve context data for a specific note
+    
+    Args:
+        note: The Note object to focus on
+    
+    Returns:
+        String containing the note's content and metadata
+    """
+    context = f"FOCUSED NOTE: {note.title}\n"
+    context += f"Date: {note.timestamp.strftime('%Y-%m-%d')}\n"
+    
+    # Add the note content
+    context += f"\nCONTENT:\n{note.content}\n"
+    
+    # Add referenced entities if any
+    if note.referenced_entities.exists():
+        context += "\nREFERENCED ENTITIES:\n"
+        for entity in note.referenced_entities.all():
+            context += f"- {entity.name} (Type: {entity.get_type_display()})\n"
+            if entity.details:
+                context += f"  Details: {entity.details}\n"
+    
+    # Add tags if any
+    if note.tags.exists():
+        tag_list = ", ".join([tag.name for tag in note.tags.all()])
+        context += f"\nTAGS: {tag_list}\n"
+    
+    return context 
+
+def get_smart_rag_context(workspace, query, focused_note, use_local_llm=False):
+    """
+    Enhanced RAG context retrieval that prioritizes a specific note
+    
+    Args:
+        workspace: The workspace to get context for
+        query: The user's query string
+        focused_note: The specific note to prioritize
+        use_local_llm: Whether the user is using a local LLM
+        
+    Returns:
+        String containing the relevant context data
+    """
+    # If we have no query or no OpenAI API key, return a limited context with just the focused note
+    if not query or not settings.OPENAI_API_KEY or use_local_llm:
+        return get_truncated_note_context(focused_note)
+    
+    # Generate embedding for the query
+    query_embedding = generate_embeddings(query)
+    
+    # Track total tokens to avoid exceeding limits
+    MAX_CONTEXT_TOKENS = 6000  # Reserve ~2000 tokens for the prompt and response
+    
+    # Start building context
+    context = f"WORKSPACE: {workspace.name}\n"
+    if workspace.description:
+        context += f"Description: {workspace.description}\n\n"
+    
+    estimated_tokens = estimate_tokens(context)
+    
+    # 1. First, get the embeddings for the focused note to find the most relevant sections
+    focused_note_embeddings = NoteEmbedding.objects.filter(
+        note=focused_note
+    ).order_by('section_index')
+    
+    best_focused_sections = []
+    if focused_note_embeddings.exists():
+        # For each section of the focused note, calculate similarity
+        for ne in focused_note_embeddings:
+            embedding_array = np.array(ne.embedding)
+            query_array = np.array(query_embedding)
+            
+            # Calculate cosine similarity
+            similarity = np.dot(query_array, embedding_array) / (
+                np.linalg.norm(query_array) * np.linalg.norm(embedding_array)
+            )
+            
+            # Store the section, its text, and similarity
+            section_text = ne.section_text or ""
+            if not section_text and focused_note_embeddings.count() == 1:
+                # If there's only one embedding and no section_text, use a preview of the full content
+                section_text = focused_note.content[:1000] + "..." if len(focused_note.content) > 1000 else focused_note.content
+                
+            best_focused_sections.append({
+                'section_index': ne.section_index,
+                'section_text': section_text,
+                'similarity': similarity,
+                'token_estimate': estimate_tokens(section_text) + 50  # Add 50 tokens for formatting
+            })
+        
+        # Sort sections by similarity
+        best_focused_sections.sort(key=lambda x: x['similarity'], reverse=True)
+    
+    # 2. Add prioritized note sections first (most relevant sections of the focused note)
+    if best_focused_sections:
+        focused_context = f"\nPRIORITIZED NOTE: {focused_note.title} (Date: {focused_note.timestamp.strftime('%Y-%m-%d')})\n"
+        estimated_tokens += estimate_tokens(focused_context)
+        context += focused_context
+        
+        # Add the most relevant sections up to a token budget of 60% of max tokens
+        focused_token_budget = int(MAX_CONTEXT_TOKENS * 0.6)
+        sections_added = 0
+        
+        for section in best_focused_sections:
+            # Check if adding this section would exceed our focused note budget
+            if estimated_tokens + section['token_estimate'] <= focused_token_budget:
+                if sections_added > 0:
+                    section_header = f"\nSection {section['section_index'] + 1}:\n"
+                else:
+                    section_header = "Content:\n"
+                
+                context += section_header + section['section_text'] + "\n"
+                estimated_tokens += section['token_estimate'] + estimate_tokens(section_header)
+                sections_added += 1
+            else:
+                # If we can't add the full section, add a truncated version
+                if sections_added == 0:  # Ensure we add at least something from the focused note
+                    truncated_text = section['section_text'][:500] + "... [content truncated]"
+                    truncated_header = "Content (truncated):\n"
+                    context += truncated_header + truncated_text + "\n"
+                    estimated_tokens += estimate_tokens(truncated_header + truncated_text)
+                    sections_added += 1
+                break
+        
+        # Add a note if not all sections were included
+        if sections_added < len(best_focused_sections):
+            note_text = f"[Note: Only showing {sections_added} of {len(best_focused_sections)} sections from this note due to token limits.]\n"
+            context += note_text
+            estimated_tokens += estimate_tokens(note_text)
+        
+        # Add referenced entities for the focused note
+        if focused_note.referenced_entities.exists() and estimated_tokens < MAX_CONTEXT_TOKENS:
+            ref_text = "Referenced entities: " + ", ".join([e.name for e in focused_note.referenced_entities.all()]) + "\n"
+            if estimated_tokens + estimate_tokens(ref_text) < MAX_CONTEXT_TOKENS:
+                context += ref_text
+                estimated_tokens += estimate_tokens(ref_text)
+    
+    # 3. Now get other relevant notes (excluding the focused note)
+    if estimated_tokens < MAX_CONTEXT_TOKENS:
+        # Get all note embeddings in this workspace except for the focused note
+        note_embeddings = NoteEmbedding.objects.filter(
+            note__workspace=workspace
+        ).exclude(
+            note=focused_note
+        ).select_related('note')
+        
+        # Group embeddings by note
+        note_embedding_map = {}
+        for ne in note_embeddings:
+            if ne.note_id not in note_embedding_map:
+                note_embedding_map[ne.note_id] = []
+            note_embedding_map[ne.note_id].append(ne)
+        
+        # Find most relevant notes
+        note_similarities = []
+        for note_id, embeddings in note_embedding_map.items():
+            # Find the highest similarity for any chunk of this note
+            max_similarity = 0
+            best_embedding = None
+            
+            for ne in embeddings:
+                embedding_array = np.array(ne.embedding)
+                query_array = np.array(query_embedding)
+                
+                # Calculate cosine similarity
+                similarity = np.dot(query_array, embedding_array) / (
+                    np.linalg.norm(query_array) * np.linalg.norm(embedding_array)
+                )
+                
+                if similarity > max_similarity:
+                    max_similarity = similarity
+                    best_embedding = ne
+            
+            # Add to results if we found a match
+            if best_embedding:
+                note_similarities.append((best_embedding.note_id, max_similarity, best_embedding))
+        
+        # Sort by similarity and get top 5
+        note_similarities.sort(key=lambda x: x[1], reverse=True)
+        top_similarities = note_similarities[:5]
+        
+        # Prepare data for additional notes
+        if top_similarities:
+            other_notes_context = "\nADDITIONAL RELEVANT NOTES:\n"
+            if estimated_tokens + estimate_tokens(other_notes_context) < MAX_CONTEXT_TOKENS:
+                context += other_notes_context
+                estimated_tokens += estimate_tokens(other_notes_context)
+                
+                # Prepare note data
+                other_notes_data = []
+                for note_id, similarity, best_embedding in top_similarities:
+                    try:
+                        note = Note.objects.get(id=note_id)
+                        # If we have a best_embedding with section_text, prefer using that specific section
+                        if best_embedding and best_embedding.section_text:
+                            preview = f"[Section {best_embedding.section_index+1}]: {best_embedding.section_text}"
+                        else:
+                            preview = note.content
+                        
+                        # Truncate preview for very long content
+                        if len(preview) > 500:
+                            preview = preview[:497] + "..."
+                            
+                        other_notes_data.append({
+                            'note': note,
+                            'preview': preview,
+                            'similarity': similarity,
+                            'token_estimate': estimate_tokens(
+                                f"- {note.title} (Date: {note.timestamp.strftime('%Y-%m-%d')})\n"
+                                f"  Content: {preview}\n"
+                            )
+                        })
+                    except Note.DoesNotExist:
+                        continue
+                
+                # Add other notes until we hit the token limit
+                for note_data in other_notes_data:
+                    if estimated_tokens + note_data['token_estimate'] < MAX_CONTEXT_TOKENS:
+                        note_text = (
+                            f"- {note_data['note'].title} "
+                            f"(Date: {note_data['note'].timestamp.strftime('%Y-%m-%d')})\n"
+                            f"  Content: {note_data['preview']}\n"
+                        )
+                        context += note_text
+                        estimated_tokens += note_data['token_estimate']
+                    else:
+                        break
+    
+    # 4. Add relevant entities if we still have space
+    entity_embeddings = []
+    relevant_entity_ids = []
+    
+    if estimated_tokens < MAX_CONTEXT_TOKENS:
+        try:
+            from ..models import EntityEmbedding
+            
+            entity_embeddings_objs = EntityEmbedding.objects.filter(
+                entity__workspace=workspace
+            ).select_related('entity')
+            
+            if entity_embeddings_objs.exists():
+                entity_embeddings_list = [np.array(ee.embedding) for ee in entity_embeddings_objs]
+                entity_objects = [ee.entity for ee in entity_embeddings_objs]
+                
+                # Get top 3 most similar entities (fewer than normal RAG to save tokens)
+                similar_entities = similarity_search(
+                    query_embedding,
+                    entity_embeddings_list,
+                    top_k=min(3, len(entity_embeddings_list))
+                )
+                
+                relevant_entity_ids = [entity_objects[idx].id for idx, _ in similar_entities]
+                
+                # Add entities if we have space
+                if relevant_entity_ids:
+                    entities_context = "\nRELEVANT ENTITIES:\n"
+                    if estimated_tokens + estimate_tokens(entities_context) < MAX_CONTEXT_TOKENS:
+                        context += entities_context
+                        estimated_tokens += estimate_tokens(entities_context)
+                        
+                        for entity in Entity.objects.filter(id__in=relevant_entity_ids):
+                            entity_text = f"- {entity.name} (Type: {entity.get_type_display()})\n"
+                            if entity.details:
+                                entity_text += f"  Details: {entity.details}\n"
+                            
+                            if estimated_tokens + estimate_tokens(entity_text) < MAX_CONTEXT_TOKENS:
+                                context += entity_text
+                                estimated_tokens += estimate_tokens(entity_text)
+                            else:
+                                break
+        except (ImportError, AttributeError):
+            # EntityEmbedding might not exist yet
+            pass
+    
+    # 5. Add a note about the smart RAG approach
+    note_text = "\n[Note: This response uses parts of the focused note combined with other relevant content due to token limits.]\n"
+    if estimated_tokens + estimate_tokens(note_text) < MAX_CONTEXT_TOKENS:
+        context += note_text
+    
+    return context
+
+def get_truncated_note_context(note):
+    """
+    Create a truncated context from a large note when we can't use embeddings
+    
+    Args:
+        note: The Note object to focus on
+        
+    Returns:
+        String containing a truncated version of the note's content
+    """
+    MAX_TOKENS = 6000
+    
+    # Start with the header
+    context = f"FOCUSED NOTE: {note.title}\n"
+    context += f"Date: {note.timestamp.strftime('%Y-%m-%d')}\n\n"
+    
+    # Calculate the approximate tokens used by the header
+    header_tokens = estimate_tokens(context)
+    
+    # Calculate how many tokens we have left for the content
+    content_token_budget = MAX_TOKENS - header_tokens - 100  # Keep 100 tokens as buffer
+    
+    # Get the note content and truncate if necessary
+    content = note.content
+    estimated_content_tokens = estimate_tokens(content)
+    
+    if estimated_content_tokens > content_token_budget:
+        # Simple truncation approach - truncate to fit budget
+        truncation_ratio = content_token_budget / estimated_content_tokens
+        chars_to_keep = int(len(content) * truncation_ratio)
+        
+        # Ensure we don't cut in the middle of a line if possible
+        last_newline = content[:chars_to_keep].rfind('\n')
+        if last_newline > chars_to_keep * 0.8:  # If the last newline is at least 80% of the way through
+            content = content[:last_newline] + "\n\n[... content truncated due to length ...]"
+        else:
+            content = content[:chars_to_keep] + "\n\n[... content truncated due to length ...]"
+    
+    context += f"CONTENT:\n{content}\n"
+    
+    # Add referenced entities if there's space
+    entities_text = ""
+    if note.referenced_entities.exists():
+        entities_text = "\nREFERENCED ENTITIES:\n"
+        for entity in note.referenced_entities.all():
+            entities_text += f"- {entity.name} (Type: {entity.get_type_display()})\n"
+    
+    # Add tags if there's space
+    tags_text = ""
+    if note.tags.exists():
+        tag_list = ", ".join([tag.name for tag in note.tags.all()])
+        tags_text = f"\nTAGS: {tag_list}\n"
+    
+    # Check if we can add the entities and tags
+    if estimate_tokens(context + entities_text + tags_text) <= MAX_TOKENS:
+        context += entities_text + tags_text
+    elif estimate_tokens(context + entities_text) <= MAX_TOKENS:
+        context += entities_text
+    
+    return context 

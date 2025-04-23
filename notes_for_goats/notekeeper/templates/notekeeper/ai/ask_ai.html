@@ -81,13 +81,47 @@
                 </div>
             </form>
             
+            <!-- Add this section above the question form -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Context Options</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label for="contextMode">Context Mode:</label>
+                        <select id="contextMode" class="form-control" onchange="toggleNoteSelector()">
+                            <option value="auto" {% if not focused_note_id %}selected{% endif %}>Automatic (RAG)</option>
+                            <option value="focused" {% if focused_note_id %}selected{% endif %}>Focus on Note</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            "Automatic" uses semantic search to find relevant content. "Focus on Note" uses a single note as context.
+                        </small>
+                    </div>
+                    
+                    <div id="noteSelectorContainer" class="form-group" {% if not focused_note_id %}style="display: none;"{% endif %}>
+                        <label for="noteSelector">Select a note to focus on:</label>
+                        <select id="noteSelector" class="form-control">
+                            <option value="">-- Select a note --</option>
+                            {% for note in notes %}
+                                <option value="{{ note.id }}" {% if focused_note_id == note.id %}selected{% endif %}>{{ note.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
             <!-- AI Question Form -->
-            <form method="POST" id="ai-form">
+            <form method="post" action="{% url 'notekeeper:ask_ai' workspace_id=workspace.id %}" id="askAiForm">
                 {% csrf_token %}
+                
+                <!-- Add hidden inputs for context mode and focused note -->
+                <input type="hidden" name="context_mode" id="contextModeInput" value="{% if focused_note_id %}focused{% else %}auto{% endif %}">
+                <input type="hidden" name="focused_note_id" id="focusedNoteInput" value="{{ focused_note_id|default:'' }}">
+                
                 <div class="form-group">
                     <label for="user_query">Your Question:</label>
                     <textarea name="user_query" id="user_query" class="form-control" rows="3" 
-                        placeholder="{% if use_direct_prompt %}Enter your prompt exactly as you want to send it to the AI...{% else %}E.g., Summarize my notes about Project X or What did I discuss with Alice last week?{% endif %}" required></textarea>
+                        placeholder="{% if use_direct_prompt %}Enter your prompt exactly as you want to send it to the AI...{% else %}E.g., Summarize my notes about Project X or What did I discuss with Alice last week?{% endif %}" required>{{ user_query }}</textarea>
                 </div>
                 <button type="submit" class="btn btn-primary mt-3" id="submit-btn">
                     <i class="bi bi-robot me-1"></i> Ask AI
@@ -125,7 +159,7 @@
         
         <!-- Only display token info if it exists -->
         {% if token_info %}
-        <div class="token-info-alert alert {% if token_info.total > token_info.limit_threshold %}alert-warning{% else %}alert-info{% endif %} m-3 mb-0">
+        <div class="token-info mt-3 p-2 border rounded bg-light">
             <div class="d-flex align-items-center">
                 <i class="bi {% if token_info.total > token_info.limit_threshold %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %} me-2"></i>
                 <div>
@@ -137,6 +171,21 @@
                     <small>
                         <span class="badge bg-success">RAG Active</span>
                         Using semantic search to find relevant content ({{ token_info.context|floatformat:0 }} tokens)
+                    </small>
+                    {% endif %}
+                    
+                    {% if token_info.use_focused %}
+                    <br>
+                    <small>
+                        <span class="badge {% if token_info.is_rag_fallback %}bg-warning{% else %}bg-info{% endif %}">
+                            {% if token_info.is_rag_fallback %}Smart RAG{% else %}Focused Mode{% endif %}
+                        </span>
+                        {% if token_info.is_rag_fallback %}
+                            Using parts of "{{ token_info.focused_title }}" with additional relevant content 
+                            ({{ token_info.context|floatformat:0 }} tokens)
+                        {% else %}
+                            Using note "{{ token_info.focused_title }}" as context ({{ token_info.context|floatformat:0 }} tokens)
+                        {% endif %}
                     </small>
                     {% endif %}
                     
@@ -219,7 +268,7 @@ ${document.querySelector('.ai-response').innerText.trim()}`;
     }
     
     // Show loading indicator when form is submitted
-    document.getElementById('ai-form').addEventListener('submit', function() {
+    document.getElementById('askAiForm').addEventListener('submit', function() {
         document.getElementById('loading').style.display = 'block';
         document.getElementById('submit-btn').disabled = true;
         document.getElementById('submit-btn').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
@@ -236,5 +285,26 @@ ${document.querySelector('.ai-response').innerText.trim()}`;
             console.error('Could not copy text: ', err);
         });
     }
+
+    // Add JavaScript to handle the UI toggling
+    function toggleNoteSelector() {
+        const contextMode = document.getElementById('contextMode').value;
+        const noteSelectorContainer = document.getElementById('noteSelectorContainer');
+        const contextModeInput = document.getElementById('contextModeInput');
+        const focusedNoteInput = document.getElementById('focusedNoteInput');
+        
+        if (contextMode === 'focused') {
+            noteSelectorContainer.style.display = 'block';
+            contextModeInput.value = 'focused';
+        } else {
+            noteSelectorContainer.style.display = 'none';
+            contextModeInput.value = 'auto';
+            focusedNoteInput.value = '';
+        }
+    }
+
+    document.getElementById('noteSelector').addEventListener('change', function() {
+        document.getElementById('focusedNoteInput').value = this.value;
+    });
 </script>
 {% endblock %}

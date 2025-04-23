@@ -39,8 +39,16 @@
         {% endif %}
     </div>
     
-    <div class="actions">
-        <a href="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.id %}" class="btn">Edit</a>
+    <div class="note-actions mt-3">
+        <a href="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.pk %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        
+        <a href="{% url 'notekeeper:ask_ai' workspace_id=workspace.id %}?context_mode=focused&focused_note_id={{ entry.id }}" 
+           class="btn btn-secondary">
+            <i class="bi bi-robot"></i> Ask AI about this note
+        </a>
+        
         <a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}" class="btn">Back to Notes</a>
     </div>
 </div>
