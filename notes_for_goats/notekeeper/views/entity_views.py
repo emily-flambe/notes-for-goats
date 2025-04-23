@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from ..models import Workspace, Entity, Note, Relationship
+from ..models import Workspace, Entity, Note, Relationship, Tag
 from ..forms import EntityForm
 
 def entity_list(request, workspace_id):
@@ -61,13 +61,9 @@ def entity_detail(request, workspace_id, pk):
     })
 
 def entity_create(request, workspace_id):
+    """View to create a new entity"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    
-    # Get entity type from query parameter if available
-    initial_data = {}
-    entity_type = request.GET.get('type')
-    if entity_type in ['PERSON', 'PROJECT', 'TEAM']:
-        initial_data['type'] = entity_type
+    entity_type = request.GET.get('type', None)  # Get the type from query string if available
     
     if request.method == "POST":
         form = EntityForm(request.POST)
@@ -75,32 +71,73 @@ def entity_create(request, workspace_id):
             entity = form.save(commit=False)
             entity.workspace = workspace
             entity.save()
+            
+            # Handle existing tags
+            form.save_m2m()
+            
+            # Handle new tags
+            new_tags = form.cleaned_data.get('new_tags', '')
+            if new_tags:
+                tag_names = [name.strip().lower() for name in new_tags.split(',') if name.strip()]
+                for tag_name in tag_names:
+                    tag, created = Tag.objects.get_or_create(
+                        workspace=workspace,
+                        name__iexact=tag_name,
+                        defaults={'name': tag_name}
+                    )
+                    entity.tags.add(tag)
+            
             return redirect('notekeeper:entity_detail', workspace_id=workspace_id, pk=entity.pk)
     else:
+        # Initialize form with optional type
+        initial_data = {}
+        if entity_type and entity_type in dict(Entity.ENTITY_TYPES):
+            initial_data['type'] = entity_type
         form = EntityForm(initial=initial_data)
     
+    # Make sure tags are filtered by workspace
+    form.fields['tags'].queryset = Tag.objects.filter(workspace=workspace).order_by('name')
+    
     return render(request, 'notekeeper/entity/form.html', {
-        'form': form,
         'workspace': workspace,
-        'entity_type': entity_type  # Pass this to template for custom headings
+        'form': form,
+        'entity_type': entity_type
     })
 
 def entity_edit(request, workspace_id, pk):
+    """View to edit an existing entity"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    entity = get_object_or_404(Entity, pk=pk, workspace=workspace)  # Ensure entity belongs to this workspace
+    entity = get_object_or_404(Entity, pk=pk, workspace=workspace)
     
     if request.method == "POST":
         form = EntityForm(request.POST, instance=entity)
         if form.is_valid():
-            entity = form.save()
-            return redirect('notekeeper:entity_detail', workspace_id=workspace.id, pk=entity.pk)
+            # Save without committing to handle tags
+            entity = form.save(commit=True)
+            
+            # Handle new tags
+            new_tags = form.cleaned_data.get('new_tags', '')
+            if new_tags:
+                tag_names = [name.strip().lower() for name in new_tags.split(',') if name.strip()]
+                for tag_name in tag_names:
+                    tag, created = Tag.objects.get_or_create(
+                        workspace=workspace,
+                        name__iexact=tag_name,
+                        defaults={'name': tag_name}
+                    )
+                    entity.tags.add(tag)
+            
+            return redirect('notekeeper:entity_detail', workspace_id=workspace_id, pk=entity.pk)
     else:
         form = EntityForm(instance=entity)
     
+    # Make sure tags are filtered by workspace
+    form.fields['tags'].queryset = Tag.objects.filter(workspace=workspace).order_by('name')
+    
     return render(request, 'notekeeper/entity/form.html', {
+        'workspace': workspace,
         'form': form,
-        'workspace': workspace,  # Pass the workspace to the template
-        'entity': entity  # Pass the entity to the template
+        'entity': entity
     })
 
 def entity_delete(request, workspace_id, pk):

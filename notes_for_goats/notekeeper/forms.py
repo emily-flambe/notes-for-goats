@@ -44,21 +44,36 @@ class EntityForm(forms.ModelForm):
         help_text='Enter tags separated by commas (e.g., me, myself, I)'
     )
     
+    # Add a new field for new tags that aren't in the database yet
+    new_tags = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput()  # This will be populated via JavaScript
+    )
+    
     class Meta:
         model = Entity
-        fields = ['name', 'type', 'details', 'tags']
+        fields = ['name', 'type', 'details', 'tags', 'new_tags']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'type': forms.Select(attrs={'class': 'form-control'}),
             'details': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
-            'tags': forms.SelectMultiple(attrs={'class': 'form-control select2-tags'}),
+            'tags': forms.SelectMultiple(attrs={
+                'class': 'form-control select2-tags-create',  # Make sure this class matches the JS
+                'data-tags': 'true'  # Enable tag creation in Select2
+            }),
         }
     
     def __init__(self, *args, **kwargs):
+        self.workspace = kwargs.pop('workspace', None)
         super().__init__(*args, **kwargs)
         
         # If this is for an existing workspace, limit the tags choices
-        if self.instance and self.instance.pk and hasattr(self.instance, 'workspace'):
+        if self.workspace:
+            self.fields['tags'].queryset = Tag.objects.filter(
+                workspace=self.workspace
+            ).order_by('name')
+        elif self.instance and self.instance.pk and hasattr(self.instance, 'workspace'):
+            self.workspace = self.instance.workspace
             self.fields['tags'].queryset = Tag.objects.filter(
                 workspace=self.instance.workspace
             ).order_by('name')
@@ -68,19 +83,37 @@ class EntityForm(forms.ModelForm):
         
         if commit:
             entity.save()
-            self.save_m2m()  # Save the tags M2M relationship
             
-            # Convert tags_text to Tag objects
+            # First, handle selected existing tags
+            self.save_m2m()
+            
+            # Then, handle the new tags passed from the hidden field
+            new_tags_str = self.cleaned_data.get('new_tags', '')
+            if new_tags_str and self.workspace:
+                # Split the new tags string into individual tag names
+                new_tag_names = [name.strip().lower() for name in new_tags_str.split(',') if name.strip()]
+                
+                # Create and associate each new tag
+                for tag_name in new_tag_names:
+                    # Check if tag already exists (case-insensitive)
+                    tag, created = Tag.objects.get_or_create(
+                        workspace=self.workspace,
+                        name__iexact=tag_name,
+                        defaults={'name': tag_name}  # Use this if creating new
+                    )
+                    entity.tags.add(tag)
+            
+            # Finally, handle tags from tags_text field for backward compatibility
             tags_text = self.cleaned_data.get('tags_text', '')
-            if tags_text:
-                workspace = entity.workspace
+            if tags_text and self.workspace:
                 tag_names = [t.strip().lower() for t in tags_text.split(',') if t.strip()]
                 
                 # Find or create Tag objects for each tag name
                 for tag_name in tag_names:
                     tag, _ = Tag.objects.get_or_create(
-                        workspace=workspace,
-                        name=tag_name
+                        workspace=self.workspace,
+                        name__iexact=tag_name,
+                        defaults={'name': tag_name}
                     )
                     entity.tags.add(tag)
         

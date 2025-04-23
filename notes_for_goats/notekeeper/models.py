@@ -99,7 +99,7 @@ class Entity(models.Model):
         # Ensure a tag exists with the same name as the entity (lowercase for consistency)
         entity_name_tag, created = Tag.objects.get_or_create(
             workspace=self.workspace,
-            name=self.name.lower()
+            name=self.name.lower().replace(" ", "")
         )
         
         # Link this tag to the entity if not already linked

@@ -29,37 +29,50 @@
     <div class="card">
         <form method="post">
             {% csrf_token %}
-            <div>
+            <div class="form-group">
                 <label for="{{ form.name.id_for_label }}">Name:</label>
                 {{ form.name }}
-                {{ form.name.errors }}
+                {% if form.name.errors %}
+                    <div class="error">{{ form.name.errors }}</div>
+                {% endif %}
             </div>
             
-            <div>
+            <div class="form-group">
                 <label for="{{ form.type.id_for_label }}">Type:</label>
                 {{ form.type }}
-                {{ form.type.errors }}
+                {% if form.type.errors %}
+                    <div class="error">{{ form.type.errors }}</div>
+                {% endif %}
             </div>
             
             <div class="form-group">
                 <label for="{{ form.tags.id_for_label }}">Tags:</label>
                 {{ form.tags }}
-                {% if form.tags.help_text %}
-                    <small class="form-text text-muted">{{ form.tags.help_text }}</small>
-                {% endif %}
+                <small class="form-text text-muted">
+                    Select existing tags or type to create new ones. Separate multiple new tags with commas.
+                </small>
                 {% if form.tags.errors %}
-                    <div class="invalid-feedback" style="display: block;">
-                        {% for error in form.tags.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
+                    <div class="error">{{ form.tags.errors }}</div>
                 {% endif %}
             </div>
             
-            <div>
-                <label for="{{ form.notes.id_for_label }}">Notes:</label>
-                {{ form.notes }}
-                {{ form.notes.errors }}
+            <div class="form-group">
+                <label for="{{ form.details.id_for_label }}">Details:</label>
+                {{ form.details }}
+                {% if form.details.errors %}
+                    <div class="error">{{ form.details.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <!-- Hidden field for new tags -->
+            {{ form.new_tags }}
+            
+            <!-- Add this debug section temporarily -->
+            <div style="background: #f5f5f5; padding: 10px; margin: 10px 0; border: 1px solid #ddd;">
+                <h4>Debug Info:</h4>
+                <p>Tags field has class: {{ form.tags.field.widget.attrs.class }}</p>
+                <p>New tags field exists: {% if form.new_tags %}Yes{% else %}No{% endif %}</p>
+                <p>Number of existing tags: {{ form.tags.field.queryset.count }}</p>
             </div>
             
             <div class="form-actions">
@@ -73,4 +86,65 @@
         </form>
     </div>
 </div>
+{% endblock %} 
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize Select2 with tag creation capabilities
+    $('.select2-tags-create').select2({
+        tags: true,                // Allow creating new tags
+        tokenSeparators: [','],    // Allow comma separation
+        width: '100%',             // Make it full width
+        placeholder: "Select existing tags or type to create new ones",
+        allowClear: true,          // Add an 'x' to clear all selections
+        createTag: function(params) {
+            // Only create a tag if we have text and it's not just whitespace
+            var term = $.trim(params.term);
+            if (term === '') {
+                return null;
+            }
+            
+            // Convert to lowercase for consistency
+            term = term.toLowerCase();
+            
+            return {
+                id: 'new_' + term,  // Prefix with 'new_' to identify new tags
+                text: term,
+                newTag: true  // Add a flag to identify this as a new tag
+            };
+        }
+    });
+    
+    // Handle form submission to collect new tags
+    $('form').on('submit', function() {
+        console.log("Form submit detected, processing new tags");
+        
+        // Get all selected options that represent new tags
+        var newTags = [];
+        $('.select2-tags-create option:selected').each(function() {
+            var optionValue = $(this).val();
+            console.log("Processing selected option:", optionValue);
+            
+            // If it starts with 'new_', it's a new tag we need to create
+            if (optionValue && optionValue.toString().startsWith('new_')) {
+                // Extract the tag name (remove the 'new_' prefix)
+                var tagName = optionValue.toString().substring(4);
+                console.log("Found new tag:", tagName);
+                newTags.push(tagName);
+                
+                // Deselect this option as it's not a real tag ID
+                $(this).prop('selected', false);
+            }
+        });
+        
+        // Set the new tags in the hidden field
+        console.log("Setting new tags:", newTags.join(','));
+        $('#id_new_tags').val(newTags.join(','));
+        
+        // Let the form submission continue
+        return true;
+    });
+});
+</script>
 {% endblock %} 
