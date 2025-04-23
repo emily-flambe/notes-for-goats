@@ -257,3 +257,27 @@ class UrlImportForm(forms.Form):
         if not url.startswith(('http://', 'https://')):
             url = 'https://' + url
         return url
+
+class HtmlImportForm(forms.Form):
+    """Form for importing content from an HTML file or pasted HTML"""
+    title = forms.CharField(max_length=200, required=False, 
+                           help_text="Leave blank to extract from the HTML content")
+    html_file = forms.FileField(required=False, 
+                               help_text="Upload an HTML file saved from a website")
+    html_content = forms.CharField(widget=forms.Textarea, required=False,
+                                  help_text="Or paste HTML content directly")
+    base_url = forms.URLField(required=False,
+                             help_text="Original URL (helps with parsing relative links)")
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        html_file = cleaned_data.get('html_file')
+        html_content = cleaned_data.get('html_content')
+        
+        # Require either a file or pasted content, but not necessarily both
+        if not html_file and not html_content:
+            raise forms.ValidationError(
+                "Please either upload an HTML file or paste HTML content."
+            )
+        
+        return cleaned_data

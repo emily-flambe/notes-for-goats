@@ -1,0 +1,102 @@
+{% extends "notekeeper/base.html" %}
+
+{% block title %}Import from HTML - {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Import from HTML</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+                
+                <div class="form-group mb-3">
+                    <label for="{{ form.title.id_for_label }}">Note Title:</label>
+                    {{ form.title }}
+                    <small class="form-text text-muted">{{ form.title.help_text }}</small>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="{{ form.html_file.id_for_label }}">HTML File:</label>
+                    {{ form.html_file }}
+                    <small class="form-text text-muted">{{ form.html_file.help_text }}</small>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="{{ form.html_content.id_for_label }}">HTML Content:</label>
+                    <textarea name="{{ form.html_content.name }}" id="{{ form.html_content.id_for_label }}" 
+                              class="form-control" rows="10">{{ form.html_content.value|default:"" }}</textarea>
+                    <small class="form-text text-muted">{{ form.html_content.help_text }}</small>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="{{ form.base_url.id_for_label }}">Original URL (optional):</label>
+                    {{ form.base_url }}
+                    <small class="form-text text-muted">{{ form.base_url.help_text }}</small>
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Import HTML</button>
+                    <a href="{% url 'notekeeper:note_list' workspace_id=workspace.id %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>How to Use This Feature</h3>
+        </div>
+        <div class="card-body">
+            <h4>For Sites Requiring Authentication:</h4>
+            <ol>
+                <li>Log in to the website in your browser</li>
+                <li>Once you can see the content, use your browser's "Save Page As" feature:
+                    <ul>
+                        <li>Chrome: Right-click > Save as... > Choose "Webpage, HTML Only"</li>
+                        <li>Firefox: Right-click > Save Page As... > Choose "Web Page, HTML only"</li>
+                        <li>Safari: File > Save As... > Choose "Web Page, HTML Only"</li>
+                    </ul>
+                </li>
+                <li>Upload the saved HTML file using the form above</li>
+            </ol>
+            
+            <h4>For Quick Copy/Paste:</h4>
+            <ol>
+                <li>Select all content on the webpage (Ctrl+A or Cmd+A)</li>
+                <li>Copy the content (Ctrl+C or Cmd+C)</li>
+                <li>Paste into the "HTML Content" field above</li>
+            </ol>
+            
+            <div class="alert alert-info">
+                <strong>Tip:</strong> If you provide the original URL, relative links and images in the content will work better.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-control {
+        width: 100%;
+    }
+    
+    .form-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .alert-info {
+        background-color: #e2f0fd;
+        border-color: #c9e3fc;
+    }
+</style>
+{% endblock %}

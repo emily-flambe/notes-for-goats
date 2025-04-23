@@ -15,6 +15,9 @@
                 <a href="{% url 'notekeeper:note_import_from_url' workspace_id=workspace.id %}" class="btn btn-secondary">
                     <i class="icon-link"></i> Import from URL
                 </a>
+                <a href="{% url 'notekeeper:note_import_from_html' workspace_id=workspace.id %}" class="btn btn-secondary">
+                    <i class="icon-file"></i> Import from HTML
+                </a>
             </div>
         </div>
     </div>
