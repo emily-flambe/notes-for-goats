@@ -34,90 +34,78 @@ class NoteForm(forms.ModelForm):
             self.fields['referenced_entities'].queryset = Entity.objects.filter(workspace=workspace).order_by('name')
 
 class EntityForm(forms.ModelForm):
-    # Define a char field for backwards compatibility with the template
-    tags_text = forms.CharField(
-        required=False, 
+    # Simple text field for comma-separated tags
+    tag_list = forms.CharField(
+        required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Enter tags separated by commas (e.g., me, myself, I)'
+            'placeholder': 'Enter tags separated by commas (e.g., important, work, personal)'
         }),
-        help_text='Enter tags separated by commas (e.g., me, myself, I)'
-    )
-    
-    # Add a new field for new tags that aren't in the database yet
-    new_tags = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput()  # This will be populated via JavaScript
+        help_text='Enter tags separated by commas (e.g., important, work, personal)'
     )
     
     class Meta:
         model = Entity
-        fields = ['name', 'type', 'details', 'tags', 'new_tags']
+        fields = ['name', 'type', 'details']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'type': forms.Select(attrs={'class': 'form-control'}),
             'details': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
-            'tags': forms.SelectMultiple(attrs={
-                'class': 'form-control select2-tags-create',  # Make sure this class matches the JS
-                'data-tags': 'true'  # Enable tag creation in Select2
-            }),
         }
     
     def __init__(self, *args, **kwargs):
-        self.workspace = kwargs.pop('workspace', None)
         super().__init__(*args, **kwargs)
         
-        # If this is for an existing workspace, limit the tags choices
-        if self.workspace:
-            self.fields['tags'].queryset = Tag.objects.filter(
-                workspace=self.workspace
-            ).order_by('name')
-        elif self.instance and self.instance.pk and hasattr(self.instance, 'workspace'):
-            self.workspace = self.instance.workspace
-            self.fields['tags'].queryset = Tag.objects.filter(
-                workspace=self.instance.workspace
-            ).order_by('name')
+        # If we're editing an existing entity, populate the tag_list field
+        if self.instance.pk:
+            self.initial['tag_list'] = ', '.join(tag.name for tag in self.instance.tags.all())
     
     def save(self, commit=True):
-        entity = super().save(commit=False)
+        entity = super().save(commit=commit)
         
         if commit:
-            entity.save()
+            # Process the tag_list field
+            tag_list = self.cleaned_data.get('tag_list', '')
+            self.process_tags(entity, tag_list)
             
-            # First, handle selected existing tags
-            self.save_m2m()
-            
-            # Then, handle the new tags passed from the hidden field
-            new_tags_str = self.cleaned_data.get('new_tags', '')
-            if new_tags_str and self.workspace:
-                # Split the new tags string into individual tag names
-                new_tag_names = [name.strip().lower() for name in new_tags_str.split(',') if name.strip()]
-                
-                # Create and associate each new tag
-                for tag_name in new_tag_names:
-                    # Check if tag already exists (case-insensitive)
-                    tag, created = Tag.objects.get_or_create(
-                        workspace=self.workspace,
-                        name__iexact=tag_name,
-                        defaults={'name': tag_name}  # Use this if creating new
-                    )
-                    entity.tags.add(tag)
-            
-            # Finally, handle tags from tags_text field for backward compatibility
-            tags_text = self.cleaned_data.get('tags_text', '')
-            if tags_text and self.workspace:
-                tag_names = [t.strip().lower() for t in tags_text.split(',') if t.strip()]
-                
-                # Find or create Tag objects for each tag name
-                for tag_name in tag_names:
-                    tag, _ = Tag.objects.get_or_create(
-                        workspace=self.workspace,
-                        name__iexact=tag_name,
-                        defaults={'name': tag_name}
-                    )
-                    entity.tags.add(tag)
-        
         return entity
+    
+    def process_tags(self, entity, tag_list):
+        """Process a comma-separated list of tags and update the entity's tags"""
+        if not tag_list:
+            # Clear all tags except the entity name tag
+            entity_name_tag = entity.name.lower().replace(" ", "")
+            entity.tags.filter(name=entity_name_tag).update(name=entity_name_tag)  # Update just in case name changed
+            entity.tags.exclude(name=entity_name_tag).clear()
+            return
+        
+        # Get the workspace from the entity
+        workspace = entity.workspace
+        
+        # Parse the tag list
+        tag_names = [name.strip().lower() for name in tag_list.split(',') if name.strip()]
+        
+        # Create or get tags for each name
+        tags_to_add = []
+        for tag_name in tag_names:
+            tag, created = Tag.objects.get_or_create(
+                workspace=workspace,
+                name=tag_name
+            )
+            tags_to_add.append(tag)
+        
+        # Get the entity name tag (this should always exist per Entity.save)
+        entity_name_tag, created = Tag.objects.get_or_create(
+            workspace=workspace,
+            name=entity.name.lower().replace(" ", "")
+        )
+        
+        # Add the entity name tag if not in the list
+        if entity_name_tag not in tags_to_add:
+            tags_to_add.append(entity_name_tag)
+        
+        # Set the tags (this replaces all existing tags)
+        entity.tags.set(tags_to_add)
 
 class RelationshipTypeForm(forms.ModelForm):
     class Meta:

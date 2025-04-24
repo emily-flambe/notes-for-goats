@@ -46,13 +46,13 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.tags.id_for_label }}">Tags:</label>
-                {{ form.tags }}
+                <label for="{{ form.tag_list.id_for_label }}">Tags:</label>
+                {{ form.tag_list }}
                 <small class="form-text text-muted">
-                    Select existing tags or type to create new ones. Separate multiple new tags with commas.
+                    {{ form.tag_list.help_text }}
                 </small>
-                {% if form.tags.errors %}
-                    <div class="error">{{ form.tags.errors }}</div>
+                {% if form.tag_list.errors %}
+                    <div class="error">{{ form.tag_list.errors }}</div>
                 {% endif %}
             </div>
             

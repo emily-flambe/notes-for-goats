@@ -72,20 +72,8 @@ def entity_create(request, workspace_id):
             entity.workspace = workspace
             entity.save()
             
-            # Handle existing tags
-            form.save_m2m()
-            
-            # Handle new tags
-            new_tags = form.cleaned_data.get('new_tags', '')
-            if new_tags:
-                tag_names = [name.strip().lower() for name in new_tags.split(',') if name.strip()]
-                for tag_name in tag_names:
-                    tag, created = Tag.objects.get_or_create(
-                        workspace=workspace,
-                        name__iexact=tag_name,
-                        defaults={'name': tag_name}
-                    )
-                    entity.tags.add(tag)
+            # Process tags (handled in form.save() when commit=True)
+            form.save()
             
             return redirect('notekeeper:entity_detail', workspace_id=workspace_id, pk=entity.pk)
     else:
@@ -94,9 +82,6 @@ def entity_create(request, workspace_id):
         if entity_type and entity_type in dict(Entity.ENTITY_TYPES):
             initial_data['type'] = entity_type
         form = EntityForm(initial=initial_data)
-    
-    # Make sure tags are filtered by workspace
-    form.fields['tags'].queryset = Tag.objects.filter(workspace=workspace).order_by('name')
     
     return render(request, 'notekeeper/entity/form.html', {
         'workspace': workspace,
@@ -112,27 +97,12 @@ def entity_edit(request, workspace_id, pk):
     if request.method == "POST":
         form = EntityForm(request.POST, instance=entity)
         if form.is_valid():
-            # Save without committing to handle tags
-            entity = form.save(commit=True)
-            
-            # Handle new tags
-            new_tags = form.cleaned_data.get('new_tags', '')
-            if new_tags:
-                tag_names = [name.strip().lower() for name in new_tags.split(',') if name.strip()]
-                for tag_name in tag_names:
-                    tag, created = Tag.objects.get_or_create(
-                        workspace=workspace,
-                        name__iexact=tag_name,
-                        defaults={'name': tag_name}
-                    )
-                    entity.tags.add(tag)
+            # Save and process tags (handled in form.save() when commit=True)
+            form.save()
             
             return redirect('notekeeper:entity_detail', workspace_id=workspace_id, pk=entity.pk)
     else:
         form = EntityForm(instance=entity)
-    
-    # Make sure tags are filtered by workspace
-    form.fields['tags'].queryset = Tag.objects.filter(workspace=workspace).order_by('name')
     
     return render(request, 'notekeeper/entity/form.html', {
         'workspace': workspace,
