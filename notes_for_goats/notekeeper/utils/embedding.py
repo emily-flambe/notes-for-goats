@@ -107,12 +107,28 @@ def similarity_search(query_embedding, embeddings_list, top_k=5):
     similarities = []
     
     for i, embedding in enumerate(embeddings_list):
-        if embedding:
-            embedding_array = np.array(embedding)
-            similarity = np.dot(query_array, embedding_array) / (
-                np.linalg.norm(query_array) * np.linalg.norm(embedding_array)
-            )
-            similarities.append((i, similarity))
+        if embedding is not None:  # Explicitly check for None
+            try:
+                embedding_array = np.array(embedding)
+                
+                # Ensure arrays have content
+                if embedding_array.size == 0 or query_array.size == 0:
+                    continue
+                
+                # Calculate the norms
+                query_norm = np.linalg.norm(query_array)
+                embedding_norm = np.linalg.norm(embedding_array)
+                
+                # Avoid division by zero
+                if query_norm > 0 and embedding_norm > 0:
+                    # Calculate dot product and convert to Python float
+                    dot_product = np.dot(query_array, embedding_array)
+                    similarity = float(dot_product / (query_norm * embedding_norm))
+                    similarities.append((i, similarity))
+            except Exception as e:
+                # Skip problematic embeddings but log for debugging
+                print(f"Error processing embedding at index {i}: {e}")
+                continue
     
     # Sort by similarity (highest first) and return top k
     similarities.sort(key=lambda x: x[1], reverse=True)

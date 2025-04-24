@@ -438,51 +438,17 @@ class EntityEmbeddingAdmin(admin.ModelAdmin):
             # Calculate similarities
             similar_entities = similarity_search(embedding_array, other_arrays, top_k=5)
             
-            # Generate HTML output
+            # Generate HTML output with validation
             html = "<h3>Most Similar Entities</h3>"
             html += "<table style='width:100%; border-collapse: collapse;'>"
             html += "<tr><th style='padding:8px; border:1px solid #ddd;'>Entity</th><th style='padding:8px; border:1px solid #ddd;'>Type</th><th style='padding:8px; border:1px solid #ddd;'>Similarity</th></tr>"
             
             for idx, similarity in similar_entities:
-                entity = entities[idx]
-                url = f"/admin/notekeeper/entity/{entity.id}/change/"
-                html += f"<tr>"
-                html += f"<td style='padding:8px; border:1px solid #ddd;'><a href='{url}'>{entity.name}</a></td>"
-                html += f"<td style='padding:8px; border:1px solid #ddd;'>{entity.get_type_display()}</td>"
-                html += f"<td style='padding:8px; border:1px solid #ddd;'>{similarity:.4f}</td>"
-                html += f"</tr>"
-                
+                if 0 <= idx < len(entities):  # Validate index
+                    entity = entities[idx]
+                    html += f"<tr><td style='padding:8px; border:1px solid #ddd;'>{entity.name}</td><td style='padding:8px; border:1px solid #ddd;'>{entity.get_type_display()}</td><td style='padding:8px; border:1px solid #ddd;'>{similarity:.4f}</td></tr>"
+            
             html += "</table>"
-            
-            # Also show most similar notes
-            try:
-                note_embeddings = NoteEmbedding.objects.filter(
-                    note__workspace=obj.entity.workspace
-                ).select_related('note')
-                
-                if note_embeddings.exists():
-                    note_arrays = [np.array(ne.embedding) for ne in note_embeddings]
-                    notes = [ne.note for ne in note_embeddings]
-                    
-                    # Calculate similarities with notes
-                    similar_notes = similarity_search(embedding_array, note_arrays, top_k=5)
-                    
-                    html += "<h3>Most Similar Notes</h3>"
-                    html += "<table style='width:100%; border-collapse: collapse;'>"
-                    html += "<tr><th style='padding:8px; border:1px solid #ddd;'>Note</th><th style='padding:8px; border:1px solid #ddd;'>Similarity</th></tr>"
-                    
-                    for idx, similarity in similar_notes:
-                        note = notes[idx]
-                        url = f"/admin/notekeeper/note/{note.id}/change/"
-                        html += f"<tr>"
-                        html += f"<td style='padding:8px; border:1px solid #ddd;'><a href='{url}'>{note.title}</a></td>"
-                        html += f"<td style='padding:8px; border:1px solid #ddd;'>{similarity:.4f}</td>"
-                        html += f"</tr>"
-                        
-                    html += "</table>"
-            except Exception as e:
-                html += f"<p>Error calculating note similarities: {str(e)}</p>"
-            
             return mark_safe(html)
         except Exception as e:
             return f"Error calculating similarities: {str(e)}"
