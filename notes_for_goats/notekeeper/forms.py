@@ -75,8 +75,14 @@ class EntityForm(forms.ModelForm):
         if not tag_list:
             # Clear all tags except the entity name tag
             entity_name_tag = entity.name.lower().replace(" ", "")
-            entity.tags.filter(name=entity_name_tag).update(name=entity_name_tag)  # Update just in case name changed
-            entity.tags.exclude(name=entity_name_tag).clear()
+            # Get the entity name tag
+            tag, created = Tag.objects.get_or_create(
+                workspace=entity.workspace,
+                name=entity_name_tag
+            )
+            # Clear all tags and then add back just the entity name tag
+            entity.tags.clear()
+            entity.tags.add(tag)
             return
         
         # Get the workspace from the entity

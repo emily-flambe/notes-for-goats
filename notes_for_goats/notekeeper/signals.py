@@ -106,27 +106,47 @@ def generate_entity_embedding(sender, instance, **kwargs):
     """Generate and store embeddings when an entity is created or updated"""
     # Only generate if we have an OpenAI key (needed for embeddings)
     if not settings.OPENAI_API_KEY:
+        logger.warning(f"Skipping embedding generation for entity {instance.id} - No OpenAI API key")
         return
         
     try:
         # Combine name, type, and details for better semantic representation
-        text_to_embed = f"{instance.name} - {instance.get_type_display()}\n\n{instance.details}"
+        text_to_embed = f"{instance.name} - {instance.get_type_display()}"
+        
+        if instance.details:
+            text_to_embed += f"\n\n{instance.details}"
         
         # Add tags if available
         if hasattr(instance, 'tags') and instance.tags.exists():
             tag_list = ", ".join([tag.name for tag in instance.tags.all()])
             text_to_embed += f"\n\nTags: {tag_list}"
         
+        # Skip if there's nothing meaningful to embed
+        if not text_to_embed.strip():
+            logger.warning(f"Skipping embedding for entity {instance.id} - No content to embed")
+            return
+            
         # Generate embedding
-        embedding_vector = generate_embeddings(text_to_embed)
-        
-        # Save or update the embedding
-        EntityEmbedding.objects.update_or_create(
-            entity=instance,
-            defaults={'embedding': embedding_vector}
-        )
+        logger.info(f"Generating embedding for entity {instance.id}: {instance.name}")
+        try:
+            embedding_vector = generate_embeddings(text_to_embed)
+            
+            # Validate embedding format
+            if not embedding_vector or not isinstance(embedding_vector, list):
+                logger.error(f"Invalid embedding format for entity {instance.id} - got {type(embedding_vector)}")
+                return
+                
+            # Save or update the embedding
+            EntityEmbedding.objects.update_or_create(
+                entity=instance,
+                defaults={'embedding': embedding_vector}
+            )
+            logger.info(f"Successfully saved embedding for entity {instance.id}")
+        except Exception as e:
+            logger.error(f"OpenAI embedding generation failed for entity {instance.id}: {str(e)}")
+            
     except Exception as e:
-        logger.error(f"Error generating embedding for entity {instance.id}: {e}")
+        logger.error(f"Error generating embedding for entity {instance.id}: {str(e)}", exc_info=True)
 
 # Add a special handler for when relationships change to update related entity embeddings
 @receiver(post_save, sender=Relationship)

@@ -320,7 +320,11 @@ def get_database_context(workspace, query=None, use_local_llm=False):
                 top_k=min(5, len(entity_embeddings_list))
             )
             
-            relevant_entity_ids = [entity_objects[idx].id for idx, _ in similar_entities]
+            # Convert indices to integers and safely access entities
+            relevant_entity_ids = []
+            for idx, similarity in similar_entities:
+                if 0 <= idx < len(entity_objects):  # Ensure index is valid
+                    relevant_entity_ids.append(entity_objects[idx].id)
     except (ImportError, AttributeError):
         # EntityEmbedding might not exist yet
         pass
@@ -1672,25 +1676,11 @@ def get_smart_rag_context(workspace, query, focused_note, use_local_llm=False):
                     top_k=min(3, len(entity_embeddings_list))
                 )
                 
-                relevant_entity_ids = [entity_objects[idx].id for idx, _ in similar_entities]
-                
-                # Add entities if we have space
-                if relevant_entity_ids:
-                    entities_context = "\nRELEVANT ENTITIES:\n"
-                    if estimated_tokens + estimate_tokens(entities_context) < MAX_CONTEXT_TOKENS:
-                        context += entities_context
-                        estimated_tokens += estimate_tokens(entities_context)
-                        
-                        for entity in Entity.objects.filter(id__in=relevant_entity_ids):
-                            entity_text = f"- {entity.name} (Type: {entity.get_type_display()})\n"
-                            if entity.details:
-                                entity_text += f"  Details: {entity.details}\n"
-                            
-                            if estimated_tokens + estimate_tokens(entity_text) < MAX_CONTEXT_TOKENS:
-                                context += entity_text
-                                estimated_tokens += estimate_tokens(entity_text)
-                            else:
-                                break
+                # Safely convert indices to entity IDs
+                relevant_entity_ids = []
+                for idx, similarity in similar_entities:
+                    if 0 <= idx < len(entity_objects):  # Ensure index is valid
+                        relevant_entity_ids.append(entity_objects[idx].id)
         except (ImportError, AttributeError):
             # EntityEmbedding might not exist yet
             pass
