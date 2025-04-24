@@ -89,12 +89,13 @@
                 <div class="card-body">
                     <div class="form-group mb-3">
                         <label for="contextMode">Context Mode:</label>
-                        <select id="contextMode" class="form-control" onchange="toggleNoteSelector()">
-                            <option value="auto" {% if not focused_note_id %}selected{% endif %}>Automatic (RAG)</option>
+                        <select id="contextMode" class="form-control" onchange="toggleContextOptions()">
+                            <option value="auto" {% if not focused_note_id and not filter_mode %}selected{% endif %}>Automatic (RAG)</option>
                             <option value="focused" {% if focused_note_id %}selected{% endif %}>Focus on Note</option>
+                            <option value="filtered" {% if filter_mode %}selected{% endif %}>Apply Filters</option>
                         </select>
                         <small class="form-text text-muted">
-                            "Automatic" uses semantic search to find relevant content. "Focus on Note" uses a single note as context.
+                            "Automatic" uses semantic search to find relevant content. "Focus on Note" uses a single note as context. "Apply Filters" lets you prioritize specific content.
                         </small>
                     </div>
                     
@@ -107,6 +108,41 @@
                             {% endfor %}
                         </select>
                     </div>
+
+                    <div id="filterContainer" class="form-group" {% if not filter_mode %}style="display: none;"{% endif %}>
+                        <div class="card border-light mb-3">
+                            <div class="card-body">
+                                <h6>Filter Options</h6>
+                                
+                                <!-- Tags filter with checkboxes -->
+                                <div class="mb-3">
+                                    <label>Filter by Tags:</label>
+                                    <div class="tag-checkbox-container">
+                                        {% if all_tags %}
+                                            {% for tag in all_tags %}
+                                                <div class="form-check">
+                                                    <input class="form-check-input tag-checkbox" 
+                                                           type="checkbox" 
+                                                           id="tag_{{ tag.id }}" 
+                                                           value="{{ tag.id }}"
+                                                           {% if selected_tag_ids and tag.id|stringformat:"s" in selected_tag_ids %}checked{% endif %}>
+                                                    <label class="form-check-label"
+                                                            for="tag_{{ tag.id }}">
+                                                        #{{ tag.name }}
+                                                    </label>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p class="text-muted">No tags available in this workspace.</p>
+                                        {% endif %}
+                                    </div>
+                                    <small class="form-text text-muted mt-2">
+                                        Select one or more tags to prioritize in the AI context.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -114,9 +150,10 @@
             <form method="post" action="{% url 'notekeeper:ask_ai' workspace_id=workspace.id %}" id="askAiForm">
                 {% csrf_token %}
                 
-                <!-- Add hidden inputs for context mode and focused note -->
-                <input type="hidden" name="context_mode" id="contextModeInput" value="{% if focused_note_id %}focused{% else %}auto{% endif %}">
+                <!-- Update the hidden inputs -->
+                <input type="hidden" name="context_mode" id="contextModeInput" value="{% if focused_note_id %}focused{% elif filter_mode %}filtered{% else %}auto{% endif %}">
                 <input type="hidden" name="focused_note_id" id="focusedNoteInput" value="{{ focused_note_id|default:'' }}">
+                <input type="hidden" name="tag_filters" id="tagFiltersInput" value="{{ selected_tag_ids|join:',' }}">
                 
                 <div class="form-group">
                     <label for="user_query">Your Question:</label>
@@ -189,6 +226,20 @@
                     </small>
                     {% endif %}
                     
+                    {% if token_info.use_filtered %}
+                    <br>
+                    <small>
+                        <span class="badge bg-primary">Filtered RAG</span>
+                        Using notes and entities tagged with: 
+                        <span class="selected-tags-list">
+                            {% for tag_name in token_info.filter_tags %}
+                                #{{ tag_name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </span>
+                        ({{ token_info.context|floatformat:0 }} tokens)
+                    </small>
+                    {% endif %}
+                    
                     {% if token_info.total > token_info.limit_threshold %}
                     <br>
                     <small class="text-warning">
@@ -252,6 +303,58 @@
     font-size: 0.9rem;
     padding: 0.5rem 1rem;
 }
+
+/* Corrected styling for the tag checkboxes */
+.tag-checkbox-container {
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-top: 5px;
+    background-color: #f8fafc;
+}
+
+.tag-checkbox-container .form-check {
+    margin-bottom: 3px;
+    padding-left: 1.8rem;  /* Space for the checkbox */
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 22px;  /* Slightly reduced height */
+}
+
+.tag-checkbox-container .form-check-input {
+    position: absolute;
+    left: 0;  /* Align to the left edge */
+    margin-top: 0.15rem;  /* Fine-tune vertical position */
+}
+
+.tag-checkbox-container .form-check-label {
+    font-size: 0.85rem;
+    line-height: 1.2;
+    margin-bottom: 0;
+    padding-top: 1px;  /* Small adjustment to align with checkbox */
+}
+
+/* Create a compact 2-column layout for larger screens */
+@media (min-width: 576px) {
+    .tag-checkbox-container {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    
+    .tag-checkbox-container .form-check {
+        width: 50%;
+        padding-right: 5px;
+    }
+}
+
+/* Style for the selected tag indicator in the token info */
+.selected-tags-list {
+    display: inline;
+    font-style: italic;
+}
 </style>
 
 <script>
@@ -286,25 +389,65 @@ ${document.querySelector('.ai-response').innerText.trim()}`;
         });
     }
 
-    // Add JavaScript to handle the UI toggling
-    function toggleNoteSelector() {
+    // Replace the tag filter event listener with this
+    function updateTagFilters() {
+        const checkboxes = document.querySelectorAll('.tag-checkbox:checked');
+        const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+        document.getElementById('tagFiltersInput').value = selectedIds.join(',');
+    }
+    
+    // Add event listeners to all tag checkboxes
+    document.querySelectorAll('.tag-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateTagFilters);
+    });
+    
+    // Update the toggleContextOptions function to clear all tag checkboxes when not in filtered mode
+    function toggleContextOptions() {
         const contextMode = document.getElementById('contextMode').value;
         const noteSelectorContainer = document.getElementById('noteSelectorContainer');
+        const filterContainer = document.getElementById('filterContainer');
         const contextModeInput = document.getElementById('contextModeInput');
         const focusedNoteInput = document.getElementById('focusedNoteInput');
         
+        // Hide all option containers first
+        noteSelectorContainer.style.display = 'none';
+        filterContainer.style.display = 'none';
+        
+        // Show the appropriate container based on selection
         if (contextMode === 'focused') {
             noteSelectorContainer.style.display = 'block';
             contextModeInput.value = 'focused';
-        } else {
-            noteSelectorContainer.style.display = 'none';
-            contextModeInput.value = 'auto';
+            // Clear filter selections
+            document.getElementById('tagFiltersInput').value = '';
+            document.querySelectorAll('.tag-checkbox:checked').forEach(cb => {
+                cb.checked = false;
+            });
+        } 
+        else if (contextMode === 'filtered') {
+            filterContainer.style.display = 'block';
+            contextModeInput.value = 'filtered';
+            // Clear focused note
             focusedNoteInput.value = '';
+            // Make sure tag filters are updated
+            updateTagFilters();
+        }
+        else {
+            // Auto mode
+            contextModeInput.value = 'auto';
+            // Clear both focused note and filters
+            focusedNoteInput.value = '';
+            document.getElementById('tagFiltersInput').value = '';
+            document.querySelectorAll('.tag-checkbox:checked').forEach(cb => {
+                cb.checked = false;
+            });
         }
     }
 
     document.getElementById('noteSelector').addEventListener('change', function() {
         document.getElementById('focusedNoteInput').value = this.value;
     });
+
+    // Initialize tag filters on page load
+    updateTagFilters();
 </script>
 {% endblock %}
