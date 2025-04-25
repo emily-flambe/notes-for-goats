@@ -262,6 +262,9 @@ def serve_imported_file(request, workspace_id, note_id):
     if not os.path.exists(full_path):
         raise Http404("File not found")
     
+    # Get the filename from the path
+    filename = os.path.basename(full_path)
+    
     # Determine the file type to set the content type
     file_ext = os.path.splitext(full_path)[1].lower()
     content_type = None
@@ -271,5 +274,8 @@ def serve_imported_file(request, workspace_id, note_id):
     elif file_ext == '.html':
         content_type = 'text/html'
     
-    # Return the file
-    return FileResponse(open(full_path, 'rb'), content_type=content_type) 
+    # Set content disposition to force download
+    response = FileResponse(open(full_path, 'rb'), content_type=content_type)
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response 

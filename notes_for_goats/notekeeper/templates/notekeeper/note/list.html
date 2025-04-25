@@ -101,6 +101,12 @@
                                     <div class="journal-date">{{ entry.timestamp|date:"F j, Y - g:i A" }}</div>
                                 </div>
                                 <div class="actions">
+                                    {% if entry.file_path %}
+                                    <a href="{% url 'notekeeper:serve_imported_file' workspace_id=workspace.id note_id=entry.id %}" 
+                                       class="btn btn-sm btn-info download-button" target="_blank">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
+                                    {% endif %}
                                     <button class="btn btn-sm edit-button" data-url="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.id %}">Edit</button>
                                     <button class="btn btn-sm btn-danger delete-button" data-url="{% url 'notekeeper:note_delete' workspace_id=workspace.id pk=entry.id %}">Delete</button>
                                 </div>
@@ -310,6 +316,31 @@
         padding-top: 0.5rem;
         border-top: 1px solid #e2e8f0;
     }
+    
+    /* Download button styling */
+    .download-button {
+        background-color: #4299e1;
+        color: white;
+        margin-right: 4px;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    .download-button:hover {
+        background-color: #3182ce;
+        color: white;
+    }
+    
+    .download-button i {
+        margin-right: 3px;
+        font-size: 0.9em;
+    }
+    
+    /* Ensure the actions div has enough space */
+    .journal-header .actions {
+        display: flex;
+        gap: 4px;
+    }
 </style>
 {% endblock %}
 
@@ -377,6 +408,26 @@
                 if (confirmDelete) {
                     window.location.href = deleteUrl;
                 }
+            });
+        });
+
+        // Add event listener for download buttons to prevent note link activation
+        const downloadButtons = document.querySelectorAll('.download-button');
+        downloadButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                // Stop the event from bubbling up to the note link
+                event.stopPropagation();
+            });
+        });
+        
+        // Add event listener for edit buttons
+        const editButtons = document.querySelectorAll('.edit-button');
+        editButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                const editUrl = this.getAttribute('data-url');
+                window.location.href = editUrl;
             });
         });
     });
