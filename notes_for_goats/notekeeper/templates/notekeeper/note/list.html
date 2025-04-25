@@ -120,9 +120,10 @@
                                 <div class="journal-tags">
                                     <div class="note-list">
                                         {% for tag in entry.tags.all %}
-                                            <span class="note-tag">
+                                            <a href="{% url 'notekeeper:tag_detail' workspace_id=workspace.id pk=tag.id %}" 
+                                               class="note-tag clickable" onclick="event.stopPropagation();">
                                                 #{{ tag.name }}
-                                            </span>
+                                            </a>
                                         {% endfor %}
                                     </div>
                                 </div>
@@ -207,12 +208,20 @@
         font-size: 0.85em;
         color: #4a5568;
         text-decoration: none;
+        transition: all 0.15s ease;
     }
     
-    .note-tag:hover {
-        background-color: #e2e8f0;
-        color: #2d3748;
+    .note-tag.clickable {
+        cursor: pointer;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .note-tag.clickable:hover {
+        background-color: #4299e1;
+        color: white;
         text-decoration: none;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
     
     /* Enhanced notes container */
@@ -428,6 +437,15 @@
                 event.stopPropagation();
                 const editUrl = this.getAttribute('data-url');
                 window.location.href = editUrl;
+            });
+        });
+
+        // Make sure tag clicks don't activate the note link
+        const tagLinks = document.querySelectorAll('.note-tag.clickable');
+        tagLinks.forEach(tag => {
+            tag.addEventListener('click', function(event) {
+                // Stop the event from bubbling up to the note link
+                event.stopPropagation();
             });
         });
     });
