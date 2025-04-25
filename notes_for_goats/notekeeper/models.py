@@ -60,6 +60,11 @@ class Tag(models.Model):
         for entity in entities:
             # Add all notes with this tag to the entity's referenced_notes
             entity.note_notes.add(*notes)
+        
+        # For each note, ensure it's linked to all entities with this tag
+        for note in notes:
+            # Add all entities with this tag to the note's referenced_entities
+            note.referenced_entities.add(*entities)
 
 
 class Entity(models.Model):
@@ -108,6 +113,11 @@ class Entity(models.Model):
         # Now handle the regular tag relationships
         if hasattr(self, 'tags') and self.pk:
             self.update_relationships_from_tags()
+        
+        # After saving, trigger relationship update for all the entity's tags
+        # This ensures existing notes with the same tags get connected to this entity
+        for tag in self.tags.all():
+            tag.update_relationships()
     
     def update_relationships_from_tags(self):
         """Update relationships with notes based on shared tags"""
