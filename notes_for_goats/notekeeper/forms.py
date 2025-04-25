@@ -46,10 +46,11 @@ class EntityForm(forms.ModelForm):
     
     class Meta:
         model = Entity
-        fields = ['name', 'type', 'details']
+        fields = ['name', 'type', 'title', 'details']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'type': forms.Select(attrs={'class': 'form-control'}),
+            'type': forms.Select(attrs={'class': 'form-control', 'id': 'entity-type-select'}),
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job title or role'}),
             'details': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
         }
     

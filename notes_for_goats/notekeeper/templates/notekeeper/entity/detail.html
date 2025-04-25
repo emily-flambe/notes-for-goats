@@ -13,6 +13,10 @@
             <p><strong>Created:</strong> {{ entity.created_at|date:"F j, Y" }}</p>
             <p><strong>Updated:</strong> {{ entity.updated_at|date:"F j, Y" }}</p>
             
+            {% if entity.type == 'PERSON' and entity.title %}
+                <p><strong>Title/Role:</strong> {{ entity.title }}</p>
+            {% endif %}
+            
             {% if entity.tags.exists %}
                 <div class="entity-tags-top">
                     <p><strong>Tags:</strong></p>
