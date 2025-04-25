@@ -101,6 +101,12 @@
                                     <div class="journal-date">{{ entry.timestamp|date:"F j, Y - g:i A" }}</div>
                                 </div>
                                 <div class="actions">
+                                    {% if entry.file_path %}
+                                    <a href="{% url 'notekeeper:serve_imported_file' workspace_id=workspace.id note_id=entry.id %}" 
+                                       class="btn btn-sm btn-info download-button" target="_blank">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
+                                    {% endif %}
                                     <button class="btn btn-sm edit-button" data-url="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.id %}">Edit</button>
                                     <button class="btn btn-sm btn-danger delete-button" data-url="{% url 'notekeeper:note_delete' workspace_id=workspace.id pk=entry.id %}">Delete</button>
                                 </div>
@@ -114,9 +120,10 @@
                                 <div class="journal-tags">
                                     <div class="note-list">
                                         {% for tag in entry.tags.all %}
-                                            <span class="note-tag">
+                                            <a href="{% url 'notekeeper:tag_detail' workspace_id=workspace.id pk=tag.id %}" 
+                                               class="note-tag clickable" onclick="event.stopPropagation();">
                                                 #{{ tag.name }}
-                                            </span>
+                                            </a>
                                         {% endfor %}
                                     </div>
                                 </div>
@@ -201,17 +208,25 @@
         font-size: 0.85em;
         color: #4a5568;
         text-decoration: none;
+        transition: all 0.15s ease;
     }
     
-    .note-tag:hover {
-        background-color: #e2e8f0;
-        color: #2d3748;
+    .note-tag.clickable {
+        cursor: pointer;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .note-tag.clickable:hover {
+        background-color: #4299e1;
+        color: white;
         text-decoration: none;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
     
     /* Enhanced notes container */
     .journal-notes {
-        padding: 0 10px; /* Reduced from 15px */
+        padding: 0 0px; /* Reduced from 15px */
         display: flex;
         flex-direction: column;
         gap: 8px; /* Added gap between entries */
@@ -219,7 +234,7 @@
     
     /* Enhanced note entry styling to make it pop */
     .journal-entry {
-        padding: 16px 14px; /* Reduced from 20px 15px */
+        padding: 16px 16px; /* Reduced from 20px 15px */
         margin: 0; /* Removed margin in favor of flex gap */
         border-radius: 6px; /* Added rounded corners */
         background-color: #f8fafc; /* Very light background color */
@@ -238,9 +253,8 @@
         border-bottom: 1px solid #edf2f7; /* Ensure last item has bottom border */
     }
     
-    /* Reduced padding for content to decrease space after timestamp */
     .journal-content {
-        padding: -10px 0 4px; /* Reduced from 6px 0 4px - less space at the top */
+        padding: -10px 0 0px;
         line-height: 1.2;
         display: -webkit-box;
         -webkit-line-clamp: 2;
@@ -252,15 +266,13 @@
         position: relative;
     }
     
-    /* Reduce bottom margin on the journal header */
     .journal-header {
-        padding-bottom: 1px; /* Reduced from 3px */
+        padding-bottom: 0px;
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
     }
     
-    /* Reduce bottom margin on title */
     .journal-title {
         margin-top: 0;
         margin-bottom: 1px; /* Reduced from 3px */
@@ -277,14 +289,12 @@
         text-decoration: none;
     }
     
-    /* Smaller margin after date */
     .journal-date {
         font-size: 0.825rem;
         color: #718096;
-        margin-bottom: 1px; /* Added small margin */
+        margin-bottom: -20px; /* idk lmao */
     }
     
-    /* No results message styling */
     .no-results-message {
         padding: 30px 20px;
         text-align: center;
@@ -314,6 +324,31 @@
         margin-top: 0rem;
         padding-top: 0.5rem;
         border-top: 1px solid #e2e8f0;
+    }
+    
+    /* Download button styling */
+    .download-button {
+        background-color: #4299e1;
+        color: white;
+        margin-right: 4px;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    .download-button:hover {
+        background-color: #3182ce;
+        color: white;
+    }
+    
+    .download-button i {
+        margin-right: 3px;
+        font-size: 0.9em;
+    }
+    
+    /* Ensure the actions div has enough space */
+    .journal-header .actions {
+        display: flex;
+        gap: 4px;
     }
 </style>
 {% endblock %}
@@ -382,6 +417,35 @@
                 if (confirmDelete) {
                     window.location.href = deleteUrl;
                 }
+            });
+        });
+
+        // Add event listener for download buttons to prevent note link activation
+        const downloadButtons = document.querySelectorAll('.download-button');
+        downloadButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                // Stop the event from bubbling up to the note link
+                event.stopPropagation();
+            });
+        });
+        
+        // Add event listener for edit buttons
+        const editButtons = document.querySelectorAll('.edit-button');
+        editButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                const editUrl = this.getAttribute('data-url');
+                window.location.href = editUrl;
+            });
+        });
+
+        // Make sure tag clicks don't activate the note link
+        const tagLinks = document.querySelectorAll('.note-tag.clickable');
+        tagLinks.forEach(tag => {
+            tag.addEventListener('click', function(event) {
+                // Stop the event from bubbling up to the note link
+                event.stopPropagation();
             });
         });
     });

@@ -1,8 +1,8 @@
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
 import time
-from .models import Workspace, Entity, Note, RelationshipType, Relationship
+from .models import Workspace, Entity, Note, RelationshipType, Relationship, Tag
 from .views import create_backup
 from .utils.embedding import generate_embeddings, count_tokens, generate_chunked_embeddings
 from .models import NoteEmbedding, EntityEmbedding
@@ -197,6 +197,28 @@ def handle_user_preference_change(sender, instance, **kwargs):
     # Check if the user has RAG preferences and update accordingly
     # This requires adding RAG preferences to the user model first
     pass
+
+@receiver(m2m_changed, sender=Note.tags.through)
+def update_note_entity_relationships(sender, instance, action, pk_set, **kwargs):
+    """Update entity references when a note's tags change"""
+    if action in ["post_add", "post_remove", "post_clear"]:
+        # Get the note
+        note = instance
+        
+        # Update entity references based on current tags
+        if hasattr(note, 'tags'):
+            # Get all entities that share tags with this note
+            shared_tag_entities = []
+            for tag in note.tags.all():
+                for entity in tag.tagged_entities.all():
+                    if entity not in shared_tag_entities:
+                        shared_tag_entities.append(entity)
+            
+            # Update note's referenced entities to include those with shared tags
+            if shared_tag_entities:
+                # Add these entities to the note's referenced_entities without removing existing ones
+                for entity in shared_tag_entities:
+                    note.referenced_entities.add(entity)
 
 def ready():
     """Function to be called when the app is ready to ensure signals are connected"""

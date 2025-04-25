@@ -92,7 +92,7 @@
                                         {{ related_entity }}
                                     {% endif %}
                                 </td>
-                                <td>{{ rel.notes|truncatechars:50|default:"-" }}</td>
+                                <td>{{ rel.details|truncatechars:50|default:"-" }}</td>
                                 <td class="actions">
                                     <a href="{% url 'notekeeper:relationship_edit' workspace_id=workspace.id pk=rel.id %}" class="btn btn-sm">Edit</a>
                                     <a href="{% url 'notekeeper:relationship_delete' workspace_id=workspace.id pk=rel.id %}?from_entity={{ entity.id }}" class="btn btn-sm btn-danger">Delete</a>

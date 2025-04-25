@@ -64,17 +64,6 @@
                 {% endif %}
             </div>
             
-            <!-- Hidden field for new tags -->
-            {{ form.new_tags }}
-            
-            <!-- Add this debug section temporarily -->
-            <div style="background: #f5f5f5; padding: 10px; margin: 10px 0; border: 1px solid #ddd;">
-                <h4>Debug Info:</h4>
-                <p>Tags field has class: {{ form.tags.field.widget.attrs.class }}</p>
-                <p>New tags field exists: {% if form.new_tags %}Yes{% else %}No{% endif %}</p>
-                <p>Number of existing tags: {{ form.tags.field.queryset.count }}</p>
-            </div>
-            
             <div class="form-actions">
                 <button type="submit" class="btn">Save</button>
                 {% if entity %}
