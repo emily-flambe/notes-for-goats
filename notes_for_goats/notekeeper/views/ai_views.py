@@ -3,10 +3,11 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings
-from ..models import Workspace, Note, Entity, UserPreference, NoteEmbedding, Tag
+from ..models import Workspace, Note, Entity, UserPreference, NoteEmbedding, Tag, Relationship
 from ..llm_service import LLMService
 from ..utils.embedding import generate_embeddings, similarity_search
 import numpy as np
+from django.contrib.contenttypes.models import ContentType
 
 # Get logger for this module
 logger = logging.getLogger(__name__)
@@ -94,6 +95,9 @@ def ask_ai(request, workspace_id):
         focused_note_id = request.POST.get('focused_note_id', '')
         tag_filters = request.POST.get('tag_filters', '')
         entity_filters = request.POST.get('entity_filters', '')
+        
+        # Always include relationships (remove variable and just use True)
+        include_relationships = True
         
         # Process filters
         selected_tag_ids = [tag_id.strip() for tag_id in tag_filters.split(',') if tag_id.strip()]
@@ -242,7 +246,8 @@ def ask_ai(request, workspace_id):
                         'filter_tags': [tag.name for tag in selected_tags] if context_mode == 'filtered' and selected_tag_ids else [],
                         'filter_entities': selected_entities if context_mode == 'filtered' and selected_entity_ids else [],
                         'is_rag_fallback': is_rag_fallback,
-                        'limit_threshold': 0.75 * (16384 if not use_local_llm and "gpt-4" in settings.OPENAI_MODEL.lower() else 4096)
+                        'limit_threshold': 0.75 * (16384 if not use_local_llm and "gpt-4" in settings.OPENAI_MODEL.lower() else 4096),
+                        'include_relationships': True,
                     }
                 
                 # Generate response
@@ -307,6 +312,8 @@ def get_database_context(workspace, query=None, use_local_llm=False):
     - query: Optional query string to use for RAG
     - use_local_llm: Whether the user is using a local LLM (from user preferences)
     """
+    # Include relationships is now the default behavior, no parameter needed
+    
     # Decide whether to use RAG or full context
     use_rag = query and settings.OPENAI_API_KEY and not use_local_llm
     
@@ -408,8 +415,77 @@ def get_database_context(workspace, query=None, use_local_llm=False):
             if estimated_tokens + estimate_tokens(entity_text) < MAX_CONTEXT_TOKENS:
                 entities_context += entity_text
                 estimated_tokens += estimate_tokens(entity_text)
-            else:
-                break
+                
+            # Add relationship information if requested and we have space
+            if include_relationships:
+                # Check if we have enough tokens first
+                if estimated_tokens + 300 < MAX_CONTEXT_TOKENS:  # Allow ~300 tokens for relationships
+                    entity_content_type = ContentType.objects.get_for_model(Entity)
+                    
+                    # Get relationships where this entity is the source
+                    source_relationships = Relationship.objects.filter(
+                        workspace=workspace,
+                        source_content_type=entity_content_type,
+                        source_object_id=entity.id
+                    ).select_related('relationship_type')
+                    
+                    # Get relationships where this entity is the target
+                    target_relationships = Relationship.objects.filter(
+                        workspace=workspace,
+                        target_content_type=entity_content_type,
+                        target_object_id=entity.id
+                    ).select_related('relationship_type')
+                    
+                    if source_relationships.exists() or target_relationships.exists():
+                        rel_text = "  Relationships:\n"
+                        
+                        # Add up to 3 most important relationships for brevity
+                        relationship_count = 0
+                        max_relationships = 3
+                        
+                        # Add source relationships (entity → other)
+                        for rel in source_relationships:
+                            if relationship_count >= max_relationships:
+                                break
+                                
+                            if rel.target_content_type == entity_content_type:
+                                try:
+                                    target_entity = Entity.objects.get(id=rel.target_object_id)
+                                    rel_text += f"    → {rel.relationship_type.display_name} {target_entity.name}\n"
+                                    relationship_count += 1
+                                except Entity.DoesNotExist:
+                                    continue
+                        
+                        # Add target relationships (other → entity)
+                        for rel in target_relationships:
+                            if relationship_count >= max_relationships:
+                                break
+                                
+                            if rel.source_content_type == entity_content_type:
+                                try:
+                                    source_entity = Entity.objects.get(id=rel.source_object_id)
+                                    # Use inverse name if available
+                                    if rel.relationship_type.is_directional and rel.relationship_type.inverse_name:
+                                        rel_text += f"    ← {source_entity.name} {rel.relationship_type.inverse_name} this\n"
+                                    else:
+                                        rel_text += f"    ← {source_entity.name} {rel.relationship_type.display_name} this\n"
+                                    relationship_count += 1
+                                except Entity.DoesNotExist:
+                                    continue
+                        
+                        if relationship_count > 0:
+                            # Only add relationships text if we found valid relationships
+                            if relationship_count == max_relationships and (
+                                len(source_relationships) + len(target_relationships) > max_relationships
+                            ):
+                                rel_text += f"    (and {len(source_relationships) + len(target_relationships) - max_relationships} more...)\n"
+                                
+                            # Add to entity text with token tracking
+                            if estimated_tokens + estimate_tokens(rel_text) < MAX_CONTEXT_TOKENS:
+                                entity_text += rel_text
+                                estimated_tokens += estimate_tokens(rel_text)
+                
+            # Rest of the entity processing...
                 
         context += entities_context
     
@@ -930,13 +1006,6 @@ def get_filtered_context(workspace, tags=None, entities=None, query=None, use_lo
     """
     Retrieve relevant data from the database for a specific workspace,
     filtered by tags and/or entities and prioritized for relevance using RAG
-    
-    Parameters:
-    - workspace: The workspace to get context for
-    - tags: QuerySet of Tag objects to filter by (optional)
-    - entities: QuerySet of Entity objects to filter by (optional)
-    - query: Optional query string to use for RAG
-    - use_local_llm: Whether the user is using a local LLM (from user preferences)
     """
     # Decide whether to use RAG or full context
     use_rag = query and settings.OPENAI_API_KEY and not use_local_llm
@@ -981,40 +1050,30 @@ def get_filtered_context(workspace, tags=None, entities=None, query=None, use_lo
     # Get distinct entity IDs
     filtered_entity_ids = list(filtered_entities.values_list('id', flat=True))
     
-    # The rest of this function can adapt the existing get_filtered_context_by_tags function
-    # to work with the combined filters
-    if not use_rag:
-        # Build description of filters
-        filter_desc = []
-        if has_tag_filters:
-            filter_desc.append(f"Tags: {', '.join(['#' + name for name in tag_names])}")
-        if has_entity_filters:
-            filter_desc.append(f"Entities: {', '.join(entity_names)}")
-            
-        return get_filtered_full_context(
-            workspace, 
-            filtered_note_ids, 
-            filtered_entity_ids, 
-            " and ".join(filter_desc)
-        )
-    
-    # For RAG functionality, reuse the existing code with the filtered notes and entities
-    # (This would be the rest of the get_filtered_context_by_tags function adapted to use
-    # both tag and entity filters)
-    
-    # For now, let's use the existing function to handle the RAG part
-    # Future improvement would be to merge these implementations completely
-    return get_filtered_full_context(
-        workspace, 
-        filtered_note_ids, 
-        filtered_entity_ids, 
-        "Combined filters"
+    # Build context with relationships always included
+    context = build_context_with_relationships(
+        workspace,
+        filtered_note_ids,
+        filtered_entity_ids,
+        "Combined filters",
+        include_relationships=True  # Always True
     )
+    
+    return context
 
-def get_filtered_full_context(workspace, note_ids, entity_ids, filter_description):
+def build_context_with_relationships(workspace, note_ids, entity_ids, filter_description, include_relationships=True):
     """
-    Retrieve all filtered data from the database based on provided IDs
+    Build a comprehensive context that includes relationship information
+    
+    Parameters:
+    - workspace: The workspace to get context for
+    - note_ids: List of note IDs to include
+    - entity_ids: List of entity IDs to include
+    - filter_description: Description of the filters applied
+    - include_relationships: Whether to include relationship information
     """
+    from django.contrib.contenttypes.models import ContentType
+    
     # Filter by workspace and IDs
     entities = Entity.objects.filter(workspace=workspace, id__in=entity_ids)
     notes = Note.objects.filter(workspace=workspace, id__in=note_ids).order_by('-timestamp')
@@ -1027,25 +1086,98 @@ def get_filtered_full_context(workspace, note_ids, entity_ids, filter_descriptio
     else:
         context += "\n"
     
-    context += "FILTERED ENTITIES:\n"
-    for entity in entities:
-        context += f"- {entity.name} (Type: {entity.get_type_display()})\n"
-        if entity.details:
-            context += f"  Details: {entity.details}\n"
-        if hasattr(entity, 'tags') and entity.tags.exists():
-            tag_list = ", ".join([tag.name for tag in entity.tags.all()])
-            context += f"  Tags: {tag_list}\n"
+    # Get entity content type for relationship queries
+    entity_content_type = ContentType.objects.get_for_model(Entity)
     
-    context += "\nFILTERED NOTES:\n"
-    for note in notes:
-        context += f"- {note.title} (Date: {note.timestamp.strftime('%Y-%m-%d')})\n"
-        # Truncate very long notes
-        content = note.content
-        if len(content) > 500:
-            content = content[:497] + "..."
-        context += f"  Content: {content}\n"
-        if note.referenced_entities.exists():
-            entities_list = ", ".join([e.name for e in note.referenced_entities.all()])
-            context += f"  References: {entities_list}\n"
+    # Add filtered entities with their relationships
+    if entities.exists():
+        context += "FILTERED ENTITIES:\n"
+        for entity in entities:
+            # Basic entity info
+            context += f"- {entity.name} (Type: {entity.get_type_display()})\n"
+            
+            # Add title for Person entities
+            if entity.type == 'PERSON' and entity.title:
+                context += f"  Title: {entity.title}\n"
+                
+            if entity.details:
+                # Truncate very long details
+                if len(entity.details) > 200:
+                    context += f"  Details: {entity.details[:197]}...\n"
+                else:
+                    context += f"  Details: {entity.details}\n"
+            
+            if hasattr(entity, 'tags') and entity.tags.exists():
+                tag_list = ", ".join([tag.name for tag in entity.tags.all()])
+                context += f"  Tags: {tag_list}\n"
+            
+            # Add relationship information if requested
+            if include_relationships:
+                # Get relationships where this entity is the source
+                source_relationships = Relationship.objects.filter(
+                    workspace=workspace,
+                    source_content_type=entity_content_type,
+                    source_object_id=entity.id
+                ).select_related('relationship_type')
+                
+                # Get relationships where this entity is the target
+                target_relationships = Relationship.objects.filter(
+                    workspace=workspace,
+                    target_content_type=entity_content_type,
+                    target_object_id=entity.id
+                ).select_related('relationship_type')
+                
+                if source_relationships.exists() or target_relationships.exists():
+                    context += "  Relationships:\n"
+                    
+                    # Add source relationships (entity → other)
+                    for rel in source_relationships:
+                        if rel.target_content_type == entity_content_type:
+                            try:
+                                target_entity = Entity.objects.get(id=rel.target_object_id)
+                                context += f"    → {rel.relationship_type.display_name} {target_entity.name}\n"
+                                # Add details if they exist
+                                if rel.details:
+                                    details = rel.details if len(rel.details) < 50 else f"{rel.details[:47]}..."
+                                    context += f"      Details: {details}\n"
+                            except Entity.DoesNotExist:
+                                continue
+                    
+                    # Add target relationships (other → entity)
+                    for rel in target_relationships:
+                        if rel.source_content_type == entity_content_type:
+                            try:
+                                source_entity = Entity.objects.get(id=rel.source_object_id)
+                                # Use inverse name if available
+                                if rel.relationship_type.is_directional and rel.relationship_type.inverse_name:
+                                    context += f"    ← {source_entity.name} {rel.relationship_type.inverse_name} this\n"
+                                else:
+                                    context += f"    ← {source_entity.name} {rel.relationship_type.display_name} this\n"
+                                # Add details if they exist
+                                if rel.details:
+                                    details = rel.details if len(rel.details) < 50 else f"{rel.details[:47]}..."
+                                    context += f"      Details: {details}\n"
+                            except Entity.DoesNotExist:
+                                continue
+            
+            context += "\n"  # Add space between entities
     
-    return context 
+    # Add filtered notes
+    if notes.exists():
+        context += "FILTERED NOTES:\n"
+        for note in notes:
+            context += f"- {note.title} (Date: {note.timestamp.strftime('%Y-%m-%d')})\n"
+            # Truncate very long notes
+            content = note.content
+            if len(content) > 500:
+                content = content[:497] + "..."
+            context += f"  Content: {content}\n"
+            if note.referenced_entities.exists():
+                entities_list = ", ".join([e.name for e in note.referenced_entities.all()])
+                context += f"  References: {entities_list}\n"
+            context += "\n"  # Add space between notes
+    
+    return context
+
+# Replace the existing get_filtered_full_context function with our new function
+get_filtered_full_context = build_context_with_relationships 

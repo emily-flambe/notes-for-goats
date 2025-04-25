@@ -279,7 +279,6 @@
                         </span>
                         {% endif %}
                         
-                        ({{ token_info.context|floatformat:0 }} tokens)
                     </small>
                     {% endif %}
                     
@@ -455,7 +454,7 @@ ${document.querySelector('.ai-response').innerText.trim()}`;
         checkbox.addEventListener('change', updateEntityFilters);
     });
     
-    // Update the toggleContextOptions function to clear all checkboxes when not in filtered mode
+    // Update the toggleContextOptions function to handle the relationships checkbox
     function toggleContextOptions() {
         const contextMode = document.getElementById('contextMode').value;
         const noteSelectorContainer = document.getElementById('noteSelectorContainer');
