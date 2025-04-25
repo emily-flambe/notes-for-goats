@@ -45,6 +45,18 @@
                 {% endif %}
             </div>
             
+            <!-- Title field - only shown for Person entities -->
+            <div class="form-group" id="title-field-group" style="display: {% if form.instance.type == 'PERSON' or entity_type == 'PERSON' %}block{% else %}none{% endif %};">
+                <label for="{{ form.title.id_for_label }}">Title/Role:</label>
+                {{ form.title }}
+                <small class="form-text text-muted">
+                    {{ form.title.help_text }}
+                </small>
+                {% if form.title.errors %}
+                    <div class="error">{{ form.title.errors }}</div>
+                {% endif %}
+            </div>
+            
             <div class="form-group">
                 <label for="{{ form.tag_list.id_for_label }}">Tags:</label>
                 {{ form.tag_list }}
@@ -80,6 +92,22 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
+    // Handle showing/hiding the title field based on entity type
+    function toggleTitleField() {
+        var selectedType = $('#entity-type-select').val();
+        if (selectedType === 'PERSON') {
+            $('#title-field-group').slideDown(200);
+        } else {
+            $('#title-field-group').slideUp(200);
+            // Optionally clear the field when hidden
+            $('#{{ form.title.id_for_label }}').val('');
+        }
+    }
+    
+    // Call on page load and when type changes
+    toggleTitleField();
+    $('#entity-type-select').change(toggleTitleField);
+    
     // Initialize Select2 with tag creation capabilities
     $('.select2-tags-create').select2({
         tags: true,                // Allow creating new tags

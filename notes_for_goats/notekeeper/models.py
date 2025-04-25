@@ -80,6 +80,7 @@ class Entity(models.Model):
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='entities')
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=10, choices=ENTITY_TYPES)
+    title = models.CharField(max_length=100, blank=True, help_text="Job title or role (only for Person entities)")
     details = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
