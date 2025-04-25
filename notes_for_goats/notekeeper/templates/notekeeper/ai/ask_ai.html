@@ -140,6 +140,33 @@
                                         Select one or more tags to prioritize in the AI context.
                                     </small>
                                 </div>
+                                
+                                <!-- Entities filter with checkboxes -->
+                                <div class="mb-3">
+                                    <label>Filter by Entities:</label>
+                                    <div class="tag-checkbox-container">
+                                        {% if all_entities %}
+                                            {% for entity in all_entities %}
+                                                <div class="form-check">
+                                                    <input class="form-check-input entity-checkbox" 
+                                                           type="checkbox" 
+                                                           id="entity_{{ entity.id }}" 
+                                                           value="{{ entity.id }}"
+                                                           {% if selected_entity_ids and entity.id|stringformat:"s" in selected_entity_ids %}checked{% endif %}>
+                                                    <label class="form-check-label"
+                                                            for="entity_{{ entity.id }}">
+                                                        {{ entity.name }}
+                                                    </label>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p class="text-muted">No entities available in this workspace.</p>
+                                        {% endif %}
+                                    </div>
+                                    <small class="form-text text-muted mt-2">
+                                        Select one or more entities to prioritize in the AI context.
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -154,6 +181,7 @@
                 <input type="hidden" name="context_mode" id="contextModeInput" value="{% if focused_note_id %}focused{% elif filter_mode %}filtered{% else %}auto{% endif %}">
                 <input type="hidden" name="focused_note_id" id="focusedNoteInput" value="{{ focused_note_id|default:'' }}">
                 <input type="hidden" name="tag_filters" id="tagFiltersInput" value="{{ selected_tag_ids|join:',' }}">
+                <input type="hidden" name="entity_filters" id="entityFiltersInput" value="{{ selected_entity_ids|join:',' }}">
                 
                 <div class="form-group">
                     <label for="user_query">Your Question:</label>
@@ -230,12 +258,27 @@
                     <br>
                     <small>
                         <span class="badge bg-primary">Filtered RAG</span>
-                        Using notes and entities tagged with: 
+                        
+                        {% if token_info.filter_entities %}
+                        Entities: 
+                        <span class="selected-tags-list">
+                            {% for entity in token_info.filter_entities %}
+                                {{ entity.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </span>
+                        {% endif %}
+                        
+                        {% if token_info.filter_entities and token_info.filter_tags %} | {% endif %}
+                        
+                        {% if token_info.filter_tags %}
+                        Tags: 
                         <span class="selected-tags-list">
                             {% for tag_name in token_info.filter_tags %}
                                 #{{ tag_name }}{% if not forloop.last %}, {% endif %}
                             {% endfor %}
                         </span>
+                        {% endif %}
+                        
                         ({{ token_info.context|floatformat:0 }} tokens)
                     </small>
                     {% endif %}
@@ -389,19 +432,30 @@ ${document.querySelector('.ai-response').innerText.trim()}`;
         });
     }
 
-    // Replace the tag filter event listener with this
+    // Update tag filters
     function updateTagFilters() {
         const checkboxes = document.querySelectorAll('.tag-checkbox:checked');
         const selectedIds = Array.from(checkboxes).map(cb => cb.value);
         document.getElementById('tagFiltersInput').value = selectedIds.join(',');
     }
     
-    // Add event listeners to all tag checkboxes
+    // Add entity filter function
+    function updateEntityFilters() {
+        const checkboxes = document.querySelectorAll('.entity-checkbox:checked');
+        const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+        document.getElementById('entityFiltersInput').value = selectedIds.join(',');
+    }
+    
+    // Add event listeners to all checkboxes
     document.querySelectorAll('.tag-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', updateTagFilters);
     });
     
-    // Update the toggleContextOptions function to clear all tag checkboxes when not in filtered mode
+    document.querySelectorAll('.entity-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateEntityFilters);
+    });
+    
+    // Update the toggleContextOptions function to clear all checkboxes when not in filtered mode
     function toggleContextOptions() {
         const contextMode = document.getElementById('contextMode').value;
         const noteSelectorContainer = document.getElementById('noteSelectorContainer');
@@ -418,36 +472,42 @@ ${document.querySelector('.ai-response').innerText.trim()}`;
             noteSelectorContainer.style.display = 'block';
             contextModeInput.value = 'focused';
             // Clear filter selections
-            document.getElementById('tagFiltersInput').value = '';
-            document.querySelectorAll('.tag-checkbox:checked').forEach(cb => {
-                cb.checked = false;
-            });
+            clearFilters();
         } 
         else if (contextMode === 'filtered') {
             filterContainer.style.display = 'block';
             contextModeInput.value = 'filtered';
             // Clear focused note
             focusedNoteInput.value = '';
-            // Make sure tag filters are updated
+            // Make sure filters are updated
             updateTagFilters();
+            updateEntityFilters();
         }
         else {
             // Auto mode
             contextModeInput.value = 'auto';
             // Clear both focused note and filters
             focusedNoteInput.value = '';
-            document.getElementById('tagFiltersInput').value = '';
-            document.querySelectorAll('.tag-checkbox:checked').forEach(cb => {
-                cb.checked = false;
-            });
+            clearFilters();
         }
     }
+    
+    // Helper function to clear filters
+    function clearFilters() {
+        document.getElementById('tagFiltersInput').value = '';
+        document.getElementById('entityFiltersInput').value = '';
+        
+        document.querySelectorAll('.tag-checkbox:checked, .entity-checkbox:checked').forEach(cb => {
+            cb.checked = false;
+        });
+    }
+
+    // Initialize filters on page load
+    updateTagFilters();
+    updateEntityFilters();
 
     document.getElementById('noteSelector').addEventListener('change', function() {
         document.getElementById('focusedNoteInput').value = this.value;
     });
-
-    // Initialize tag filters on page load
-    updateTagFilters();
 </script>
 {% endblock %}
