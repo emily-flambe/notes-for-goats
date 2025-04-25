@@ -86,4 +86,7 @@ urlpatterns = [
     path('workspaces/<int:workspace_id>/note/import-url/', views.note_import_from_url, name='note_import_from_url'),
     path('workspaces/<int:workspace_id>/note/import-html/', views.note_import_from_html, name='note_import_from_html'),
     path('workspaces/<int:workspace_id>/note/import-pdf/', views.note_import_from_pdf, name='note_import_from_pdf'),
+
+    # Serve imported file
+    path('workspaces/<int:workspace_id>/notes/<int:note_id>/file/', views.serve_imported_file, name='serve_imported_file'),
 ] 

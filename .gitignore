@@ -197,3 +197,6 @@ backups/
 # Backup
 backups/
 *.sqlite3
+
+# Imported files
+**/imports/**

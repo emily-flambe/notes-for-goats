@@ -1,0 +1,11 @@
+<!-- Add this near the note metadata section -->
+{% if note.file_path %}
+<div class="mb-3">
+    <strong>Imported File:</strong>
+    <a href="{% url 'notekeeper:serve_imported_file' workspace_id=workspace.id note_id=note.id %}" 
+       target="_blank" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-file-earmark"></i>
+        Open Original File
+    </a>
+</div>
+{% endif %} 

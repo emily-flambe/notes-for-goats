@@ -137,3 +137,6 @@ OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo')
 # Add settings for local LLM
 LOCAL_LLM_URL = os.environ.get('LOCAL_LLM_URL', 'http://localhost:11434')
 LOCAL_LLM_MODEL = os.environ.get('LOCAL_LLM_MODEL', 'llama3')
+
+# Add this near other path configurations
+IMPORT_FILES_DIR = os.environ.get('IMPORT_FILES_DIR', os.path.join(BASE_DIR, 'notekeeper', 'imports'))

@@ -136,6 +136,7 @@ class Note(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     referenced_entities = models.ManyToManyField(Entity, blank=True, related_name='note_notes')
     tags = models.ManyToManyField(Tag, blank=True, related_name='tagged_notes')
+    file_path = models.CharField(max_length=255, blank=True, null=True, help_text="Path to the imported file")
     
     def __str__(self):
         return f"{self.timestamp.strftime('%Y-%m-%d')}: {self.title}"
