@@ -423,18 +423,102 @@
         // Relationship filter handling
         const relationshipTypeFilter = document.getElementById('relationship_type_filter');
         const targetEntityGroup = document.getElementById('target-entity-group');
+        const targetEntityFilter = document.getElementById('target_entity_filter');
         
-        if (relationshipTypeFilter && targetEntityGroup) {
+        if (relationshipTypeFilter && targetEntityGroup && targetEntityFilter) {
             // Show/hide the target entity dropdown based on relationship type selection
             relationshipTypeFilter.addEventListener('change', function() {
                 if (this.value) {
+                    // Show the target entity group
                     targetEntityGroup.style.display = 'block';
+                    
+                    // Fetch entities that have relationships of this type
+                    fetchTargetEntities(this.value);
                 } else {
                     targetEntityGroup.style.display = 'none';
                     // Clear the target entity selection when relationship type is cleared
-                    document.getElementById('target_entity_filter').value = '';
+                    targetEntityFilter.value = '';
+                    
+                    // Reset the dropdown options
+                    while (targetEntityFilter.options.length > 1) {
+                        targetEntityFilter.remove(1);
+                    }
                 }
             });
+            
+            // Function to fetch entities that are targets of the selected relationship type
+            function fetchTargetEntities(relationshipTypeId) {
+                // Show loading state
+                targetEntityFilter.disabled = true;
+                
+                // Create a placeholder option
+                const loadingOption = document.createElement('option');
+                loadingOption.text = 'Loading...';
+                loadingOption.value = '';
+                
+                // Clear existing options except the first one
+                while (targetEntityFilter.options.length > 1) {
+                    targetEntityFilter.remove(1);
+                }
+                
+                // Add loading option
+                targetEntityFilter.add(loadingOption);
+                
+                // Fetch data from API
+                fetch(`{% url 'notekeeper:get_relationship_targets' workspace_id=workspace.id %}?relationship_type=${relationshipTypeId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Remove loading option
+                        targetEntityFilter.remove(targetEntityFilter.options.length - 1);
+                        
+                        if (data.entities && data.entities.length > 0) {
+                            // Add entities to dropdown
+                            data.entities.forEach(entity => {
+                                const option = document.createElement('option');
+                                option.value = entity.id;
+                                option.text = `${entity.name} (${entity.type})`;
+                                
+                                // Check if this was previously selected
+                                if (entity.id == "{{ selected_target_entity_id }}") {
+                                    option.selected = true;
+                                }
+                                
+                                targetEntityFilter.add(option);
+                            });
+                        } else {
+                            // No entities found
+                            const noEntitiesOption = document.createElement('option');
+                            noEntitiesOption.text = 'No entities available';
+                            noEntitiesOption.value = '';
+                            targetEntityFilter.add(noEntitiesOption);
+                        }
+                        
+                        // Re-enable the dropdown
+                        targetEntityFilter.disabled = false;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching entities:', error);
+                        
+                        // Show error message
+                        const errorOption = document.createElement('option');
+                        errorOption.text = 'Error loading entities';
+                        errorOption.value = '';
+                        
+                        // Clear dropdown and add error option
+                        while (targetEntityFilter.options.length > 1) {
+                            targetEntityFilter.remove(1);
+                        }
+                        targetEntityFilter.add(errorOption);
+                        
+                        // Re-enable dropdown
+                        targetEntityFilter.disabled = false;
+                    });
+            }
+            
+            // Initialize dropdown if relationship type is already selected
+            if (relationshipTypeFilter.value) {
+                fetchTargetEntities(relationshipTypeFilter.value);
+            }
         }
     });
 </script>
