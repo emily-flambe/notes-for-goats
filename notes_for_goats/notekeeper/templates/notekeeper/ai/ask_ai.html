@@ -314,11 +314,11 @@
             <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard()">
                 <i class="bi bi-clipboard"></i> Copy Response
             </button>
-            <form method="POST" action="{% url 'notekeeper:save_ai_chat' workspace_id=workspace.id %}">
+            <form method="POST" action="{% url 'notekeeper:save_ai_chat' workspace_id=workspace.id %}" onsubmit="prepareContent()">
                 {% csrf_token %}
                 <input type="hidden" name="title" value="{{ user_query|truncatechars:50|striptags|safe }}" />
                 <input type="hidden" name="content" id="note-content" />
-                <button type="submit" class="btn btn-sm btn-primary" onclick="prepareContent()">
+                <button type="submit" class="btn btn-sm btn-primary">
                     <i class="bi bi-journal-plus"></i> Save as Note
                 </button>
             </form>
@@ -400,6 +400,18 @@
 </style>
 
 <script>
+    // Function to prepare content for saving as a note
+    function prepareContent() {
+        const formattedContent = `**Question:** ${document.querySelector('.prompt-text').innerText.trim()}
+
+**Model:** ${document.querySelector('.model-name').innerText.trim()}
+
+**Response:**
+${document.querySelector('.ai-response').innerText.trim()}`;
+        
+        document.getElementById('note-content').value = formattedContent;
+    }
+    
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         // Make sure the note selector shows the correct note if focused_note_id is set
@@ -420,18 +432,6 @@
                     userQueryField.value = "Summarize this.";
                 }
             }
-        }
-        
-        // Add function to prepare content for saving as a note
-        function prepareContent() {
-            const formattedContent = `**Question:** ${document.querySelector('.prompt-text').innerText.trim()}
-
-**Model:** ${document.querySelector('.model-name').innerText.trim()}
-
-**Response:**
-${document.querySelector('.ai-response').innerText.trim()}`;
-            
-            document.getElementById('note-content').value = formattedContent;
         }
         
         // Show loading indicator when form is submitted
