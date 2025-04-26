@@ -51,7 +51,7 @@
             {% if people.exists %}
                 <div class="entity-section">
                     <h2 class="section-title">People</h2>
-                    <div class="entity-list">
+                    <div class="entity-section-list">
                         {% for entity in people|dictsort:"name" %}
                             <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}" class="entity-item-link">
                                 <div class="entity-item">
@@ -89,7 +89,7 @@
             {% if projects.exists %}
                 <div class="entity-section">
                     <h2 class="section-title">Projects</h2>
-                    <div class="entity-list">
+                    <div class="entity-section-list">
                         {% for entity in projects|dictsort:"name" %}
                             <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}" class="entity-item-link">
                                 <div class="entity-item">
@@ -127,7 +127,7 @@
             {% if teams.exists %}
                 <div class="entity-section">
                     <h2 class="section-title">Teams</h2>
-                    <div class="entity-list">
+                    <div class="entity-section-list">
                         {% for entity in teams|dictsort:"name" %}
                             <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}" class="entity-item-link">
                                 <div class="entity-item">
@@ -205,6 +205,7 @@
         margin-top: 20px;
         padding-top: 15px;
         border-top: 1px solid #edf2f7;
+        width: 100%;
     }
     
     .section-title {
@@ -213,34 +214,46 @@
         margin: 0 0 15px 10px;
     }
     
-    /* Entity list styling (matching journal-notes) */
-    .entity-list {
-        padding: 0 10px;
+    /* Entity section list styling - single column */
+    .entity-section-list {
+        padding: 0;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        flex-wrap: nowrap !important;
+        gap: 0;
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #edf2f7;
+        border-radius: 6px;
+        background-color: #fff;
+        width: 100%;
     }
     
-    /* Entity item styling (matching journal-entry) */
+    /* Entity item styling */
     .entity-item {
         padding: 16px 14px;
         margin: 0;
-        border-radius: 6px;
         background-color: #f8fafc;
-        border: 1px solid #edf2f7;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-bottom: 1px solid #edf2f7;
         transition: all 0.2s ease;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .entity-item:last-child {
+        border-bottom: none;
     }
     
     .entity-item-link {
         text-decoration: none;
         color: inherit;
+        display: block;
+        width: 100%;
     }
     
     /* Hover effect */
     .entity-item:hover {
         background-color: #c7e0ef;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     }
     
     /* Entity header */
@@ -249,6 +262,7 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
+        width: 100%;
     }
     
     /* Entity title */
@@ -271,6 +285,7 @@
         max-height: calc(1.5em * 3);
         color: #4a5568;
         position: relative;
+        width: 100%;
     }
     
     /* Tags styling */
@@ -279,6 +294,7 @@
         flex-wrap: wrap;
         gap: 6px;
         margin-top: 3px;
+        width: 100%;
     }
     
     .tag-badge {
@@ -290,12 +306,6 @@
         font-size: 0.85em;
         color: #4a5568;
         text-decoration: none;
-    }
-    
-    /* Section add button */
-    .section-add {
-        text-align: right;
-        padding: 10px 10px 0 0;
     }
     
     /* No results message styling */

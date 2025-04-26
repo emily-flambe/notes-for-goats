@@ -63,7 +63,7 @@ def entity_detail(request, workspace_id, pk):
 def entity_create(request, workspace_id):
     """View to create a new entity"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    entity_type = request.GET.get('type', None)  # Get the type from query string if available
+    entity_type = request.GET.get('type', 'PERSON')  # Default to PERSON if no type specified
     
     if request.method == "POST":
         form = EntityForm(request.POST)
@@ -77,10 +77,8 @@ def entity_create(request, workspace_id):
             
             return redirect('notekeeper:entity_detail', workspace_id=workspace_id, pk=entity.pk)
     else:
-        # Initialize form with optional type
-        initial_data = {}
-        if entity_type and entity_type in dict(Entity.ENTITY_TYPES):
-            initial_data['type'] = entity_type
+        # Initialize form with type
+        initial_data = {'type': entity_type}
         form = EntityForm(initial=initial_data)
     
     return render(request, 'notekeeper/entity/form.html', {
