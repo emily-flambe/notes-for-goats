@@ -33,10 +33,11 @@ A personal note-taking application designed for professionals to organize struct
    make env
 
    # Build and start the application
-   docker-compose up -d
+   make build
+   make up
 
    # Create an admin user (first time only)
-   docker-compose exec web python notes_for_goats/manage.py createsuperuser
+   make superuser
    ```
 
 3. **Access**
@@ -75,9 +76,23 @@ A personal note-taking application designed for professionals to organize struct
 
 ## Setting Up AI Features
 
-Notes for Goats supports two AI backends: local models via Ollama (recommended for privacy and no costs) or OpenAI (faster but requires API key).
+Notes for Goats supports two AI backends: OpenAI (default, faster with better results) and local models via Ollama (free alternative with complete privacy).
 
-### Option 1: Local AI with Ollama (Recommended)
+### Option 1: OpenAI API (Recommended)
+
+For the best experience with powerful AI capabilities:
+
+1. **Get an API key** from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+
+2. **Configure Notes for Goats**
+   
+   When running `make env`, enter your OpenAI API key when prompted.
+
+3. **Toggle in the UI**
+   
+   You can switch between OpenAI and local models directly in the Ask AI interface.
+
+### Option 2: Local AI with Ollama (Free Alternative)
 
 Run AI features locally with complete privacy and no usage costs:
 
@@ -113,20 +128,6 @@ Run AI features locally with complete privacy and no usage costs:
    LOCAL_LLM_URL=http://localhost:11434
    LOCAL_LLM_MODEL=llama3
    ```
-
-### Option 2: OpenAI API (Alternative)
-
-For faster responses with OpenAI's powerful models:
-
-1. **Get an API key** from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-
-2. **Configure Notes for Goats**
-   
-   When running `make env`, enter your OpenAI API key when prompted.
-
-3. **Toggle in the UI**
-   
-   You can switch between local and OpenAI models directly in the Ask AI interface.
 
 ## How to Use Notes for Goats
 
@@ -176,7 +177,7 @@ Interact with your notes using natural language:
 - "What were the key points from my meeting with Alice last week?"
 - "What connections exist between the Marketing and Sales teams?"
 
-**Privacy Note**: Local LLM queries never leave your computer, while OpenAI queries are processed in the cloud.
+**Privacy Note**: By default, queries are processed using OpenAI in the cloud. For complete privacy, switch to the local LLM option which keeps all data on your computer.
 
 ## Data Backup and Migration
 
@@ -235,6 +236,12 @@ This approach provides more accurate answers while keeping token usage reasonabl
 
 ## Troubleshooting AI Features
 
+### OpenAI Issues
+
+- Verify your API key is valid
+- Check for rate limiting or quota issues
+- Ensure your OpenAI account has billing set up
+
 ### Local LLM Issues
 
 If Ollama isn't working:
@@ -248,12 +255,6 @@ If Ollama isn't working:
   ```
 - Check `LOCAL_LLM_URL` doesn't include `/api` at the end
 - For best performance: 16GB+ RAM, GPU or Apple Silicon recommended
-
-### OpenAI Issues
-
-- Verify your API key is valid
-- Check for rate limiting or quota issues
-- Ensure your OpenAI account has billing set up
 
 ## Planned Features
 
