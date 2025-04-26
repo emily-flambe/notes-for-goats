@@ -32,6 +32,32 @@
                     </select>
                 </div>
                 
+                <!-- Relationship Type filter -->
+                <div class="filter-group">
+                    <label for="relationship_type_filter">Relationship Type:</label>
+                    <select id="relationship_type_filter" name="relationship_type">
+                        <option value="">Any / None</option>
+                        {% for rel_type in relationship_types %}
+                            <option value="{{ rel_type.id }}" {% if rel_type.id|stringformat:"s" == selected_relationship_type_id %}selected{% endif %}>
+                                {{ rel_type.display_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Target Entity filter -->
+                <div class="filter-group" id="target-entity-group" style="display: {% if selected_relationship_type_id %}block{% else %}none{% endif %};">
+                    <label for="target_entity_filter">With Entity:</label>
+                    <select id="target_entity_filter" name="target_entity">
+                        <option value="">Select Entity</option>
+                        {% for entity in all_entities %}
+                            <option value="{{ entity.id }}" {% if entity.id|stringformat:"s" == selected_target_entity_id %}selected{% endif %}>
+                                {{ entity.name }} ({{ entity.get_type_display }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
                 <!-- Search input -->
                 <div class="filter-group">
                     <label for="search">Search:</label>
@@ -385,12 +411,29 @@
             });
         });
         
-        // Entity type filter if needed
+        // Entity type filter
         const entityTypeFilter = document.getElementById('entity_type_filter');
         if (entityTypeFilter) {
             entityTypeFilter.addEventListener('change', function() {
                 // Auto-submit the form when type changes
                 this.form.submit();
+            });
+        }
+        
+        // Relationship filter handling
+        const relationshipTypeFilter = document.getElementById('relationship_type_filter');
+        const targetEntityGroup = document.getElementById('target-entity-group');
+        
+        if (relationshipTypeFilter && targetEntityGroup) {
+            // Show/hide the target entity dropdown based on relationship type selection
+            relationshipTypeFilter.addEventListener('change', function() {
+                if (this.value) {
+                    targetEntityGroup.style.display = 'block';
+                } else {
+                    targetEntityGroup.style.display = 'none';
+                    // Clear the target entity selection when relationship type is cleared
+                    document.getElementById('target_entity_filter').value = '';
+                }
             });
         }
     });
