@@ -46,7 +46,7 @@
             </div>
             
             <!-- Title field - only shown for Person entities -->
-            <div class="form-group" id="title-field-group" style="display: {% if form.instance.type == 'PERSON' or entity_type == 'PERSON' %}block{% else %}none{% endif %};">
+            <div class="form-group" id="title-field-group" style="display: {% if form.instance.type == 'PERSON' or entity_type == 'PERSON' or not form.instance.pk %}block{% else %}none{% endif %};">
                 <label for="{{ form.title.id_for_label }}">Title/Role:</label>
                 {{ form.title }}
                 <small class="form-text text-muted">

@@ -32,6 +32,32 @@
                     </select>
                 </div>
                 
+                <!-- Relationship Type filter -->
+                <div class="filter-group">
+                    <label for="relationship_type_filter">Relationship Type:</label>
+                    <select id="relationship_type_filter" name="relationship_type">
+                        <option value="">Any / None</option>
+                        {% for rel_type in relationship_types %}
+                            <option value="{{ rel_type.id }}" {% if rel_type.id|stringformat:"s" == selected_relationship_type_id %}selected{% endif %}>
+                                {{ rel_type.display_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Target Entity filter -->
+                <div class="filter-group" id="target-entity-group" style="display: {% if selected_relationship_type_id %}block{% else %}none{% endif %};">
+                    <label for="target_entity_filter">With Entity:</label>
+                    <select id="target_entity_filter" name="target_entity">
+                        <option value="">Select Entity</option>
+                        {% for entity in all_entities %}
+                            <option value="{{ entity.id }}" {% if entity.id|stringformat:"s" == selected_target_entity_id %}selected{% endif %}>
+                                {{ entity.name }} ({{ entity.get_type_display }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
                 <!-- Search input -->
                 <div class="filter-group">
                     <label for="search">Search:</label>
@@ -51,7 +77,7 @@
             {% if people.exists %}
                 <div class="entity-section">
                     <h2 class="section-title">People</h2>
-                    <div class="entity-list">
+                    <div class="entity-section-list">
                         {% for entity in people|dictsort:"name" %}
                             <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}" class="entity-item-link">
                                 <div class="entity-item">
@@ -89,7 +115,7 @@
             {% if projects.exists %}
                 <div class="entity-section">
                     <h2 class="section-title">Projects</h2>
-                    <div class="entity-list">
+                    <div class="entity-section-list">
                         {% for entity in projects|dictsort:"name" %}
                             <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}" class="entity-item-link">
                                 <div class="entity-item">
@@ -127,7 +153,7 @@
             {% if teams.exists %}
                 <div class="entity-section">
                     <h2 class="section-title">Teams</h2>
-                    <div class="entity-list">
+                    <div class="entity-section-list">
                         {% for entity in teams|dictsort:"name" %}
                             <a href="{% url 'notekeeper:entity_detail' workspace_id=workspace.id pk=entity.pk %}" class="entity-item-link">
                                 <div class="entity-item">
@@ -205,6 +231,7 @@
         margin-top: 20px;
         padding-top: 15px;
         border-top: 1px solid #edf2f7;
+        width: 100%;
     }
     
     .section-title {
@@ -213,34 +240,46 @@
         margin: 0 0 15px 10px;
     }
     
-    /* Entity list styling (matching journal-notes) */
-    .entity-list {
-        padding: 0 10px;
+    /* Entity section list styling - single column */
+    .entity-section-list {
+        padding: 0;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        flex-wrap: nowrap !important;
+        gap: 0;
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #edf2f7;
+        border-radius: 6px;
+        background-color: #fff;
+        width: 100%;
     }
     
-    /* Entity item styling (matching journal-entry) */
+    /* Entity item styling */
     .entity-item {
         padding: 16px 14px;
         margin: 0;
-        border-radius: 6px;
         background-color: #f8fafc;
-        border: 1px solid #edf2f7;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-bottom: 1px solid #edf2f7;
         transition: all 0.2s ease;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .entity-item:last-child {
+        border-bottom: none;
     }
     
     .entity-item-link {
         text-decoration: none;
         color: inherit;
+        display: block;
+        width: 100%;
     }
     
     /* Hover effect */
     .entity-item:hover {
         background-color: #c7e0ef;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     }
     
     /* Entity header */
@@ -249,6 +288,7 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
+        width: 100%;
     }
     
     /* Entity title */
@@ -271,6 +311,7 @@
         max-height: calc(1.5em * 3);
         color: #4a5568;
         position: relative;
+        width: 100%;
     }
     
     /* Tags styling */
@@ -279,6 +320,7 @@
         flex-wrap: wrap;
         gap: 6px;
         margin-top: 3px;
+        width: 100%;
     }
     
     .tag-badge {
@@ -290,12 +332,6 @@
         font-size: 0.85em;
         color: #4a5568;
         text-decoration: none;
-    }
-    
-    /* Section add button */
-    .section-add {
-        text-align: right;
-        padding: 10px 10px 0 0;
     }
     
     /* No results message styling */
@@ -375,13 +411,114 @@
             });
         });
         
-        // Entity type filter if needed
+        // Entity type filter
         const entityTypeFilter = document.getElementById('entity_type_filter');
         if (entityTypeFilter) {
             entityTypeFilter.addEventListener('change', function() {
                 // Auto-submit the form when type changes
                 this.form.submit();
             });
+        }
+        
+        // Relationship filter handling
+        const relationshipTypeFilter = document.getElementById('relationship_type_filter');
+        const targetEntityGroup = document.getElementById('target-entity-group');
+        const targetEntityFilter = document.getElementById('target_entity_filter');
+        
+        if (relationshipTypeFilter && targetEntityGroup && targetEntityFilter) {
+            // Show/hide the target entity dropdown based on relationship type selection
+            relationshipTypeFilter.addEventListener('change', function() {
+                if (this.value) {
+                    // Show the target entity group
+                    targetEntityGroup.style.display = 'block';
+                    
+                    // Fetch entities that have relationships of this type
+                    fetchTargetEntities(this.value);
+                } else {
+                    targetEntityGroup.style.display = 'none';
+                    // Clear the target entity selection when relationship type is cleared
+                    targetEntityFilter.value = '';
+                    
+                    // Reset the dropdown options
+                    while (targetEntityFilter.options.length > 1) {
+                        targetEntityFilter.remove(1);
+                    }
+                }
+            });
+            
+            // Function to fetch entities that are targets of the selected relationship type
+            function fetchTargetEntities(relationshipTypeId) {
+                // Show loading state
+                targetEntityFilter.disabled = true;
+                
+                // Create a placeholder option
+                const loadingOption = document.createElement('option');
+                loadingOption.text = 'Loading...';
+                loadingOption.value = '';
+                
+                // Clear existing options except the first one
+                while (targetEntityFilter.options.length > 1) {
+                    targetEntityFilter.remove(1);
+                }
+                
+                // Add loading option
+                targetEntityFilter.add(loadingOption);
+                
+                // Fetch data from API
+                fetch(`{% url 'notekeeper:get_relationship_targets' workspace_id=workspace.id %}?relationship_type=${relationshipTypeId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Remove loading option
+                        targetEntityFilter.remove(targetEntityFilter.options.length - 1);
+                        
+                        if (data.entities && data.entities.length > 0) {
+                            // Add entities to dropdown
+                            data.entities.forEach(entity => {
+                                const option = document.createElement('option');
+                                option.value = entity.id;
+                                option.text = `${entity.name} (${entity.type})`;
+                                
+                                // Check if this was previously selected
+                                if (entity.id == "{{ selected_target_entity_id }}") {
+                                    option.selected = true;
+                                }
+                                
+                                targetEntityFilter.add(option);
+                            });
+                        } else {
+                            // No entities found
+                            const noEntitiesOption = document.createElement('option');
+                            noEntitiesOption.text = 'No entities available';
+                            noEntitiesOption.value = '';
+                            targetEntityFilter.add(noEntitiesOption);
+                        }
+                        
+                        // Re-enable the dropdown
+                        targetEntityFilter.disabled = false;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching entities:', error);
+                        
+                        // Show error message
+                        const errorOption = document.createElement('option');
+                        errorOption.text = 'Error loading entities';
+                        errorOption.value = '';
+                        
+                        // Clear dropdown and add error option
+                        while (targetEntityFilter.options.length > 1) {
+                            targetEntityFilter.remove(1);
+                        }
+                        targetEntityFilter.add(errorOption);
+                        
+                        // Re-enable dropdown
+                        targetEntityFilter.disabled = false;
+                    });
+            }
+            
+            // Initialize dropdown if relationship type is already selected
+            if (relationshipTypeFilter.value) {
+                fetchTargetEntities(relationshipTypeFilter.value);
+            }
         }
     });
 </script>

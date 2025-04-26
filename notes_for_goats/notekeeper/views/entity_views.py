@@ -1,16 +1,107 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from ..models import Workspace, Entity, Note, Relationship, Tag
+from django.db.models import Q
+from django.http import JsonResponse
+from ..models import Workspace, Entity, Note, Relationship, RelationshipType, Tag
 from ..forms import EntityForm
 
 def entity_list(request, workspace_id):
     workspace = get_object_or_404(Workspace, pk=workspace_id)
     
-    # Get entities by type
-    people = workspace.entities.filter(type='PERSON').order_by('name')
-    projects = workspace.entities.filter(type='PROJECT').order_by('name')
-    teams = workspace.entities.filter(type='TEAM').order_by('name')
+    # Get relationship filter parameters
+    relationship_type_id = request.GET.get('relationship_type', '')
+    target_entity_id = request.GET.get('target_entity', '')
+    entity_type = request.GET.get('type', '')
+    search_query = request.GET.get('q', '')
+    
+    # Base query for entities
+    entities_query = workspace.entities.all()
+    
+    # Apply search filter if provided
+    if search_query:
+        entities_query = entities_query.filter(
+            Q(name__icontains=search_query) | 
+            Q(details__icontains=search_query) |
+            Q(tags__name__icontains=search_query)
+        ).distinct()
+    
+    # Apply entity type filter if provided
+    if entity_type:
+        entities_query = entities_query.filter(type=entity_type)
+    
+    # Apply relationship filter if both relationship type and target entity are provided
+    if relationship_type_id and target_entity_id:
+        try:
+            relationship_type_id = int(relationship_type_id)
+            target_entity_id = int(target_entity_id)
+            
+            # Get the content type for Entity model
+            entity_content_type = ContentType.objects.get_for_model(Entity)
+            
+            # Get relationship type to check if it's directional
+            relationship_type = RelationshipType.objects.get(id=relationship_type_id, workspace=workspace)
+            related_entity_ids = []
+            
+            # If relationship is directional, only consider the appropriate direction
+            if relationship_type.is_directional:
+                # Find entities where: Entity has the specified relationship with the target entity (entity → target)
+                # For "Reports To", this finds entities who report to the target
+                source_entity_ids = Relationship.objects.filter(
+                    workspace=workspace,
+                    relationship_type_id=relationship_type_id,
+                    source_content_type=entity_content_type,
+                    target_content_type=entity_content_type,
+                    target_object_id=target_entity_id
+                ).values_list('source_object_id', flat=True)
+                
+                related_entity_ids = list(source_entity_ids)
+            else:
+                # For non-directional relationships, consider both directions
+                # 1. Entity has the specified relationship with the target entity (entity → target)
+                source_entity_ids = Relationship.objects.filter(
+                    workspace=workspace,
+                    relationship_type_id=relationship_type_id,
+                    source_content_type=entity_content_type,
+                    target_content_type=entity_content_type,
+                    target_object_id=target_entity_id
+                ).values_list('source_object_id', flat=True)
+                
+                # 2. Target entity has the specified relationship with the entity (target → entity)
+                target_entity_ids = Relationship.objects.filter(
+                    workspace=workspace,
+                    relationship_type_id=relationship_type_id,
+                    source_content_type=entity_content_type,
+                    source_object_id=target_entity_id,
+                    target_content_type=entity_content_type
+                ).values_list('target_object_id', flat=True)
+                
+                related_entity_ids = list(source_entity_ids) + list(target_entity_ids)
+            
+            # Filter the main query to include only entities with the relationship
+            if related_entity_ids:
+                entities_query = entities_query.filter(id__in=related_entity_ids)
+            else:
+                # If no relationships found, return empty queryset
+                entities_query = entities_query.filter(id=None)
+            
+        except (ValueError, TypeError, RelationshipType.DoesNotExist):
+            # Invalid ID format or relationship type not found, ignore filter
+            pass
+    
+    # Get entity counts by type
+    people = entities_query.filter(type='PERSON').order_by('name')
+    projects = entities_query.filter(type='PROJECT').order_by('name')
+    teams = entities_query.filter(type='TEAM').order_by('name')
+    
+    # Get all relationship types for the dropdown
+    relationship_types = RelationshipType.objects.filter(workspace=workspace).order_by('display_name')
+    
+    # Get all entities for the target entity dropdown
+    all_entities = workspace.entities.all().order_by('name')
+    
+    # Get entity types for the dropdown
+    entity_types = Entity.ENTITY_TYPES
     
     context = {
         'workspace': workspace,
@@ -18,6 +109,11 @@ def entity_list(request, workspace_id):
         'projects': projects,
         'teams': teams,
         'entities': workspace.entities.all(),  # Keep for backward compatibility
+        'relationship_types': relationship_types,
+        'all_entities': all_entities,
+        'entity_types': entity_types,
+        'selected_relationship_type_id': relationship_type_id,
+        'selected_target_entity_id': target_entity_id,
     }
     
     return render(request, 'notekeeper/entity/list.html', context)
@@ -63,7 +159,7 @@ def entity_detail(request, workspace_id, pk):
 def entity_create(request, workspace_id):
     """View to create a new entity"""
     workspace = get_object_or_404(Workspace, pk=workspace_id)
-    entity_type = request.GET.get('type', None)  # Get the type from query string if available
+    entity_type = request.GET.get('type', 'PERSON')  # Default to PERSON if no type specified
     
     if request.method == "POST":
         form = EntityForm(request.POST)
@@ -77,10 +173,8 @@ def entity_create(request, workspace_id):
             
             return redirect('notekeeper:entity_detail', workspace_id=workspace_id, pk=entity.pk)
     else:
-        # Initialize form with optional type
-        initial_data = {}
-        if entity_type and entity_type in dict(Entity.ENTITY_TYPES):
-            initial_data['type'] = entity_type
+        # Initialize form with type
+        initial_data = {'type': entity_type}
         form = EntityForm(initial=initial_data)
     
     return render(request, 'notekeeper/entity/form.html', {
@@ -195,4 +289,61 @@ def entity_relationships_graph(request, workspace_id, pk):
         if not (node['id'] in seen or seen.add(node['id']))
     ]
     
-    return JsonResponse(relationships_data) 
+    return JsonResponse(relationships_data)
+
+def get_relationship_targets(request, workspace_id):
+    """API endpoint to get entities that have relationships of a specific type"""
+    workspace = get_object_or_404(Workspace, pk=workspace_id)
+    relationship_type_id = request.GET.get('relationship_type', '')
+    
+    try:
+        relationship_type_id = int(relationship_type_id)
+        relationship_type = RelationshipType.objects.get(id=relationship_type_id, workspace=workspace)
+        
+        entity_content_type = ContentType.objects.get_for_model(Entity)
+        
+        if relationship_type.is_directional:
+            # For directional relationships, get only entities that are targets
+            # (i.e., entities that have other entities related to them via this relationship)
+            target_ids = Relationship.objects.filter(
+                workspace=workspace,
+                relationship_type_id=relationship_type_id,
+                target_content_type=entity_content_type
+            ).values_list('target_object_id', flat=True).distinct()
+            
+            target_entities = Entity.objects.filter(
+                workspace=workspace,
+                id__in=target_ids
+            ).order_by('name')
+        else:
+            # For non-directional relationships, get all entities involved in this relationship type
+            source_ids = Relationship.objects.filter(
+                workspace=workspace,
+                relationship_type_id=relationship_type_id,
+                source_content_type=entity_content_type
+            ).values_list('source_object_id', flat=True).distinct()
+            
+            target_ids = Relationship.objects.filter(
+                workspace=workspace,
+                relationship_type_id=relationship_type_id,
+                target_content_type=entity_content_type
+            ).values_list('target_object_id', flat=True).distinct()
+            
+            all_ids = list(source_ids) + list(target_ids)
+            target_entities = Entity.objects.filter(
+                workspace=workspace,
+                id__in=all_ids
+            ).order_by('name').distinct()
+        
+        # Format the entities for JSON response
+        entity_data = [{
+            'id': entity.id,
+            'name': entity.name,
+            'type': entity.get_type_display()
+        } for entity in target_entities]
+        
+        return JsonResponse({'entities': entity_data})
+    
+    except (ValueError, TypeError, RelationshipType.DoesNotExist):
+        # Return empty array if invalid relationship type
+        return JsonResponse({'entities': []}) 
