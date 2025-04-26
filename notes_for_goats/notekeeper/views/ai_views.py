@@ -312,7 +312,8 @@ def get_database_context(workspace, query=None, use_local_llm=False):
     - query: Optional query string to use for RAG
     - use_local_llm: Whether the user is using a local LLM (from user preferences)
     """
-    # Include relationships is now the default behavior, no parameter needed
+    # Include relationships is now the default behavior, always set to True
+    include_relationships = True
     
     # Decide whether to use RAG or full context
     use_rag = query and settings.OPENAI_API_KEY and not use_local_llm

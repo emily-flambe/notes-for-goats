@@ -107,6 +107,10 @@
                                         <i class="bi bi-download"></i> Download
                                     </a>
                                     {% endif %}
+                                    <a href="{% url 'notekeeper:ask_ai' workspace_id=workspace.id %}?context_mode=focused&focused_note_id={{ entry.id }}" 
+                                       class="btn btn-sm btn-secondary summarize-button" onclick="event.stopPropagation();">
+                                        <i class="bi bi-robot"></i> Summarize
+                                    </a>
                                     <button class="btn btn-sm edit-button" data-url="{% url 'notekeeper:note_edit' workspace_id=workspace.id pk=entry.id %}">Edit</button>
                                     <button class="btn btn-sm btn-danger delete-button" data-url="{% url 'notekeeper:note_delete' workspace_id=workspace.id pk=entry.id %}">Delete</button>
                                 </div>
@@ -345,6 +349,25 @@
         font-size: 0.9em;
     }
     
+    /* Summarize button styling */
+    .summarize-button {
+        background-color: #805ad5;
+        color: white;
+        margin-right: 4px;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    .summarize-button:hover {
+        background-color: #6b46c1;
+        color: white;
+    }
+    
+    .summarize-button i {
+        margin-right: 3px;
+        font-size: 0.9em;
+    }
+    
     /* Ensure the actions div has enough space */
     .journal-header .actions {
         display: flex;
@@ -423,6 +446,15 @@
         // Add event listener for download buttons to prevent note link activation
         const downloadButtons = document.querySelectorAll('.download-button');
         downloadButtons.forEach(button => {
+            button.addEventListener('click', function(event) {
+                // Stop the event from bubbling up to the note link
+                event.stopPropagation();
+            });
+        });
+        
+        // Add event listener for summarize buttons to prevent note link activation
+        const summarizeButtons = document.querySelectorAll('.summarize-button');
+        summarizeButtons.forEach(button => {
             button.addEventListener('click', function(event) {
                 // Stop the event from bubbling up to the note link
                 event.stopPropagation();
