@@ -26,18 +26,18 @@ A personal note-taking application designed for professionals to organize struct
 
    ```bash
    # Clone the repository
-git clone https://github.com/yourusername/notes-for-goats.git
-cd notes-for-goats
+   git clone https://github.com/yourusername/notes-for-goats.git
+   cd notes-for-goats
    
    # Set up environment variables
    make env
 
    # Build and start the application
-docker-compose up -d
+   docker-compose up -d
 
    # Create an admin user (first time only)
-docker-compose exec web python notes_for_goats/manage.py createsuperuser
-```
+   docker-compose exec web python notes_for_goats/manage.py createsuperuser
+   ```
 
 3. **Access**
    - Main app: http://localhost:8000/
@@ -52,26 +52,26 @@ docker-compose exec web python notes_for_goats/manage.py createsuperuser
 
    ```bash
    # Clone the repository
-git clone https://github.com/yourusername/notes-for-goats.git
-cd notes-for-goats
+   git clone https://github.com/yourusername/notes-for-goats.git
+   cd notes-for-goats
    
    # Set up environment variables
    make env
 
-   # Create and activate a virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+   # Clone the repository
+   git clone https://github.com/yourusername/notes-for-goats.git
+   cd notes-for-goats
 
    # Install dependencies
-pip install -r requirements.txt
+   pip install -r requirements.txt
 
    # Set up the database and create admin user
-python manage.py migrate
-python manage.py createsuperuser
+   python manage.py migrate
+   python manage.py createsuperuser
 
    # Run the development server
-python manage.py runserver
-```
+   python manage.py runserver
+   ```
 
 ## Setting Up AI Features
 
