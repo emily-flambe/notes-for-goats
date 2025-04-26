@@ -20,7 +20,7 @@ A personal note-taking application designed for professionals to organize struct
 
 1. **Prerequisites**
 - [Docker](https://www.docker.com/get-started)
-- [Docker Compose](https://docs.docker.com/compose/install/) (usually included with Docker Desktop)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
 2. **Setup and Launch**
 
@@ -91,9 +91,15 @@ Run AI features locally with complete privacy and no usage costs:
    curl -fsSL https://ollama.com/install.sh | sh
    
    # Windows: Download from ollama.com/download/windows
+   ``` 
+
+2. **Start the ollama service**
+
+   ```bash
+   ollama run llama3
    ```
 
-2. **Download a model**
+3. **Download a model**
    
    ```bash
    # Download Llama 3 (recommended)
