@@ -400,23 +400,50 @@
 </style>
 
 <script>
-    // Add function to prepare content for saving as a note
-    function prepareContent() {
-        const formattedContent = `**Question:** ${document.querySelector('.prompt-text').innerText.trim()}
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Make sure the note selector shows the correct note if focused_note_id is set
+        const focusedNoteId = "{{ focused_note_id|default:'' }}";
+        if (focusedNoteId) {
+            const noteSelector = document.getElementById('noteSelector');
+            if (noteSelector) {
+                noteSelector.value = focusedNoteId;
+                document.getElementById('focusedNoteInput').value = focusedNoteId;
+                // Make sure context mode matches
+                document.getElementById('contextMode').value = 'focused';
+                toggleContextOptions();
+                
+                // Auto-populate question field with "Summarize this." if it's empty
+                const userQueryField = document.getElementById('user_query');
+                const userQueryValue = "{{ user_query|escapejs }}";
+                if (!userQueryValue.trim()) {
+                    userQueryField.value = "Summarize this.";
+                }
+            }
+        }
+        
+        // Add function to prepare content for saving as a note
+        function prepareContent() {
+            const formattedContent = `**Question:** ${document.querySelector('.prompt-text').innerText.trim()}
 
 **Model:** ${document.querySelector('.model-name').innerText.trim()}
 
 **Response:**
 ${document.querySelector('.ai-response').innerText.trim()}`;
+            
+            document.getElementById('note-content').value = formattedContent;
+        }
         
-        document.getElementById('note-content').value = formattedContent;
-    }
-    
-    // Show loading indicator when form is submitted
-    document.getElementById('askAiForm').addEventListener('submit', function() {
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('submit-btn').disabled = true;
-        document.getElementById('submit-btn').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+        // Show loading indicator when form is submitted
+        document.getElementById('askAiForm').addEventListener('submit', function() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('submit-btn').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+        });
+        
+        // Initialize filters on page load
+        updateTagFilters();
+        updateEntityFilters();
     });
     
     // Function to copy response to clipboard
@@ -500,10 +527,6 @@ ${document.querySelector('.ai-response').innerText.trim()}`;
             cb.checked = false;
         });
     }
-
-    // Initialize filters on page load
-    updateTagFilters();
-    updateEntityFilters();
 
     document.getElementById('noteSelector').addEventListener('change', function() {
         document.getElementById('focusedNoteInput').value = this.value;

@@ -39,31 +39,47 @@ def _apply_rule(rule, specific_entity=None):
     # Set to track processed entity pairs to avoid duplication
     processed_pairs = set()
     
+    # Get the source relationship type
+    relationship_type = rule.source_relationship_type
+    is_directional = relationship_type.is_directional
+    
     with transaction.atomic():
         for entity in entities_to_process:
             # Find common entities that this entity is related to
-            # (e.g., teams this person is a member of)
             common_entity_ids = set()
             
-            # Case 1: Entity -> Common Entity
-            outgoing_relations = Relationship.objects.filter(
-                workspace=workspace,
-                relationship_type=rule.source_relationship_type,
-                source_content_type=entity_content_type,
-                source_object_id=entity.id,
-                target_content_type=entity_content_type
-            ).values_list('target_object_id', flat=True)
-            common_entity_ids.update(outgoing_relations)
-            
-            # Case 2: Common Entity -> Entity
-            incoming_relations = Relationship.objects.filter(
-                workspace=workspace,
-                relationship_type=rule.source_relationship_type,
-                source_content_type=entity_content_type,
-                target_content_type=entity_content_type,
-                target_object_id=entity.id
-            ).values_list('source_object_id', flat=True)
-            common_entity_ids.update(incoming_relations)
+            if is_directional:
+                # For directional relationships (like Reports To), only consider one direction
+                # Example: For "Reports To" - find managers this person reports to
+                outgoing_relations = Relationship.objects.filter(
+                    workspace=workspace,
+                    relationship_type=relationship_type,
+                    source_content_type=entity_content_type,
+                    source_object_id=entity.id,
+                    target_content_type=entity_content_type
+                ).values_list('target_object_id', flat=True)
+                common_entity_ids.update(outgoing_relations)
+            else:
+                # For non-directional relationships, check both directions
+                # Case 1: Entity -> Common Entity
+                outgoing_relations = Relationship.objects.filter(
+                    workspace=workspace,
+                    relationship_type=relationship_type,
+                    source_content_type=entity_content_type,
+                    source_object_id=entity.id,
+                    target_content_type=entity_content_type
+                ).values_list('target_object_id', flat=True)
+                common_entity_ids.update(outgoing_relations)
+                
+                # Case 2: Common Entity -> Entity
+                incoming_relations = Relationship.objects.filter(
+                    workspace=workspace,
+                    relationship_type=relationship_type,
+                    source_content_type=entity_content_type,
+                    target_content_type=entity_content_type,
+                    target_object_id=entity.id
+                ).values_list('source_object_id', flat=True)
+                common_entity_ids.update(incoming_relations)
             
             # Process each common entity
             for common_entity_id in common_entity_ids:
@@ -75,25 +91,38 @@ def _apply_rule(rule, specific_entity=None):
                 # Find all entities related to this common entity
                 related_entity_ids = set()
                 
-                # Others with outgoing relationship to common entity
-                related_outgoing = Relationship.objects.filter(
-                    workspace=workspace,
-                    relationship_type=rule.source_relationship_type,
-                    source_content_type=entity_content_type,
-                    target_content_type=entity_content_type,
-                    target_object_id=common_entity_id
-                ).values_list('source_object_id', flat=True)
-                related_entity_ids.update(related_outgoing)
-                
-                # Others with incoming relationship from common entity
-                related_incoming = Relationship.objects.filter(
-                    workspace=workspace,
-                    relationship_type=rule.source_relationship_type,
-                    source_content_type=entity_content_type,
-                    source_object_id=common_entity_id,
-                    target_content_type=entity_content_type
-                ).values_list('target_object_id', flat=True)
-                related_entity_ids.update(related_incoming)
+                if is_directional:
+                    # For directional relationships, only match entities with the same direction
+                    # For example, find others who also report to the same manager
+                    related_outgoing = Relationship.objects.filter(
+                        workspace=workspace,
+                        relationship_type=relationship_type,
+                        source_content_type=entity_content_type,
+                        target_content_type=entity_content_type,
+                        target_object_id=common_entity_id
+                    ).values_list('source_object_id', flat=True)
+                    related_entity_ids.update(related_outgoing)
+                else:
+                    # For non-directional relationships, check both directions
+                    # Others with outgoing relationship to common entity
+                    related_outgoing = Relationship.objects.filter(
+                        workspace=workspace,
+                        relationship_type=relationship_type,
+                        source_content_type=entity_content_type,
+                        target_content_type=entity_content_type,
+                        target_object_id=common_entity_id
+                    ).values_list('source_object_id', flat=True)
+                    related_entity_ids.update(related_outgoing)
+                    
+                    # Others with incoming relationship from common entity
+                    related_incoming = Relationship.objects.filter(
+                        workspace=workspace,
+                        relationship_type=relationship_type,
+                        source_content_type=entity_content_type,
+                        source_object_id=common_entity_id,
+                        target_content_type=entity_content_type
+                    ).values_list('target_object_id', flat=True)
+                    related_entity_ids.update(related_incoming)
                 
                 # Remove the current entity from the related set
                 if entity.id in related_entity_ids:
