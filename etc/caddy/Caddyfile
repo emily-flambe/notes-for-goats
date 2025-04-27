@@ -1,0 +1,3 @@
+notes.emilyflam.be {
+    reverse_proxy localhost:8000
+}
