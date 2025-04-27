@@ -27,8 +27,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'your-default-key-for-development')
 DEBUG = True
 
 # If DEBUG is False, we need to specify allowed hosts
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
-
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
