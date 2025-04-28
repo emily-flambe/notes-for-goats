@@ -1,0 +1,13 @@
+notes.emilyflam.be {
+    # Handle HTTP to HTTPS redirection
+    @http {
+        protocol http
+    }
+    redir @http https://{host}{uri} permanent
+
+    # Apply basic auth and reverse proxy
+    basicauth {
+        $USERNAME $HASHED_PASSWORD # Replace the latter with the actual hash obtained from running `sudo caddy hash-password` and entering the password of your dreams
+    }
+    reverse_proxy localhost:8000
+}
