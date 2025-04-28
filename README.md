@@ -2,6 +2,14 @@
 
 A personal note-taking application designed for professionals to organize structured notes about people, projects, and daily events.
 
+## How to Access
+
+This web app is currently deployed to https://notes.emilyflam.be. It is hidden behind basic authentication (implemented via Caddy). Feel free to contact me for the login, or honestly just guess a few times and you'll probably get it. The deployed app is for demonstration purposes only - because this app was coded without a particularly security-first mindset, users are strongly encouraged to use the app via local deployment (see below).
+
+If you choose to use OpenAI for the extremely sophisticated AI features in this app, be mindful of the data you're giving them. I mean, they probably already have all of your personal information anyway, but you should at least ponder the consequences of your actions.
+
+## Screenshots
+
 <details>
 <summary>📸 Screenshots (click to expand)</summary>
 
