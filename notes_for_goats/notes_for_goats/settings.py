@@ -29,6 +29,8 @@ DEBUG = True
 # If DEBUG is False, we need to specify allowed hosts
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = ['https://notes.emilyflam.be']
+
 # Application definition
 
 INSTALLED_APPS = [
