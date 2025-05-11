@@ -200,3 +200,5 @@ backups/
 
 # Imported files
 **/imports/**
+
+Caddyfile
